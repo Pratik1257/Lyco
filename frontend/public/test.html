@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Extracting Color</title>
+</head>
+<body>
+<img id="logo" src="/src/assets/LycoLogo.png" crossorigin="anonymous" onload="extractColor()" style="display:none;" />
+<canvas id="canvas" style="display:none;"></canvas>
+<script>
+function extractColor() {
+  const img = document.getElementById('logo');
+  const canvas = document.getElementById('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, 1, 1).data;
+  const hex = '#' + [data[0], data[1], data[2]].map(x => x.toString(16).padStart(2, '0')).join('');
+  document.title = 'Color: ' + hex.toUpperCase();
+  document.body.innerHTML = '<h1>Color is ' + hex.toUpperCase() + '</h1>';
+}
+</script>
+</body>
+</html>

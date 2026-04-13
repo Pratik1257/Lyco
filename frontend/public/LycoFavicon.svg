@@ -1,0 +1,8 @@
+<svg viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M19,19 L19,3 L27,11 Z" fill="#e05555"/>
+  <path d="M19,19 L19,3 L27,11 Z" fill="#ec4899" transform="rotate(72,19,19)"/>
+  <path d="M19,19 L19,3 L27,11 Z" fill="#06b6d4" transform="rotate(144,19,19)"/>
+  <path d="M19,19 L19,3 L27,11 Z" fill="#22c55e" transform="rotate(216,19,19)"/>
+  <path d="M19,19 L19,3 L27,11 Z" fill="#f97316" transform="rotate(288,19,19)"/>
+  <circle cx="19" cy="19" r="3.5" fill="white"/>
+</svg>

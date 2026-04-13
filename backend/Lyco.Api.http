@@ -1,0 +1,6 @@
+@Lyco.Api_HostAddress = http://localhost:5193
+
+GET {{Lyco.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
