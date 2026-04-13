@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Services from './pages/Services';
+import Prices from './pages/Prices';
 
 const queryClient = new QueryClient();
 
@@ -40,7 +41,7 @@ export default function App() {
               <Route path="customers" element={<div className="p-4 text-gray-500">Manage Customers — coming soon</div>} />
               <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employees — coming soon</div>} />
               <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendors — coming soon</div>} />
-              <Route path="prices" element={<div className="p-4 text-gray-500">Manage Prices — coming soon</div>} />
+              <Route path="prices" element={<Prices />} />
               <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
             </Route>
           </Routes>
