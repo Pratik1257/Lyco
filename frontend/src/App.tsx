@@ -28,7 +28,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter basename="/v2">
+        <BrowserRouter basename="/">
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
