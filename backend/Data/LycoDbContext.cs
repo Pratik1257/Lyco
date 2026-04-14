@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Lyco.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +45,8 @@ public partial class LycoDbContext : DbContext
     public virtual DbSet<VendorMst> VendorMsts { get; set; }
 
     public virtual DbSet<VendorOrderMst> VendorOrderMsts { get; set; }
+
+    public virtual DbSet<CurrencyMst> CurrencyMsts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -640,6 +642,29 @@ public partial class LycoDbContext : DbContext
             entity.HasOne(d => d.Vendor).WithMany(p => p.VendorOrderMsts)
                 .HasForeignKey(d => d.VendorId)
                 .HasConstraintName("FK_VendorOrderMst_VendorMst");
+        });
+
+        modelBuilder.Entity<CurrencyMst>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Currency__3214EC07A125FD79");
+
+            entity.ToTable("CurrencyMst");
+
+            entity.HasIndex(e => e.Code, "UQ__Currency__A25C5AA70CAD9CBB").IsUnique();
+
+            entity.Property(e => e.Code)
+                .HasMaxLength(10)
+                .IsUnicode(true);
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .IsUnicode(true);
+            entity.Property(e => e.Symbol)
+                .HasMaxLength(10)
+                .IsUnicode(true);
         });
 
         OnModelCreatingPartial(modelBuilder);

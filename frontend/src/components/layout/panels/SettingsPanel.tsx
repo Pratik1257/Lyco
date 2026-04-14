@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
 interface SettingsRowProps {
@@ -59,6 +60,7 @@ export default function SettingsPanel({ isOpen }: SettingsPanelProps) {
   const [emailNotif, setEmailNotif] = useState(true);
   const [quoteAlert, setQuoteAlert] = useState(true);
   const [paymentRemind, setPaymentRemind] = useState(false);
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -88,6 +90,7 @@ export default function SettingsPanel({ isOpen }: SettingsPanelProps) {
         <SettingsRow 
           label="Change password"
           subtext="Last changed 30 days ago"
+          onClick={() => navigate('/change-password')}
         />
 
         {/* NOTIFICATIONS Section */}

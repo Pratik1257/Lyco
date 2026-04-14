@@ -159,3 +159,4 @@ C:\Users\HP\Desktop\Lyco\backend\obj\Debug\net10.0\refint\Lyco.Api.dll
 C:\Users\HP\Desktop\Lyco\backend\obj\Debug\net10.0\Lyco.Api.pdb
 C:\Users\HP\Desktop\Lyco\backend\obj\Debug\net10.0\Lyco.Api.genruntimeconfig.cache
 C:\Users\HP\Desktop\Lyco\backend\obj\Debug\net10.0\ref\Lyco.Api.dll
+C:\Users\HP\Desktop\Lyco\backend\obj\Debug\net10.0\Lyco.Api.sourcelink.json

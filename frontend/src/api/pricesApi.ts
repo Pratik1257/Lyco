@@ -1,20 +1,21 @@
+import apiClient from './apiClient';
+
 export interface GeneralPrice {
   id: number;
   serviceId: number;
   serviceName: string;
   currency: string;
   price: number;
-  createdAt: string;
 }
 
 export interface UserwisePrice {
   id: number;
+  userId: number;
   username: string;
   serviceId: number;
   serviceName: string;
   currency: string;
   price: number;
-  createdAt: string;
 }
 
 export interface PagedResult<T> {
@@ -25,113 +26,82 @@ export interface PagedResult<T> {
   totalPages: number;
 }
 
-// Mock Data
-let generalPrices: GeneralPrice[] = [
-  { id: 1, serviceId: 1, serviceName: 'Consultation', currency: 'USD', price: 100, createdAt: new Date().toISOString() },
-  { id: 2, serviceId: 2, serviceName: 'Installation', currency: 'EUR', price: 250, createdAt: new Date().toISOString() },
-];
+export interface UserDto {
+  id: number;
+  username: string;
+}
 
-let userwisePrices: UserwisePrice[] = [
-  { id: 1, username: 'johndoe', serviceId: 1, serviceName: 'Consultation', currency: 'USD', price: 80, createdAt: new Date().toISOString() },
-];
-
-export const MOCK_USERS = ['johndoe', 'janedoe', 'admin', 'guest'];
-export const MOCK_CURRENCIES = ['USD', 'EUR', 'GBP', 'AUD', 'CAD'];
-
-// Helper for simulating network delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export interface CurrencyDto {
+  id: number;
+  code: string;
+  name: string;
+  symbol: string;
+}
 
 export const pricesApi = {
   // --- General Prices ---
-  getGeneralPrices: async (page: number, pageSize: number, search: string = ''): Promise<PagedResult<GeneralPrice>> => {
-    await delay(400);
-    let filtered = generalPrices.filter(p => 
-      p.serviceName.toLowerCase().includes(search.toLowerCase()) ||
-      p.currency.toLowerCase().includes(search.toLowerCase())
-    );
-    
-    const totalCount = filtered.length;
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
-    const totalPages = Math.ceil(totalCount / pageSize) || 1;
-
-    return { items, totalCount, page, pageSize, totalPages };
+  getGeneralPrices: async (page: number, pageSize: number, search: string = '') => {
+    const response = await apiClient.get<PagedResult<GeneralPrice>>('/Prices/general', {
+      params: { page, pageSize, search }
+    });
+    return response.data;
   },
 
-  createGeneralPrice: async (serviceId: number, serviceName: string, currency: string, price: number): Promise<GeneralPrice> => {
-    await delay(400);
-    const newPrice: GeneralPrice = {
-      id: generalPrices.length > 0 ? Math.max(...generalPrices.map(p => p.id)) + 1 : 1,
+  createGeneralPrice: async (serviceId: number, currency: string, price: number) => {
+    const response = await apiClient.post<GeneralPrice>('/Prices/general', {
       serviceId,
-      serviceName,
-      currency,
-      price,
-      createdAt: new Date().toISOString()
-    };
-    generalPrices.push(newPrice);
-    return newPrice;
-  },
-
-  updateGeneralPrice: async (id: number, serviceId: number, serviceName: string, currency: string, price: number): Promise<GeneralPrice> => {
-    await delay(400);
-    const index = generalPrices.findIndex(p => p.id === id);
-    if (index === -1) throw new Error('Price not found');
-    
-    generalPrices[index] = {
-      ...generalPrices[index],
-      serviceId,
-      serviceName,
       currency,
       price
-    };
-    return generalPrices[index];
+    });
+    return response.data;
+  },
+
+  updateGeneralPrice: async (id: number, serviceId: number, currency: string, price: number) => {
+    const response = await apiClient.put<GeneralPrice>(`/Prices/general/${id}`, {
+      serviceId,
+      currency,
+      price
+    });
+    return response.data;
   },
 
   // --- Userwise Prices ---
-  getUserwisePrices: async (page: number, pageSize: number, search: string = ''): Promise<PagedResult<UserwisePrice>> => {
-    await delay(400);
-    let filtered = userwisePrices.filter(p => 
-      p.serviceName.toLowerCase().includes(search.toLowerCase()) ||
-      p.username.toLowerCase().includes(search.toLowerCase()) ||
-      p.currency.toLowerCase().includes(search.toLowerCase())
-    );
-    
-    const totalCount = filtered.length;
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
-    const totalPages = Math.ceil(totalCount / pageSize) || 1;
-
-    return { items, totalCount, page, pageSize, totalPages };
+  getUserwisePrices: async (page: number, pageSize: number, search: string = '') => {
+    const response = await apiClient.get<PagedResult<UserwisePrice>>('/Prices/userwise', {
+      params: { page, pageSize, search }
+    });
+    return response.data;
   },
 
-  createUserwisePrice: async (username: string, serviceId: number, serviceName: string, currency: string, price: number): Promise<UserwisePrice> => {
-    await delay(400);
-    const newPrice: UserwisePrice = {
-      id: userwisePrices.length > 0 ? Math.max(...userwisePrices.map(p => p.id)) + 1 : 1,
-      username,
+  createUserwisePrice: async (userId: number, serviceId: number, currency: string, price: number) => {
+    const response = await apiClient.post<UserwisePrice>('/Prices/userwise', {
+      userId,
       serviceId,
-      serviceName,
-      currency,
-      price,
-      createdAt: new Date().toISOString()
-    };
-    userwisePrices.push(newPrice);
-    return newPrice;
-  },
-
-  updateUserwisePrice: async (id: number, username: string, serviceId: number, serviceName: string, currency: string, price: number): Promise<UserwisePrice> => {
-    await delay(400);
-    const index = userwisePrices.findIndex(p => p.id === id);
-    if (index === -1) throw new Error('Price not found');
-    
-    userwisePrices[index] = {
-      ...userwisePrices[index],
-      username,
-      serviceId,
-      serviceName,
       currency,
       price
-    };
-    return userwisePrices[index];
+    });
+    return response.data;
   },
+
+  updateUserwisePrice: async (id: number, userId: number, serviceId: number, currency: string, price: number) => {
+    const response = await apiClient.put<UserwisePrice>(`/Prices/userwise/${id}`, {
+      userId,
+      serviceId,
+      currency,
+      price
+    });
+    return response.data;
+  },
+
+  getCurrencies: async () => {
+    const response = await apiClient.get<CurrencyDto[]>('/Currencies');
+    return response.data;
+  },
+};
+
+export const usersApi = {
+  getUsers: async () => {
+    const response = await apiClient.get<UserDto[]>('/Users');
+    return response.data;
+  }
 };

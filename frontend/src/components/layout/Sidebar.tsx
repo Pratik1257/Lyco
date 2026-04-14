@@ -44,6 +44,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
       { to: '/promotions', icon: Megaphone, label: 'Manage Promotion' },
     ],
   },
+  {
+    label: 'ACCOUNT',
+    items: [
+      { to: '/change-password', icon: Lock, label: 'Change Password' },
+    ],
+  },
 ];
 
 function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void }) {
@@ -119,7 +125,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
       </div>
 
       {/* Navigation */}
-      <nav className="relative flex-1 overflow-y-auto py-4 px-3 space-y-1">
+      <nav className="relative flex-1 overflow-y-auto py-4 px-3 space-y-1 sidebar-scrollbar">
         {navSections.map((section) => (
           <div key={section.label} className="mb-3">
             <div className="flex items-center gap-2 px-3 mb-2">

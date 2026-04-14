@@ -1,0 +1,346 @@
+import { useState, useMemo, useRef, useEffect } from 'react';
+import Select, { components } from 'react-select';
+import type { MenuProps, StylesConfig, Props as SelectProps } from 'react-select';
+import { Search } from 'lucide-react';
+
+interface Option {
+  value: string | number;
+  label: string;
+}
+
+interface CustomProps {
+  searchText: string;
+  setSearchText: (val: string) => void;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+}
+
+// Extend react-select's props to include customProps
+interface ExtendedSelectProps extends SelectProps<Option, false> {
+  customProps: CustomProps;
+}
+
+interface CustomSelectProps {
+  label?: string;
+  options: Option[];
+  value: string | number | '';
+  onChange: (value: any) => void;
+  placeholder?: string;
+  required?: boolean;
+  maxMenuHeight?: number;
+}
+
+// Custom Selected Value rendering (collapsed state)
+const CustomSingleValue = (props: any) => {
+  const parts = props.data.label.split(', ');
+  if (parts.length >= 3) {
+    const [symbol, code, name] = parts;
+    return (
+      <components.SingleValue {...props}>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-cyan-50 text-cyan-600 text-xs font-bold border border-cyan-100/50">
+            {symbol}
+          </span>
+          <span className="font-bold text-gray-900 text-sm tracking-tight">{code}</span>
+          <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider hidden sm:inline">— {name}</span>
+        </div>
+      </components.SingleValue>
+    );
+  }
+  return <components.SingleValue {...props} />;
+};
+
+// Defined OUTSIDE the component so it never re-creates and loses focus
+const CustomOption = (props: any) => {
+  const parts = props.label.split(', ');
+  const isSelected = props.isSelected;
+  const isFocused = props.isFocused;
+  
+  // Logic for color contrast
+  const showWhiteText = isFocused; // When focused, we use a dark background, so text MUST be white
+  
+  // If we have a rich-text label (Symbol, Code, Name)
+  if (parts.length >= 3) {
+    const [symbol, code, name] = parts;
+    return (
+      <components.Option {...props}>
+        <div className="flex items-center gap-3 py-0.5">
+          {/* Visual Badge for Symbol */}
+          <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base font-bold transition-all duration-200 ${
+            isFocused 
+              ? 'bg-white/20 text-white scale-110 shadow-lg' 
+              : isSelected
+                ? 'bg-cyan-600 text-white shadow-sm'
+                : 'bg-cyan-50 text-cyan-600 shadow-sm border border-cyan-100/50'
+          }`}>
+            {symbol}
+          </div>
+          
+          {/* Multi-line Identifier */}
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-bold tracking-tight truncate ${
+                showWhiteText ? 'text-white' : 'text-gray-900'
+              }`}>
+                {code}
+              </span>
+              {isSelected && !isFocused && (
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+              )}
+            </div>
+            <span className={`text-[10px] font-bold uppercase tracking-widest truncate ${
+              showWhiteText ? 'text-cyan-50/80' : 'text-gray-400'
+            }`}>
+              {name}
+            </span>
+          </div>
+
+          {/* Selection Detail */}
+          {isSelected && (
+            <div className="ml-auto">
+               <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter ${
+                 isFocused ? 'bg-white/20 text-white' : 'bg-cyan-100 text-cyan-700'
+               }`}>
+                 Selected
+               </div>
+            </div>
+          )}
+        </div>
+      </components.Option>
+    );
+  }
+
+  // Fallback for standard items
+  return (
+    <components.Option {...props}>
+      <div className="flex items-center justify-between">
+        <span className={`font-medium ${isFocused ? 'text-white' : 'text-gray-900'}`}>{props.label}</span>
+        {isSelected && (
+          <div className={`w-2 h-2 rounded-full ${isFocused ? 'bg-white' : 'bg-cyan-500'}`} />
+        )}
+      </div>
+    </components.Option>
+  );
+};
+
+// Defined OUTSIDE the component so it never re-creates and loses focus
+const CustomMenu = (props: MenuProps<Option, false>) => {
+  const { searchText, setSearchText, searchInputRef } =
+    (props.selectProps as unknown as ExtendedSelectProps).customProps;
+
+  return (
+    <components.Menu {...props}>
+      <div className="p-2 border-b border-gray-100 bg-white">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all font-medium text-gray-800"
+          />
+        </div>
+      </div>
+      {props.children}
+    </components.Menu>
+  );
+};
+
+export default function CustomSelect({
+  label,
+  options,
+  value,
+  onChange,
+  placeholder = 'Select an option',
+  required = false,
+  maxMenuHeight = 450
+}: CustomSelectProps) {
+  const [searchText, setSearchText] = useState('');
+  const [menuIsOpen, setMenuIsOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus search when menu opens
+  useEffect(() => {
+    if (menuIsOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 10);
+    }
+  }, [menuIsOpen]);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || null,
+    [options, value]
+  );
+
+  const filteredOptions = useMemo(
+    () =>
+      options.filter((opt) =>
+        opt.label.toLowerCase().includes(searchText.toLowerCase())
+      ),
+    [options, searchText]
+  );
+
+  const customStyles: StylesConfig<Option, false> = {
+    control: (base, state) => ({
+      ...base,
+      backgroundColor: state.selectProps.menuIsOpen ? '#ffffff' : '#f9fafb',
+      borderColor: state.selectProps.menuIsOpen ? '#06b6d4' : '#e5e7eb',
+      boxShadow: state.selectProps.menuIsOpen
+        ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
+        : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      borderRadius: '0.85rem',
+      padding: '4px',
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      cursor: 'pointer',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      borderWidth: '1.5px',
+      '&:hover': {
+        borderColor: state.selectProps.menuIsOpen ? '#06b6d4' : '#d1d5db',
+        transform: state.selectProps.menuIsOpen ? 'none' : 'translateY(-1px)',
+        boxShadow: state.selectProps.menuIsOpen 
+          ? '0 0 0 4px rgba(6, 182, 212, 0.1)' 
+          : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+      }
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      padding: '4px 10px',
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: '#9ca3af',
+      fontWeight: 500,
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: '#111827',
+    }),
+    menu: (base) => ({
+      ...base,
+      borderRadius: '1.25rem',
+      backgroundColor: '#ffffff',
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+      border: 'none',
+      overflow: 'hidden',
+      zIndex: 9999,
+      marginTop: '8px',
+      animation: 'select-menu-in 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    }),
+    menuList: (base) => ({
+      ...base,
+      padding: '4px',
+      maxHeight: `${maxMenuHeight}px`,
+      '&::-webkit-scrollbar': {
+        width: '4px',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: 'transparent',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: '#e5e7eb',
+        borderRadius: '10px',
+      },
+      '&::-webkit-scrollbar-thumb:hover': {
+        background: '#d1d5db',
+      },
+    }),
+    menuPortal: (base) => ({
+      ...base,
+      zIndex: 9999,
+    }),
+    option: (base, state) => ({
+      ...base,
+      padding: '6px 10px',
+      margin: '1px 0',
+      borderRadius: '0.65rem',
+      fontSize: '0.875rem',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      backgroundColor: state.isFocused
+        ? '#0891b2'
+        : state.isSelected
+          ? '#ecfeff'
+          : 'transparent',
+      color: state.isFocused
+        ? '#ffffff'
+        : state.isSelected
+          ? '#0891b2'
+          : '#4b5563',
+      transform: state.isFocused ? 'scale(1.005)' : 'scale(1)',
+      '&:active': {
+        backgroundColor: state.isSelected ? '#ecfeff' : '#0e7490',
+        transform: 'scale(0.98)',
+      }
+    }),
+    indicatorSeparator: () => ({
+      display: 'none',
+    }),
+    dropdownIndicator: (base, state) => ({
+      ...base,
+      color: '#9ca3af',
+      transition: 'transform 0.3s ease',
+      transform: state.selectProps.menuIsOpen ? 'rotate(180deg)' : 'none',
+      padding: '8px',
+      '&:hover': {
+        color: '#6b7280',
+      }
+    }),
+  };
+
+  const ExtendedSelect = Select as unknown as React.ComponentType<ExtendedSelectProps>;
+
+  return (
+    <div className="space-y-1.5">
+      {label && (
+        <label className="block text-[13px] font-bold text-gray-700 ml-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <div>
+        <ExtendedSelect
+          options={filteredOptions}
+          value={selectedOption}
+          onChange={(option) => {
+            onChange(option ? option.value : '');
+            setMenuIsOpen(false);
+            setSearchText('');
+          }}
+          placeholder={placeholder}
+          styles={customStyles}
+          isSearchable={false}
+          menuIsOpen={menuIsOpen}
+          maxMenuHeight={maxMenuHeight}
+          onMenuOpen={() => {
+            setMenuIsOpen(true);
+            setSearchText('');
+          }}
+          onMenuClose={() => {
+            // When Menu attempts to close, verify if focus actually just moved to our search bar.
+            // If the search bar now has focus, we block the close command!
+            setTimeout(() => {
+              if (document.activeElement !== searchInputRef.current) {
+                setMenuIsOpen(false);
+              }
+            }, 0);
+          }}
+          customProps={{ searchText, setSearchText, searchInputRef }}
+          components={{ Menu: CustomMenu, Option: CustomOption, SingleValue: CustomSingleValue }}
+          menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+          menuPosition="fixed"
+          menuPlacement="auto"
+          noOptionsMessage={() => (
+            <div className="p-8 text-center bg-gray-50 rounded-xl m-2">
+              <Search className="mx-auto text-gray-300 mb-2" size={24} />
+              <div className="text-sm font-bold text-gray-500">No results found</div>
+              <div className="text-[11px] text-gray-400">Try searching for something else</div>
+            </div>
+          )}
+        />
+      </div>
+    </div>
+  );
+}

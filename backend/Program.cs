@@ -23,6 +23,8 @@ builder.Services.AddDbContext<LycoDbContext>(options =>
 // ── Dependency Injection ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
 builder.Services.AddScoped<IServiceService, ServiceService>();
+builder.Services.AddScoped<IPriceRepository, PriceRepository>();
+builder.Services.AddScoped<IPriceService, PriceService>();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>

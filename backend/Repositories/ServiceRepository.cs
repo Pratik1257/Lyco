@@ -13,10 +13,12 @@ public class ServiceRepository : IServiceRepository
     public async Task<(IEnumerable<ServiceMst> Items, int Total)> GetPagedAsync(
         string? search, int page, int pageSize)
     {
-        var query = _db.ServiceMsts.AsQueryable();
+        var query = _db.ServiceMsts
+            .Where(s => s.ServiceName != null && s.ServiceName != "")
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(s => s.ServiceName != null && s.ServiceName.Contains(search));
+            query = query.Where(s => s.ServiceName!.Contains(search));
 
         var total = await query.CountAsync();
         var items = await query
