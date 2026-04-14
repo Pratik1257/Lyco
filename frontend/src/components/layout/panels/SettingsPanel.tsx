@@ -54,9 +54,10 @@ const Toggle = ({ isChecked, onChange, label, subtext }: ToggleProps) => (
 
 interface SettingsPanelProps {
   isOpen: boolean;
+  onClose: () => void;
 }
 
-export default function SettingsPanel({ isOpen }: SettingsPanelProps) {
+export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [emailNotif, setEmailNotif] = useState(true);
   const [quoteAlert, setQuoteAlert] = useState(true);
   const [paymentRemind, setPaymentRemind] = useState(false);
@@ -90,7 +91,10 @@ export default function SettingsPanel({ isOpen }: SettingsPanelProps) {
         <SettingsRow 
           label="Change password"
           subtext="Last changed 30 days ago"
-          onClick={() => navigate('/change-password')}
+          onClick={() => {
+            navigate('/change-password');
+            onClose();
+          }}
         />
 
         {/* NOTIFICATIONS Section */}

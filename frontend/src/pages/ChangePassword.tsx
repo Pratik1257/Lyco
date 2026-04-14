@@ -15,24 +15,16 @@ export default function ChangePassword() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Strength Meter Logic
-  const strength = useMemo(() => {
-    if (!newPassword) return { score: 0, label: '', color: 'bg-gray-200', width: '0%' };
-    let score = 0;
-    if (newPassword.length >= 8) score++;
-    if (/[A-Z]/.test(newPassword)) score++;
-    if (/[0-9]/.test(newPassword)) score++;
-    if (/[^A-Za-z0-9]/.test(newPassword)) score++;
+  // Validation Rules
+  const validations = useMemo(() => [
+    { id: 'length', text: 'Minimum 8 characters', isValid: newPassword.length >= 8 },
+    { id: 'uppercase', text: 'One uppercase character', isValid: /[A-Z]/.test(newPassword) },
+    { id: 'lowercase', text: 'One lowercase character', isValid: /[a-z]/.test(newPassword) },
+    { id: 'special', text: 'One special character', isValid: /[^A-Za-z0-9]/.test(newPassword) },
+    { id: 'number', text: 'One number', isValid: /[0-9]/.test(newPassword) }
+  ], [newPassword]);
 
-    const levels = [
-      { label: 'Too Short', color: 'bg-rose-400', width: '25%' },
-      { label: 'Weak',      color: 'bg-orange-400', width: '50%' },
-      { label: 'Medium',    color: 'bg-amber-400', width: '75%' },
-      { label: 'Strong',    color: 'bg-emerald-500', width: '100%' }
-    ];
-    
-    return { ...levels[Math.max(0, score - 1)], score };
-  }, [newPassword]);
+  const isPasswordValid = useMemo(() => validations.every(v => v.isValid), [validations]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -45,8 +37,8 @@ export default function ChangePassword() {
       return;
     }
 
-    if (strength.score < 2) {
-      setError('Please choose a stronger password');
+    if (!isPasswordValid) {
+      setError('Please meet all password requirements');
       return;
     }
 
@@ -106,8 +98,15 @@ export default function ChangePassword() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full pl-14 pr-4 py-4 bg-gray-50/30 border border-gray-200 rounded-[1.25rem] text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500/50 focus:bg-white transition-all font-medium text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-14 pr-12 py-4 bg-gray-50/30 border border-gray-200 rounded-[1.25rem] text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500/50 focus:bg-white transition-all font-medium text-gray-800 placeholder:text-gray-300"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-600 transition-colors p-1"
+                    >
+                      {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
 
@@ -117,13 +116,6 @@ export default function ChangePassword() {
                 <div className="space-y-2 text-left">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[13px] font-bold text-gray-700 tracking-tight">New Password</label>
-                    <button 
-                      type="button"
-                      onClick={() => setShowPasswords(!showPasswords)}
-                      className="text-gray-400 hover:text-cyan-600 transition-colors"
-                    >
-                      {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
                   </div>
                   <div className="relative group/field transition-all">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-focus-within/field:bg-cyan-50 group-focus-within/field:text-cyan-600 transition-all duration-300">
@@ -138,7 +130,14 @@ export default function ChangePassword() {
                       className="w-full pl-14 pr-12 py-4 bg-gray-50/30 border border-gray-200 rounded-[1.25rem] text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500/50 focus:bg-white transition-all font-medium text-gray-800 placeholder:text-gray-300"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                       {strength.score >= 4 && <CheckCircle2 size={16} className="text-emerald-500" />}
+                       {isPasswordValid && <CheckCircle2 size={16} className="text-emerald-500" />}
+                       <button 
+                         type="button"
+                         onClick={() => setShowPasswords(!showPasswords)}
+                         className="text-gray-400 hover:text-cyan-600 transition-colors p-1"
+                       >
+                         {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+                       </button>
                     </div>
                   </div>
                 </div>
@@ -180,7 +179,7 @@ export default function ChangePassword() {
 
               <button
                 type="submit"
-                disabled={isPending || !currentPassword || !newPassword}
+                disabled={isPending || !currentPassword || !newPassword || !isPasswordValid}
                 className="w-full relative py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 rounded-[1.25rem] transition-all duration-300 active:scale-[0.98] shadow-2xl shadow-cyan-200 disabled:opacity-50 group"
               >
                 <div className="relative flex items-center justify-center gap-3">
@@ -197,7 +196,28 @@ export default function ChangePassword() {
         </div>
 
         {/* Right: Security Dashboard Context */}
-       
+        <div className="lg:col-span-5 space-y-6 animate-in slide-in-from-right-8 duration-700">
+          <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 p-8 space-y-6">
+             <div className="flex items-center gap-2 text-gray-900 font-black text-lg tracking-tight">
+               <Shield className="text-cyan-600" size={20} />
+               Password Requirements
+             </div>
+             <ul className="space-y-4">
+               {validations.map(rule => (
+                 <li key={rule.id} className="flex items-center gap-3 transition-opacity">
+                   {rule.isValid ? (
+                     <CheckCircle2 className="text-emerald-500 shrink-0" size={20} />
+                   ) : (
+                     <div className="w-5 h-5 rounded-full border-2 border-gray-100 shrink-0" />
+                   )}
+                   <span className={`text-[13px] font-bold tracking-tight transition-colors ${rule.isValid ? 'text-gray-900' : 'text-gray-400'}`}>
+                     {rule.text}
+                   </span>
+                 </li>
+               ))}
+             </ul>
+          </div>
+        </div>
 
       </div>
     </div>

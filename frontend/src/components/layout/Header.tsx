@@ -94,7 +94,10 @@ export default function Header({ title, subtitle, onMenuToggle }: HeaderProps) {
             <Settings size={18} className={activePanel === 'settings' ? 'text-[#1D9E75]' : 'text-gray-500'} />
           </button>
 
-          <SettingsPanel isOpen={activePanel === 'settings'} />
+          <SettingsPanel 
+            isOpen={activePanel === 'settings'} 
+            onClose={() => setActivePanel(null)}
+          />
         </div>
       </div>
     </header>
