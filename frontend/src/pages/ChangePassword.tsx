@@ -114,32 +114,29 @@ export default function ChangePassword() {
                 <div className="h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent" />
 
                 {/* Field Group: New Password */}
-                <div className="space-y-2 text-left">
-                  <div className="flex justify-between items-center px-1">
+               <div className="space-y-2">
+                   <div className="flex justify-between items-center px-1">
                     <label className="text-[13px] font-bold text-gray-700 tracking-tight">New Password</label>
-                    <button 
-                      type="button"
-                      onClick={() => setShowPasswords(!showPasswords)}
-                      className="text-gray-400 hover:text-cyan-600 transition-colors"
-                    >
-                      {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
                   </div>
                   <div className="relative group/field transition-all">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-focus-within/field:bg-cyan-50 group-focus-within/field:text-cyan-600 transition-all duration-300">
-                      <Key size={14} />
+                      <Lock size={14} />
                     </div>
                     <input
                       type={showPasswords ? 'text' : 'password'}
                       required
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••••••"
                       className="w-full pl-14 pr-12 py-4 bg-gray-50/30 border border-gray-200 rounded-[1.25rem] text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500/50 focus:bg-white transition-all font-medium text-gray-800 placeholder:text-gray-300"
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                       {strength.score >= 4 && <CheckCircle2 size={16} className="text-emerald-500" />}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-600 transition-colors p-1"
+                    >
+                      {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
 
