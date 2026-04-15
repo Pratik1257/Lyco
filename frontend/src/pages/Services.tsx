@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Plus, Edit2, X, ChevronDown, ChevronLeft, ChevronRight, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit2, X, ChevronDown, ChevronLeft, ChevronRight, Check, AlertCircle, Loader2, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { servicesApi, type Service } from '../api/servicesApi';
 
 export default function Services() {
@@ -13,6 +14,8 @@ export default function Services() {
   
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [newServiceName, setNewServiceName] = useState('');
   const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -30,9 +33,11 @@ export default function Services() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       closeModal();
+      toast.success('Service created successfully.');
     },
-    onError: (err: Error) => {
-      setNameError(err.message);
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || err.message;
+      toast.error(`Failed to create service: ${msg}`);
     }
   });
 
@@ -41,11 +46,45 @@ export default function Services() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       closeModal();
+      toast.success('Service updated successfully.');
     },
-    onError: (err: Error) => {
-      setNameError(err.message);
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || err.message;
+      toast.error(`Failed to update service: ${msg}`);
     }
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => servicesApi.deleteService(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      setIsDeleteModalOpen(false);
+      setServiceToDelete(null);
+      toast.success('Service deleted successfully.');
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || err.message;
+      setIsDeleteModalOpen(false);
+      setServiceToDelete(null);
+      toast.error(`Failed to delete service: ${msg}`);
+    }
+  });
+
+  const handleDeleteService = (service: Service) => {
+    setServiceToDelete(service);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (serviceToDelete) {
+      deleteMutation.mutate(serviceToDelete.id);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setServiceToDelete(null);
+  };
 
   // Derived Values
   const services = data?.items ?? [];
@@ -94,10 +133,10 @@ export default function Services() {
     <>
       {[...Array(5)].map((_, i) => (
         <tr key={i} className="animate-pulse">
-          <td className="py-4 px-6">
+          <td className="py-1.5 px-6">
             <div className="h-5 bg-gray-200 rounded-lg w-1/3 shadow-sm"></div>
           </td>
-          <td className="py-4 px-6 text-right">
+          <td className="py-1.5 px-6 text-right">
             <div className="flex justify-end">
               <div className="h-8 w-8 bg-gray-200 rounded-lg shadow-sm"></div>
             </div>
@@ -108,7 +147,7 @@ export default function Services() {
   );
 
   return (
-    <div className="relative max-w-6xl mx-auto space-y-6">
+    <div className="relative max-w-6xl mx-auto space-y-3">
         {isError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
             <AlertCircle size={20} className="shrink-0" />
@@ -118,7 +157,7 @@ export default function Services() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Toolbar */}
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-4">
+          <div className="py-2.5 px-6 border-b border-gray-100 flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
@@ -146,10 +185,10 @@ export default function Services() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="py-3.5 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  <th className="py-2 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">
                     Service Name
                   </th>
-                  <th className="py-3.5 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">
+                  <th className="py-2 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">
                     Actions
                   </th>
                 </tr>
@@ -160,18 +199,31 @@ export default function Services() {
                 ) : services.length > 0 ? (
                   services.map((service) => (
                     <tr key={service.id} className="group hover:bg-gray-50/50 transition-all">
-                      <td className="py-4 px-6">
+                      <td className="py-1.5 px-6">
                         <span className="text-sm font-semibold text-gray-700 group-hover:text-cyan-700 transition-colors">
                           {service.name}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-1.5 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
                             onClick={() => openEditModal(service)}
                             className="p-1.5 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-all cursor-pointer"
+                            title="Edit Service"
                           >
                             <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteService(service)}
+                            disabled={service.canDelete === false || deleteMutation.isPending}
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                              service.canDelete !== false
+                                ? 'text-red-500 bg-red-50 hover:bg-red-100'
+                                : 'text-gray-300 bg-gray-50 cursor-not-allowed opacity-50'
+                            }`}
+                            title={service.canDelete !== false ? "Delete Service" : "Service is associated with orders"}
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -189,7 +241,7 @@ export default function Services() {
           </div>
 
           {/* Footer info / Box */}
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-4">
+          <div className="py-2.5 px-6 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="text-xs text-gray-500">
                 Showing <span className="font-semibold text-gray-700">{totalCount === 0 ? 0 : indexOfFirstItem + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(indexOfLastItem, totalCount)}</span> of <span className="font-semibold text-gray-700">{totalCount}</span> results
@@ -342,6 +394,49 @@ export default function Services() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+              onClick={closeDeleteModal}
+            />
+
+            <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-100">
+              <div className="p-8 text-center">
+                <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-red-500">
+                  <Trash2 size={32} />
+                </div>
+                
+                <h3 className="text-xl font-black text-gray-900 mb-3">Delete Service</h3>
+                <p className="text-sm text-gray-500 leading-relaxed px-2 font-medium">
+                  Are you sure you want to delete <span className="font-bold text-gray-900">"{serviceToDelete?.name}"</span>? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3 p-6 pt-0">
+                <button
+                  onClick={closeDeleteModal}
+                  className="flex-1 px-4 py-3 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all active:scale-95 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-2xl transition-all shadow-lg shadow-red-200 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    "Delete"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

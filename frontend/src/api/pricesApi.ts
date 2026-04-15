@@ -6,6 +6,7 @@ export interface GeneralPrice {
   serviceName: string;
   currency: string;
   price: number;
+  canDelete: boolean;
 }
 
 export interface UserwisePrice {
@@ -16,6 +17,7 @@ export interface UserwisePrice {
   serviceName: string;
   currency: string;
   price: number;
+  canDelete: boolean;
 }
 
 export interface PagedResult<T> {
@@ -96,6 +98,23 @@ export const pricesApi = {
   getCurrencies: async () => {
     const response = await apiClient.get<CurrencyDto[]>('/Currencies');
     return response.data;
+  },
+  
+  // --- Group Deletion ---
+  deleteGeneralGroup: async (serviceId: number) => {
+    await apiClient.delete(`/Prices/general/group/${serviceId}`);
+  },
+
+  deleteUserwiseGroup: async (userId: number, serviceId: number) => {
+    await apiClient.delete(`/Prices/userwise/group/${userId}/${serviceId}`);
+  },
+
+  deleteGeneralPrice: async (id: number) => {
+    await apiClient.delete(`/Prices/general/${id}`);
+  },
+
+  deleteUserwisePrice: async (id: number) => {
+    await apiClient.delete(`/Prices/userwise/${id}`);
   },
 };
 

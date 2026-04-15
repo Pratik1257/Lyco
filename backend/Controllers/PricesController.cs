@@ -38,10 +38,15 @@ public class PricesController : ControllerBase
         var (dto, error) = await _service.UpdateGeneralAsync(id, req);
         return error switch
         {
-            "not_found" => NotFound(new { error = "Price not found." }),
-            not null => BadRequest(new { error }),
             _ => Ok(dto)
         };
+    }
+
+    [HttpDelete("general/{id:long}")]
+    public async Task<IActionResult> DeleteGeneral(long id)
+    {
+        await _service.DeleteGeneralPriceAsync(id);
+        return NoContent();
     }
 
     // ── Userwise Prices ───────────────────────────────────────────────────────
@@ -74,5 +79,26 @@ public class PricesController : ControllerBase
             not null => BadRequest(new { error }),
             _ => Ok(dto)
         };
+    }
+
+    [HttpDelete("userwise/{id:long}")]
+    public async Task<IActionResult> DeleteUserwise(long id)
+    {
+        await _service.DeleteUserwisePriceAsync(id);
+        return NoContent();
+    }
+
+    [HttpDelete("general/group/{serviceId:long}")]
+    public async Task<IActionResult> DeleteGeneralGroup(long serviceId)
+    {
+        await _service.DeleteGeneralGroupAsync(serviceId);
+        return NoContent();
+    }
+
+    [HttpDelete("userwise/group/{userId:long}/{serviceId:long}")]
+    public async Task<IActionResult> DeleteUserwiseGroup(long userId, long serviceId)
+    {
+        await _service.DeleteUserwiseGroupAsync(userId, serviceId);
+        return NoContent();
     }
 }

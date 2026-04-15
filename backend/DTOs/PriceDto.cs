@@ -9,30 +9,37 @@ public record GeneralPriceDto(
     long ServiceId,
     string ServiceName,
     string Currency,
-    decimal Price
+    decimal Price,
+    bool CanDelete = true
 );
 
 public record CreateGeneralPriceRequest
 {
     [Required]
+    [Range(1, long.MaxValue, ErrorMessage = "A valid service is required.")]
     public long ServiceId { get; init; }
 
-    [Required, MaxLength(50)]
+    [Required]
+    [StringLength(3, MinimumLength = 3, ErrorMessage = "Currency must be exactly 3 characters.")]
     public string Currency { get; init; } = string.Empty;
 
-    [Required, Range(0, double.MaxValue)]
+    [Required]
+    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 
 public record UpdateGeneralPriceRequest
 {
     [Required]
+    [Range(1, long.MaxValue, ErrorMessage = "A valid service is required.")]
     public long ServiceId { get; init; }
 
-    [Required, MaxLength(50)]
+    [Required]
+    [StringLength(3, MinimumLength = 3, ErrorMessage = "Currency must be exactly 3 characters.")]
     public string Currency { get; init; } = string.Empty;
 
-    [Required, Range(0, double.MaxValue)]
+    [Required]
+    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 
@@ -45,36 +52,45 @@ public record UserwisePriceDto(
     long ServiceId,
     string ServiceName,
     string Currency,
-    decimal Price
+    decimal Price,
+    bool CanDelete = true
 );
 
 public record CreateUserwisePriceRequest
 {
     [Required]
+    [Range(1, long.MaxValue, ErrorMessage = "A valid user is required.")]
     public long UserId { get; init; }
 
     [Required]
+    [Range(1, long.MaxValue, ErrorMessage = "A valid service is required.")]
     public long ServiceId { get; init; }
 
-    [Required, MaxLength(50)]
+    [Required]
+    [StringLength(3, MinimumLength = 3, ErrorMessage = "Currency must be exactly 3 characters.")]
     public string Currency { get; init; } = string.Empty;
 
-    [Required, Range(0, double.MaxValue)]
+    [Required]
+    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 
 public record UpdateUserwisePriceRequest
 {
     [Required]
+    [Range(1, long.MaxValue, ErrorMessage = "A valid user is required.")]
     public long UserId { get; init; }
 
     [Required]
+    [Range(1, long.MaxValue, ErrorMessage = "A valid service is required.")]
     public long ServiceId { get; init; }
 
-    [Required, MaxLength(50)]
+    [Required]
+    [StringLength(3, MinimumLength = 3, ErrorMessage = "Currency must be exactly 3 characters.")]
     public string Currency { get; init; } = string.Empty;
 
-    [Required, Range(0, double.MaxValue)]
+    [Required]
+    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 

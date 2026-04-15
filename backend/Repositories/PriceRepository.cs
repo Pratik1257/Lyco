@@ -49,8 +49,18 @@ public class PriceRepository : IPriceRepository
         return (items, total);
     }
 
-    public Task<PriceMst?> GetGeneralByIdAsync(long id) =>
-        _db.PriceMsts.Include(p => p.Service).FirstOrDefaultAsync(p => p.PriceId == id);
+    public async Task<PriceMst?> GetGeneralByIdAsync(long id) =>
+        await _db.PriceMsts.Include(p => p.Service).FirstOrDefaultAsync(p => p.PriceId == id);
+
+    public async Task<bool> GeneralPriceExistsAsync(long serviceId, string currency, long? excludeId = null)
+    {
+        var query = _db.PriceMsts.Where(p => p.ServiceId == serviceId && p.Currency == currency);
+        if (excludeId.HasValue)
+        {
+            query = query.Where(p => p.PriceId != excludeId.Value);
+        }
+        return await query.AnyAsync();
+    }
 
     public async Task<PriceMst> CreateGeneralAsync(long serviceId, string currency, decimal price)
     {
@@ -120,11 +130,21 @@ public class PriceRepository : IPriceRepository
         return (items, total);
     }
 
-    public Task<UserPriceMst?> GetUserwiseByIdAsync(long id) =>
-        _db.UserPriceMsts
-            .Include(p => p.Service)
+    public async Task<UserPriceMst?> GetUserwiseByIdAsync(long id) =>
+        await _db.UserPriceMsts
             .Include(p => p.User)
+            .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.UserPriceId == id);
+
+    public async Task<bool> UserwisePriceExistsAsync(long userId, long serviceId, string currency, long? excludeId = null)
+    {
+        var query = _db.UserPriceMsts.Where(p => p.UserId == userId && p.ServiceId == serviceId && p.Currency == currency);
+        if (excludeId.HasValue)
+        {
+            query = query.Where(p => p.UserPriceId != excludeId.Value);
+        }
+        return await query.AnyAsync();
+    }
 
     public async Task<UserPriceMst> CreateUserwiseAsync(long userId, long serviceId, string currency, decimal price)
     {
@@ -156,4 +176,45 @@ public class PriceRepository : IPriceRepository
             .Where(u => u.Username != null && u.Username != "")
             .OrderBy(u => u.Username)
             .ToListAsync();
+
+    // ── Group Management ──────────────────────────────────────────────────────
+
+    // ── Deletion ─────────────────────────────────────────────────────────────
+
+    public async Task DeleteGeneralPriceAsync(long id)
+    {
+        var entity = await _db.PriceMsts.FindAsync(id);
+        if (entity != null)
+        {
+            _db.PriceMsts.Remove(entity);
+            await _db.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteUserwisePriceAsync(long id)
+    {
+        var entity = await _db.UserPriceMsts.FindAsync(id);
+        if (entity != null)
+        {
+            _db.UserPriceMsts.Remove(entity);
+            await _db.SaveChangesAsync();
+        }
+    }
+
+    public async Task<bool> AnyServiceOrdersAsync(long serviceId) =>
+        await _db.OrderDetails.AnyAsync(od => od.ServiceId == serviceId && od.OrderNo != null && od.OrderNo != "");
+
+    public async Task DeleteGeneralGroupAsync(long serviceId)
+    {
+        var prices = await _db.PriceMsts.Where(p => p.ServiceId == serviceId).ToListAsync();
+        _db.PriceMsts.RemoveRange(prices);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteUserwiseGroupAsync(long userId, long serviceId)
+    {
+        var prices = await _db.UserPriceMsts.Where(p => p.UserId == userId && p.ServiceId == serviceId).ToListAsync();
+        _db.UserPriceMsts.RemoveRange(prices);
+        await _db.SaveChangesAsync();
+    }
 }

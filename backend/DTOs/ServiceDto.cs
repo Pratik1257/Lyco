@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Lyco.Api.DTOs;
 
-public record ServiceDto(long Id, string Name, DateTime CreatedAt);
+public record ServiceDto(long Id, string Name, DateTime CreatedAt, bool CanDelete = false);
 
 public record CreateServiceRequest
 {

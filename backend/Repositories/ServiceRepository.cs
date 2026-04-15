@@ -51,4 +51,27 @@ public class ServiceRepository : IServiceRepository
         _db.ServiceMsts.Update(service);
         await _db.SaveChangesAsync();
     }
+
+    public async Task<bool> HasOrdersAsync(long serviceId) =>
+        await _db.OrderDetails.AnyAsync(od => od.ServiceId == serviceId && od.OrderNo != null && od.OrderNo != "");
+
+    public async Task DeleteAsync(long id)
+    {
+        var entity = await _db.ServiceMsts
+            .Include(s => s.PriceMsts)
+            .Include(s => s.UserPriceMsts)
+            .Include(s => s.PromotionMsts)
+            .Include(s => s.Quotes)
+            .FirstOrDefaultAsync(s => s.ServiceId == id);
+
+        if (entity != null)
+        {
+            _db.PriceMsts.RemoveRange(entity.PriceMsts);
+            _db.UserPriceMsts.RemoveRange(entity.UserPriceMsts);
+            _db.PromotionMsts.RemoveRange(entity.PromotionMsts);
+            _db.Quotes.RemoveRange(entity.Quotes);
+            _db.ServiceMsts.Remove(entity);
+            await _db.SaveChangesAsync();
+        }
+    }
 }

@@ -57,4 +57,18 @@ public class ServicesController : ControllerBase
             _            => Ok(service)
         };
     }
+
+    /// <summary>
+    /// Delete a service.
+    /// Returns 409 Conflict if the service has associated orders.
+    /// </summary>
+    [HttpDelete("{id:long}")]
+    public async Task<IActionResult> Delete(long id)
+    {
+        var error = await _service.DeleteAsync(id);
+        if (error != null)
+            return Conflict(new { error });
+
+        return NoContent();
+    }
 }

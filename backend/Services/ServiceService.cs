@@ -19,8 +19,13 @@ public class ServiceService : IServiceService
 
         var (items, total) = await _repo.GetPagedAsync(search, page, pageSize);
         var totalPages = (int)Math.Ceiling((double)total / pageSize);
-        // Note: Assumed DateTime.UtcNow for DTO as ServiceMst doesn't have CreatedAt in schema
-        var dtos = items.Select(s => new ServiceDto(s.ServiceId, s.ServiceName ?? string.Empty, DateTime.UtcNow));
+        
+        var dtos = new List<ServiceDto>();
+        foreach (var s in items)
+        {
+            var hasOrders = await _repo.HasOrdersAsync(s.ServiceId);
+            dtos.Add(new ServiceDto(s.ServiceId, s.ServiceName ?? string.Empty, DateTime.UtcNow, !hasOrders));
+        }
 
         return new PagedResult<ServiceDto>(dtos, total, page, pageSize, Math.Max(1, totalPages));
     }
@@ -50,6 +55,15 @@ public class ServiceService : IServiceService
         existing.ServiceName = cleanName;
         await _repo.UpdateAsync(existing);
 
-        return (new ServiceDto(existing.ServiceId, existing.ServiceName ?? string.Empty, DateTime.UtcNow), null);
+        return (new ServiceDto(existing.ServiceId, existing.ServiceName ?? string.Empty, DateTime.UtcNow, false), null);
+    }
+
+    public async Task<string?> DeleteAsync(long id)
+    {
+        if (await _repo.HasOrdersAsync(id))
+            return "Cannot delete service because it has associated orders.";
+
+        await _repo.DeleteAsync(id);
+        return null;
     }
 }

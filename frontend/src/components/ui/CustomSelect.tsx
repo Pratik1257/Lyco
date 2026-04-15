@@ -157,7 +157,7 @@ export default function CustomSelect({
   onChange,
   placeholder = 'Select an option',
   required = false,
-  maxMenuHeight = 450
+  maxMenuHeight = 230
 }: CustomSelectProps) {
   const [searchText, setSearchText] = useState('');
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -191,7 +191,7 @@ export default function CustomSelect({
       boxShadow: state.selectProps.menuIsOpen
         ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
         : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-      borderRadius: '0.85rem',
+      borderRadius: '20px',
       padding: '4px',
       fontSize: '0.875rem',
       fontWeight: 600,

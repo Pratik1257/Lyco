@@ -16,4 +16,10 @@ public interface IPriceService
 
     // Users for dropdown
     Task<IEnumerable<UserDto>> GetUsersAsync();
+
+    // Deletion
+    Task DeleteGeneralPriceAsync(long id);
+    Task DeleteUserwisePriceAsync(long id);
+    Task DeleteGeneralGroupAsync(long serviceId);
+    Task DeleteUserwiseGroupAsync(long userId, long serviceId);
 }

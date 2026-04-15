@@ -9,4 +9,6 @@ public interface IServiceRepository
     Task<bool> ExistsByNameAsync(string name, long? excludeId);
     Task<ServiceMst> CreateAsync(string name);
     Task UpdateAsync(ServiceMst service);
+    Task<bool> HasOrdersAsync(long serviceId);
+    Task DeleteAsync(long id);
 }

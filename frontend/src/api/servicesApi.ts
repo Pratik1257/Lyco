@@ -4,6 +4,7 @@ export interface Service {
   id: number; // long from backend
   name: string;
   createdAt: string;
+  canDelete?: boolean;
 }
 
 export interface PagedResult<T> {
@@ -43,5 +44,12 @@ export const servicesApi = {
   updateService: async (id: number, name: string) => {
     const response = await apiClient.put<Service>(`/Services/${id}`, { name });
     return response.data;
+  },
+
+  /**
+   * Delete a service.
+   */
+  deleteService: async (id: number) => {
+    await apiClient.delete(`/Services/${id}`);
   },
 };
