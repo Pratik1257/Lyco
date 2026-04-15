@@ -1,10 +1,14 @@
 import { useState, useMemo, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Plus, Edit2, X, ChevronDown, ChevronLeft, ChevronRight, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Edit2, X, ChevronDown, AlertCircle, Loader2 } from 'lucide-react';
 import { pricesApi, usersApi } from '../api/pricesApi';
 import { servicesApi } from '../api/servicesApi';
 import CustomSelect from '../components/ui/CustomSelect';
 import CurrencySelect from '../components/ui/CurrencySelect';
+import { Button } from '../components/ui/Button';
+import { SearchBar } from '../components/ui/SearchBar';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import { Pagination } from '../components/ui/Pagination';
 
 type TabType = 'general' | 'userwise';
 
@@ -20,7 +24,6 @@ export default function Prices() {
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -120,7 +123,6 @@ export default function Prices() {
     onError: (err: any) => setFormError(err.response?.data?.error || err.message)
   });
 
-
   // Expansion State
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -191,9 +193,8 @@ export default function Prices() {
     setIsModalOpen(true);
   };
 
-
   const openEditGeneralGroupModal = (group: any) => {
-    setEditingId(null); // We are in group edit mode
+    setEditingId(null);
     setFormServiceId(group.serviceId);
     
     const pricesMap: Record<string, number | ''> = {};
@@ -211,7 +212,7 @@ export default function Prices() {
   };
 
   const openEditUserwiseGroupModal = (group: any) => {
-    setEditingId(null); // We are in group edit mode
+    setEditingId(null);
     setFormUserId(group.userId);
     setFormServiceId(group.serviceId);
     
@@ -271,7 +272,6 @@ export default function Prices() {
   const handleSavePrice = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Explicit Validation before proceeding
     const errors: Record<string, string> = {};
     if (formServiceId === '') errors.service = "A valid service is required.";
     if (activeTab === 'userwise' && formUserId === '') errors.user = "A valid user is required.";
@@ -300,11 +300,9 @@ export default function Prices() {
         const isGroupEdit = Object.keys(formCurrencyIds).length > 0;
         
         if (isGroupEdit) {
-          // Sync Group: Update existing, Create new, Delete removed
           const selectedSet = new Set(selectedCurrencies);
           const existingCurrencies = Object.keys(formCurrencyIds);
           
-          // 1. Update/Create
           for (const currency of selectedCurrencies) {
             const price = Number(formCurrencyPrices[currency]);
             if (formCurrencyIds[currency]) {
@@ -323,14 +321,12 @@ export default function Prices() {
             }
           }
 
-          // 2. Delete removed
           for (const currency of existingCurrencies) {
             if (!selectedSet.has(currency)) {
               await pricesApi.deleteGeneralPrice(formCurrencyIds[currency]);
             }
           }
         } else if (editingId) {
-          // Single Edit
           const currency = selectedCurrencies[0];
           await updateGeneralMutation.mutateAsync({ 
             id: editingId, 
@@ -339,7 +335,6 @@ export default function Prices() {
             price: Number(formCurrencyPrices[currency]) 
           });
         } else {
-          // New Create
           const payload = selectedCurrencies.map(currency => ({
             serviceId: Number(formServiceId),
             currency,
@@ -351,7 +346,6 @@ export default function Prices() {
         queryClient.invalidateQueries({ queryKey: ['generalPrices'] });
         closeModal();
       } else {
-        // Userwise logic
         const isGroupEdit = Object.keys(formCurrencyIds).length > 0;
         
         if (isGroupEdit) {
@@ -378,7 +372,6 @@ export default function Prices() {
             }
           }
 
-          // Delete removed
           for (const currency of existingCurrencies) {
             if (!selectedSet.has(currency)) {
               await pricesApi.deleteUserwisePrice(formCurrencyIds[currency]);
@@ -407,7 +400,6 @@ export default function Prices() {
         closeModal();
       }
     } catch (err) {
-      // Mutations handle their own error states, but we catch to stop execution
     }
   };
 
@@ -450,29 +442,24 @@ export default function Prices() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Toolbar */}
           <div className="py-2.5 px-6 border-b border-gray-100 flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder={`Search ${activeTab === 'general' ? 'general prices' : 'userwise prices'}...`}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all font-medium"
-              />
-            </div>
-            <button
+            <SearchBar
+              containerClassName="flex-1 max-w-md"
+              placeholder={`Search ${activeTab === 'general' ? 'general prices' : 'userwise prices'}...`}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <Button
+              variant="primary"
               onClick={openAddModal}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-cyan-200 transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={18} />
               Add {activeTab === 'general' ? 'General Price' : 'Userwise Price'}
-            </button>
+            </Button>
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto relative">
             {isLoading && (
               <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
@@ -480,19 +467,19 @@ export default function Prices() {
               </div>
             )}
             
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="w-10 py-2 pl-6"></th>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10 pl-6"></TableHead>
                   {activeTab === 'userwise' && (
-                    <th className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Username</th>
+                    <TableHead>Username</TableHead>
                   )}
-                  <th className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Service</th>
-                  <th className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Currencies</th>
-                  <th className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
+                  <TableHead>Service</TableHead>
+                  <TableHead>Currencies</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {groupedItems.length > 0 ? (
                   groupedItems.map((group: any) => {
                     const isExpanded = expandedRows.has(group.key);
@@ -501,48 +488,49 @@ export default function Prices() {
                     return (
                       <Fragment key={group.key}>
                         {/* Parent Row */}
-                        <tr 
+                        <TableRow 
                           onClick={() => toggleRow(group.key)}
-                          className={`group cursor-pointer transition-all ${isExpanded ? 'bg-cyan-50/30' : 'hover:bg-gray-50/50'}`}
+                          className={`group cursor-pointer ${isExpanded ? 'bg-cyan-50/30' : 'hover:bg-gray-50/50'}`}
                         >
-                          <td className="py-1.5 pl-6">
+                          <TableCell className="pl-6">
                             <ChevronDown 
                               size={18} 
                               className={`text-gray-400 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`} 
                             />
-                          </td>
+                          </TableCell>
                           {activeTab === 'userwise' && (
-                            <td className="py-1.5 px-4 text-sm font-medium text-gray-700">{group.username}</td>
+                            <TableCell className="text-sm font-medium text-gray-700">{group.username}</TableCell>
                           )}
-                          <td className="py-1.5 px-4 text-sm font-bold text-gray-800">
+                          <TableCell className="text-sm font-bold text-gray-800">
                             {group.serviceName}
-                          </td>
-                          <td className="py-1.5 px-4 text-xs font-medium text-gray-400">
+                          </TableCell>
+                          <TableCell className="text-xs font-medium text-gray-400">
                             {currencyCodes.join(', ')}
-                          </td>
-                          <td className="py-1.5 px-6 text-right">
+                          </TableCell>
+                          <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={(e: React.MouseEvent) => {
+                              <Button
+                                variant="ghost-cyan"
+                                size="icon"
+                                onClick={(e) => {
                                   e.stopPropagation();
                                   activeTab === 'general' ? openEditGeneralGroupModal(group) : openEditUserwiseGroupModal(group);
                                 }}
-                                className="p-1.5 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-all cursor-pointer"
                                 title="Edit Prices"
                               >
                                 <Edit2 size={16} />
-                              </button>
+                              </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
 
                         {/* Child Rows (Sub-table) */}
                         {isExpanded && (
-                          <tr className="bg-white">
-                            <td colSpan={activeTab === 'userwise' ? 5 : 4} className="p-0">
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={activeTab === 'userwise' ? 5 : 4} className="p-0">
                               <div className="px-6 py-2 animate-in slide-in-from-top-2 duration-300">
                                 <div className="rounded-xl border border-cyan-100/50 overflow-hidden bg-white shadow-sm">
-                                  <table className="w-full text-left">
+                                  <Table>
                                     <thead className="bg-cyan-50/50">
                                       <tr>
                                         <th className="py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-cyan-700/60">Currency Details</th>
@@ -551,109 +539,59 @@ export default function Prices() {
                                     </thead>
                                     <tbody className="divide-y divide-cyan-50/50">
                                       {group.prices.map((price: any) => (
-                                        <tr key={price.id} className="hover:bg-cyan-50/20 transition-colors">
-                                          <td className="py-1.5 px-4">
+                                        <TableRow key={price.id} className="hover:bg-cyan-50/20 transition-colors">
+                                          <TableCell>
                                             <div className="flex items-center gap-2">
                                               <span className="w-7 h-7 flex items-center justify-center rounded-lg bg-cyan-600 text-white text-xs font-bold shadow-sm">
                                                 {getCurrencySymbol(price.currency)}
                                               </span>
                                               <span className="text-sm font-bold text-gray-900">{price.currency}</span>
                                             </div>
-                                          </td>
-                                          <td className="py-1.5 px-4 text-right">
+                                          </TableCell>
+                                          <TableCell className="text-right">
                                             <span className="text-sm font-black text-gray-800 tracking-tight">
                                               {price.price.toFixed(2)}
                                             </span>
-                                          </td>
-                                        </tr>
+                                          </TableCell>
+                                        </TableRow>
                                       ))}
                                     </tbody>
-                                  </table>
+                                  </Table>
                                 </div>
                               </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         )}
                       </Fragment>
                     );
                   })
                 ) : (
-                  <tr>
-                    <td colSpan={activeTab === 'userwise' ? 5 : 4} className="py-12 text-center text-sm text-gray-500">
+                  <TableRow>
+                    <TableCell colSpan={activeTab === 'userwise' ? 5 : 4} className="py-12 text-center text-sm text-gray-500">
                       {isLoading ? 'Fetching data...' : 'No prices found.'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
-          {/* Footer info / Box */}
-          <div className="py-2.5 px-6 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className="text-xs text-gray-500">
-                Showing <span className="font-semibold text-gray-700">{totalCount === 0 ? 0 : indexOfFirstItem + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(indexOfLastItem, totalCount)}</span> of <span className="font-semibold text-gray-700">{totalCount}</span> results
-              </div>
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                  className="flex items-center gap-2 pl-3 pr-8 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all cursor-pointer shadow-sm active:bg-gray-50 whitespace-nowrap"
-                >
-                  {itemsPerPage} per page
-                  <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {isDropdownOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 min-w-full bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden py-1.5 z-20 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                    {[10, 20, 50].map(value => (
-                      <button
-                        key={value}
-                        onClick={() => {
-                          setItemsPerPage(value);
-                          setCurrentPage(1);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-4 py-2 text-xs transition-colors hover:bg-cyan-600 hover:text-white whitespace-nowrap cursor-pointer ${
-                          itemsPerPage === value 
-                            ? 'text-cyan-600 font-bold bg-cyan-50/10' 
-                            : 'text-gray-600'
-                        }`}
-                      >
-                        <span>{value} per page</span>
-                        {itemsPerPage === value && <Check size={14} className="ml-auto" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((p: number) => Math.max(1, p - 1))}
-                  disabled={safeCurrentPage === 1 || isLoading}
-                  className="p-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-cyan-200 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <span className="text-xs text-gray-500 font-bold px-1">
-                  Page {safeCurrentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((p: number) => Math.min(totalPages, p + 1))}
-                  disabled={safeCurrentPage === totalPages || isLoading}
-                  className="p-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-cyan-200 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            totalCount={totalCount}
+            indexOfFirstItem={indexOfFirstItem}
+            indexOfLastItem={indexOfLastItem}
+            itemsPerPage={itemsPerPage}
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            isLoading={isLoading}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={(val) => {
+              setItemsPerPage(val);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
-        {/* Add / Edit Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
@@ -662,7 +600,6 @@ export default function Prices() {
             />
 
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-visible animate-in fade-in zoom-in-95 duration-200">
-              {/* Header */}
               <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-t-2xl">
                 <div>
                   <h3 className="text-lg font-bold text-white">
@@ -671,12 +608,13 @@ export default function Prices() {
                       : `New ${activeTab === 'general' ? 'General' : 'Userwise'} Price`}
                   </h3>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={closeModal}
-                  className="p-1.5 text-cyan-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                 >
                   <X size={20} />
-                </button>
+                </Button>
               </div>
 
               <form onSubmit={handleSavePrice}>
@@ -800,7 +738,7 @@ export default function Prices() {
                                 setFormCurrencyPrices(val ? { [val]: '' } : {});
                                 setFieldErrors((e: Record<string, string>) => { const newE = { ...e }; delete newE[`price_${val}`]; delete newE.general; return newE; });
                               }}
-                              options={currenciesList.map(c => ({
+                              options={currenciesList.map((c: any) => ({
                                 value: c.code,
                                 label: `${getCurrencyFlag(c.code)}, ${c.code}, ${c.name}`,
                                 name: c.name,
@@ -856,23 +794,22 @@ export default function Prices() {
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/50 rounded-b-2xl">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={closeModal}
-                    className="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
+                    variant="primary"
                     disabled={isPending || formServiceId === '' || selectedCurrencies.length === 0 || !allPricesFilled || (activeTab === 'userwise' && formUserId === '')}
-                    className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 rounded-xl transition-all shadow-md shadow-cyan-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 active:scale-95 cursor-pointer"
+                    isLoading={isPending}
                   >
-                    {isPending && <Loader2 className="animate-spin" size={16} />}
                     {editingId || Object.keys(formCurrencyIds).length > 0 ? 'Update Price' : `Create Price${selectedCurrencies.length > 1 ? 's' : ''}`}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

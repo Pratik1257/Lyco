@@ -4,6 +4,7 @@ import {
   AlertCircle, Loader2, ChevronRight,
   Shield, Key, Eye, EyeOff
 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -103,7 +104,7 @@ export default function ChangePassword() {
                     <button
                       type="button"
                       onClick={() => setShowPasswords(!showPasswords)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-600 transition-colors p-1"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-600 transition-colors p-1 cursor-pointer"
                     >
                       {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -134,7 +135,7 @@ export default function ChangePassword() {
                        <button 
                          type="button"
                          onClick={() => setShowPasswords(!showPasswords)}
-                         className="text-gray-400 hover:text-cyan-600 transition-colors p-1"
+                         className="text-gray-400 hover:text-cyan-600 transition-colors p-1 cursor-pointer"
                        >
                          {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
                        </button>
@@ -177,10 +178,12 @@ export default function ChangePassword() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                size="unstyled"
                 disabled={isPending || !currentPassword || !newPassword || !isPasswordValid}
-                className="w-full relative py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 rounded-[1.25rem] transition-all duration-300 active:scale-[0.98] shadow-2xl shadow-cyan-200 disabled:opacity-50 group"
+                className="block w-full relative py-4 rounded-[1.25rem] transition-all duration-300 active:scale-[0.98] shadow-2xl shadow-cyan-200 disabled:opacity-50 group border-0 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
               >
                 <div className="relative flex items-center justify-center gap-3">
                   <span className="text-sm font-black text-white uppercase tracking-widest">
@@ -188,7 +191,7 @@ export default function ChangePassword() {
                   </span>
                   {isPending ? <Loader2 size={18} className="text-white animate-spin" /> : <ChevronRight size={18} className="text-white group-hover:translate-x-1 transition-transform" />}
                 </div>
-              </button>
+              </Button>
             </form>
           </div>
           
