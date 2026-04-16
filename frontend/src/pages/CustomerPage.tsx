@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, AlertCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,10 +9,10 @@ import { Button } from '../components/ui/Button';
 import { SearchBar } from '../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
-import CustomerFormModal from '../components/customers/CustomerFormModal';
 
 export default function CustomerPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Search & Pagination State
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,12 +20,8 @@ export default function CustomerPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // UI State
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
-  
-  // Form State
-  const [customerToEditForModal, setCustomerToEditForModal] = useState<Customer | null>(null);
 
   // Fetch Customers (Server-side Search & pagination)
   const { data, isLoading, isError, error } = useQuery({
@@ -63,19 +60,12 @@ export default function CustomerPage() {
     setCustomerToDelete(null);
   };
 
-  const openAddModal = () => {
-    setCustomerToEditForModal(null);
-    setIsModalOpen(true);
+  const handleAddCustomer = () => {
+    navigate('/customers/add-two');
   };
 
-  const openEditModal = (customer: Customer) => {
-    setCustomerToEditForModal(customer);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setCustomerToEditForModal(null);
+  const handleEditCustomer = (customer: Customer) => {
+    navigate(`/customers/add-two?id=${customer.userId}`);
   };
 
   // Derived Values
@@ -142,7 +132,7 @@ export default function CustomerPage() {
             />
             <Button
               variant="primary"
-              onClick={openAddModal}
+              onClick={handleAddCustomer}
             >
               <Plus size={18} />
               Add Customer
@@ -186,7 +176,7 @@ export default function CustomerPage() {
                             <Button 
                             variant="ghost-cyan"
                             size="icon"
-                            onClick={() => openEditModal(customer)}
+                            onClick={() => handleEditCustomer(customer)}
                             title="Edit Customer"
                             >
                             <Edit2 size={16} />
@@ -230,13 +220,6 @@ export default function CustomerPage() {
             }}
           />
         </div>
-
-        {/* Add / Edit Modal */}
-        <CustomerFormModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          customerToEdit={customerToEditForModal}
-        />
 
         {/* Delete Confirmation Modal */}
         {isDeleteModalOpen && (

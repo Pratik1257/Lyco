@@ -61,10 +61,10 @@ const CustomOption = memo((props: any) => {
   const parts = props.label.split(', ');
   const isSelected = props.isSelected;
   const isFocused = props.isFocused;
-  
+
   // Logic for color contrast
   const showWhiteText = isFocused; // When focused, we use a dark background, so text MUST be white
-  
+
   // If we have a rich-text label (Symbol, Code, Name)
   if (parts.length >= 3) {
     const [symbol, code, name] = parts;
@@ -72,31 +72,28 @@ const CustomOption = memo((props: any) => {
       <components.Option {...props}>
         <div className="flex items-center gap-3 py-0.5">
           {/* Visual Badge for Symbol */}
-          <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base font-bold transition-all duration-200 ${
-            isFocused 
-              ? 'bg-white/20 text-white scale-110 shadow-lg' 
-              : isSelected
-                ? 'bg-cyan-600 text-white shadow-sm'
-                : 'bg-cyan-50 text-cyan-600 shadow-sm border border-cyan-100/50'
-          }`}>
+          <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base font-bold transition-all duration-200 ${isFocused
+            ? 'bg-white/20 text-white scale-110 shadow-lg'
+            : isSelected
+              ? 'bg-cyan-600 text-white shadow-sm'
+              : 'bg-cyan-50 text-cyan-600 shadow-sm border border-cyan-100/50'
+            }`}>
             {symbol}
           </div>
-          
+
           {/* Multi-line Identifier */}
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <span className={`text-sm font-bold tracking-tight truncate ${
-                showWhiteText ? 'text-white' : 'text-gray-900'
-              }`}>
+              <span className={`text-sm font-bold tracking-tight truncate ${showWhiteText ? 'text-white' : 'text-gray-900'
+                }`}>
                 {code}
               </span>
               {isSelected && !isFocused && (
                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
               )}
             </div>
-            <span className={`text-[10px] font-bold uppercase tracking-widest truncate ${
-              showWhiteText ? 'text-cyan-50/80' : 'text-gray-400'
-            }`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest truncate ${showWhiteText ? 'text-cyan-50/80' : 'text-gray-400'
+              }`}>
               {name}
             </span>
           </div>
@@ -104,11 +101,10 @@ const CustomOption = memo((props: any) => {
           {/* Selection Detail */}
           {isSelected && (
             <div className="ml-auto">
-               <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter ${
-                 isFocused ? 'bg-white/20 text-white' : 'bg-cyan-100 text-cyan-700'
-               }`}>
-                 Selected
-               </div>
+              <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter ${isFocused ? 'bg-white/20 text-white' : 'bg-cyan-100 text-cyan-700'
+                }`}>
+                Selected
+              </div>
             </div>
           )}
         </div>
@@ -162,7 +158,7 @@ export default function CustomSelect({
   options,
   value,
   onChange,
-  placeholder = 'Select an option',
+  placeholder = 'Select Option',
   required = false,
   maxMenuHeight = 230,
   menuPlacement = 'auto',
@@ -212,8 +208,8 @@ export default function CustomSelect({
       '&:hover': {
         borderColor: state.selectProps.menuIsOpen ? '#06b6d4' : '#d1d5db',
         transform: state.selectProps.menuIsOpen ? 'none' : 'translateY(-1px)',
-        boxShadow: state.selectProps.menuIsOpen 
-          ? '0 0 0 4px rgba(6, 182, 212, 0.1)' 
+        boxShadow: state.selectProps.menuIsOpen
+          ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
           : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
       }
     }),
@@ -243,7 +239,7 @@ export default function CustomSelect({
       position: 'absolute',
       width: 'max-content',
       minWidth: '100%',
-      ...((state.selectProps.customProps?.menuAlign === 'right') ? { right: 0 } : { left: 0 }),
+      ...(((state.selectProps as unknown as ExtendedSelectProps).customProps?.menuAlign === 'right') ? { right: 0 } : { left: 0 }),
       animation: 'select-menu-in 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     }),
     menuList: (base) => ({

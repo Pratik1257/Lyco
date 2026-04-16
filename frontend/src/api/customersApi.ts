@@ -54,6 +54,11 @@ export const customersApi = {
     return response.data;
   },
 
+  getCustomerById: async (id: number) => {
+    const response = await apiClient.get<Customer>(`/Users/${id}`);
+    return response.data;
+  },
+
   updateCustomer: async (id: number, data: Partial<Customer>) => {
     const response = await apiClient.put<Customer>(`/Users/${id}`, data);
     return response.data;

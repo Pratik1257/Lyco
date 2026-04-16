@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/layout/Layout';
@@ -9,8 +9,21 @@ import Prices from './pages/Prices';
 import ChangePassword from './pages/ChangePassword.tsx';
 import CustomerPage from './pages/CustomerPage.tsx';
 import CustomerFormModelTwo from './pages/CustomerFormModelTwo.tsx';
+import CustomerFormModal from './components/customers/CustomerFormModal.tsx';
 import ExpiryCard from './pages/ExpiryCard.tsx';
 import CardDetailsPage from './pages/CardDetailsPage.tsx';
+
+// Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
+function CustomerFormModalPage() {
+  const navigate = useNavigate();
+  return (
+    <CustomerFormModal
+      isOpen={true}
+      onClose={() => navigate('/customers/status')}
+      customerToEdit={null}
+    />
+  );
+}
 
 const queryClient = new QueryClient();
 
@@ -55,6 +68,7 @@ export default function App() {
               <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoices — coming soon</div>} />
               <Route path="customers/status" element={<CustomerPage />} />
               <Route path="customers/add-two" element={<CustomerFormModelTwo />} />
+              <Route path="customers/add-three" element={<CustomerFormModalPage />} />
               <Route path="customers/card-summary" element={<ExpiryCard />} />
               <Route path="customers/card-details" element={<CardDetailsPage />} />
               <Route path="customers" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Customers</div>} />
