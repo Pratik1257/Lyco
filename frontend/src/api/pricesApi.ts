@@ -120,7 +120,7 @@ export const pricesApi = {
 
 export const usersApi = {
   getUsers: async () => {
-    const response = await apiClient.get<UserDto[]>('/Users');
+    const response = await apiClient.get<UserDto[]>('/Users/dropdown');
     return response.data;
   }
 };

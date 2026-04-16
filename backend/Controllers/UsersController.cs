@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Lyco.Api.Services;
+using Lyco.Api.DTOs;
 
 namespace Lyco.Api.Controllers;
 
@@ -7,14 +8,68 @@ namespace Lyco.Api.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly IPriceService _service;
+    private readonly IPriceService _priceService;
+    private readonly IUserService _userService;
 
-    public UsersController(IPriceService service) => _service = service;
+    public UsersController(IPriceService priceService, IUserService userService)
+    {
+        _priceService = priceService;
+        _userService = userService;
+    }
 
-    [HttpGet]
+    [HttpGet("dropdown")]
     public async Task<IActionResult> GetUsersForDropdown()
     {
-        var result = await _service.GetUsersAsync();
+        var result = await _priceService.GetUsersAsync();
         return Ok(result);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<UserRegistrationDto>>> GetPaged(
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var result = await _userService.GetPagedAsync(search, page, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<UserRegistrationDto>> GetById(long id)
+    {
+        var result = await _userService.GetByIdAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateUserRequest req)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var (dto, error) = await _userService.CreateAsync(req);
+        if (error != null) return BadRequest(new { Message = error });
+
+        return CreatedAtAction(nameof(GetById), new { id = dto?.UserId }, dto);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateUserRequest req)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var (dto, error) = await _userService.UpdateAsync(id, req);
+        if (error != null) return error == "User not found" ? NotFound() : BadRequest(new { Message = error });
+
+        return Ok(dto);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(long id)
+    {
+        var deleted = await _userService.DeleteAsync(id);
+        if (!deleted) return NotFound();
+
+        return NoContent();
     }
 }

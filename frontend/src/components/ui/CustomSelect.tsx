@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import Select, { components } from 'react-select';
 import type { MenuProps, StylesConfig, Props as SelectProps } from 'react-select';
 import { Search } from 'lucide-react';
@@ -12,6 +12,7 @@ interface CustomProps {
   searchText: string;
   setSearchText: (val: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  menuAlign?: 'left' | 'right';
 }
 
 // Extend react-select's props to include customProps
@@ -27,6 +28,8 @@ interface CustomSelectProps {
   placeholder?: string;
   required?: boolean;
   maxMenuHeight?: number;
+  menuPlacement?: 'auto' | 'bottom' | 'top';
+  menuAlign?: 'left' | 'right';
 }
 
 // Custom Selected Value rendering (collapsed state)
@@ -50,7 +53,11 @@ const CustomSingleValue = (props: any) => {
 };
 
 // Defined OUTSIDE the component so it never re-creates and loses focus
-const CustomOption = (props: any) => {
+const areOptionsEqual = (prevProps: any, nextProps: any) => {
+  return prevProps.isFocused === nextProps.isFocused && prevProps.isSelected === nextProps.isSelected;
+};
+
+const CustomOption = memo((props: any) => {
   const parts = props.label.split(', ');
   const isSelected = props.isSelected;
   const isFocused = props.isFocused;
@@ -120,7 +127,7 @@ const CustomOption = (props: any) => {
       </div>
     </components.Option>
   );
-};
+}, areOptionsEqual);
 
 // Defined OUTSIDE the component so it never re-creates and loses focus
 const CustomMenu = (props: MenuProps<Option, false>) => {
@@ -157,7 +164,9 @@ export default function CustomSelect({
   onChange,
   placeholder = 'Select an option',
   required = false,
-  maxMenuHeight = 230
+  maxMenuHeight = 230,
+  menuPlacement = 'auto',
+  menuAlign = 'left'
 }: CustomSelectProps) {
   const [searchText, setSearchText] = useState('');
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -191,10 +200,12 @@ export default function CustomSelect({
       boxShadow: state.selectProps.menuIsOpen
         ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
         : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-      borderRadius: '20px',
-      padding: '4px',
+      borderRadius: '0.5rem',
+      padding: '0px',
+      minHeight: '38px',
+      height: '38px',
       fontSize: '0.875rem',
-      fontWeight: 600,
+      fontWeight: 500,
       cursor: 'pointer',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       borderWidth: '1.5px',
@@ -208,7 +219,8 @@ export default function CustomSelect({
     }),
     valueContainer: (base) => ({
       ...base,
-      padding: '4px 10px',
+      padding: '0px 10px',
+      height: '100%',
     }),
     placeholder: (base) => ({
       ...base,
@@ -217,9 +229,9 @@ export default function CustomSelect({
     }),
     singleValue: (base) => ({
       ...base,
-      color: '#111827',
+      color: '#1f2937',
     }),
-    menu: (base) => ({
+    menu: (base, state) => ({
       ...base,
       borderRadius: '1.25rem',
       backgroundColor: '#ffffff',
@@ -228,6 +240,10 @@ export default function CustomSelect({
       overflow: 'hidden',
       zIndex: 9999,
       marginTop: '8px',
+      position: 'absolute',
+      width: 'max-content',
+      minWidth: '100%',
+      ...((state.selectProps.customProps?.menuAlign === 'right') ? { right: 0 } : { left: 0 }),
       animation: 'select-menu-in 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     }),
     menuList: (base) => ({
@@ -259,7 +275,6 @@ export default function CustomSelect({
       borderRadius: '0.65rem',
       fontSize: '0.875rem',
       cursor: 'pointer',
-      transition: 'all 0.2s ease',
       backgroundColor: state.isFocused
         ? '#0891b2'
         : state.isSelected
@@ -270,10 +285,8 @@ export default function CustomSelect({
         : state.isSelected
           ? '#0891b2'
           : '#4b5563',
-      transform: state.isFocused ? 'scale(1.005)' : 'scale(1)',
       '&:active': {
         backgroundColor: state.isSelected ? '#ecfeff' : '#0e7490',
-        transform: 'scale(0.98)',
       }
     }),
     indicatorSeparator: () => ({
@@ -315,8 +328,13 @@ export default function CustomSelect({
           menuIsOpen={menuIsOpen}
           maxMenuHeight={maxMenuHeight}
           onMenuOpen={() => {
-            setMenuIsOpen(true);
-            setSearchText('');
+            setMenuIsOpen((prev) => {
+              if (prev) {
+                return false;
+              }
+              setSearchText('');
+              return true;
+            });
           }}
           onMenuClose={() => {
             // When Menu attempts to close, verify if focus actually just moved to our search bar.
@@ -327,11 +345,11 @@ export default function CustomSelect({
               }
             }, 0);
           }}
-          customProps={{ searchText, setSearchText, searchInputRef }}
+          customProps={{ searchText, setSearchText, searchInputRef, menuAlign }}
           components={{ Menu: CustomMenu, Option: CustomOption, SingleValue: CustomSingleValue }}
           menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
           menuPosition="fixed"
-          menuPlacement="auto"
+          menuPlacement={menuPlacement}
           noOptionsMessage={() => (
             <div className="p-8 text-center bg-gray-50 rounded-xl m-2">
               <Search className="mx-auto text-gray-300 mb-2" size={24} />

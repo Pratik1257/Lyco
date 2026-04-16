@@ -24,7 +24,7 @@ public record CreateGeneralPriceRequest
     public string Currency { get; init; } = string.Empty;
 
     [Required]
-    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 
@@ -39,7 +39,7 @@ public record UpdateGeneralPriceRequest
     public string Currency { get; init; } = string.Empty;
 
     [Required]
-    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 
@@ -71,7 +71,7 @@ public record CreateUserwisePriceRequest
     public string Currency { get; init; } = string.Empty;
 
     [Required]
-    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 
@@ -90,7 +90,7 @@ public record UpdateUserwisePriceRequest
     public string Currency { get; init; } = string.Empty;
 
     [Required]
-    [Range(0, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Price must be a positive value.")]
     public decimal Price { get; init; }
 }
 

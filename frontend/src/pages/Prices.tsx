@@ -211,25 +211,7 @@ export default function Prices() {
     setIsModalOpen(true);
   };
 
-  const openEditUserwiseGroupModal = (group: any) => {
-    setEditingId(null);
-    setFormUserId(group.userId);
-    setFormServiceId(group.serviceId);
-    
-    const pricesMap: Record<string, number | ''> = {};
-    const idsMap: Record<string, number> = {};
-    group.prices.forEach((p: any) => {
-      pricesMap[p.currency] = p.price;
-      idsMap[p.currency] = p.id;
-    });
-    
-    setFormCurrencyPrices(pricesMap);
-    setFormCurrencyIds(idsMap);
-    setFormError(null);
-    setFieldErrors({});
-    setIsModalOpen(true);
-  };
-
+ 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
@@ -283,8 +265,8 @@ export default function Prices() {
         const val = formCurrencyPrices[c];
         if (val === '' || val === undefined) {
           errors[`price_${c}`] = "Price is required.";
-        } else if (Number(val) < 0) {
-          errors[`price_${c}`] = "Cannot be negative.";
+        } else if (Number(val) <= 0) {
+          errors[`price_${c}`] = "Price must be greater than zero.";
         }
       });
     }
@@ -292,6 +274,20 @@ export default function Prices() {
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
+    }
+    setFieldErrors({});
+    
+    // Frontend duplication validation
+    if (activeTab === 'userwise' && Object.keys(formCurrencyIds).length === 0 && !editingId) {
+      const isDuplicate = items.some((item: any) => 
+        item.userId === Number(formUserId) && 
+        item.serviceId === Number(formServiceId) &&
+        selectedCurrencies.includes(item.currency)
+      );
+      if (isDuplicate) {
+        setFormError("A price for this currency already exists for the selected user and service.");
+        return;
+      }
     }
     setFieldErrors({});
     
@@ -470,107 +466,150 @@ export default function Prices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10 pl-6"></TableHead>
-                  {activeTab === 'userwise' && (
-                    <TableHead>Username</TableHead>
-                  )}
+                  {activeTab === 'general' && <TableHead className="w-10 pl-6"></TableHead>}
+                  {activeTab === 'userwise' && <TableHead className="pl-6">Username</TableHead>}
                   <TableHead>Service</TableHead>
-                  <TableHead>Currencies</TableHead>
+                  <TableHead>{activeTab === 'general' ? 'Currencies' : 'Currency'}</TableHead>
+                  {activeTab === 'userwise' && <TableHead>Price</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groupedItems.length > 0 ? (
-                  groupedItems.map((group: any) => {
-                    const isExpanded = expandedRows.has(group.key);
-                    const currencyCodes = group.prices.map((p: any) => p.currency);
-                    
-                    return (
-                      <Fragment key={group.key}>
-                        {/* Parent Row */}
-                        <TableRow 
-                          onClick={() => toggleRow(group.key)}
-                          className={`group cursor-pointer ${isExpanded ? 'bg-cyan-50/30' : 'hover:bg-gray-50/50'}`}
-                        >
-                          <TableCell className="pl-6">
-                            <ChevronDown 
-                              size={18} 
-                              className={`text-gray-400 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`} 
-                            />
-                          </TableCell>
-                          {activeTab === 'userwise' && (
-                            <TableCell className="text-sm font-medium text-gray-700">{group.username}</TableCell>
-                          )}
-                          <TableCell className="text-sm font-bold text-gray-800">
-                            {group.serviceName}
-                          </TableCell>
-                          <TableCell className="text-xs font-medium text-gray-400">
-                            {currencyCodes.join(', ')}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost-cyan"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  activeTab === 'general' ? openEditGeneralGroupModal(group) : openEditUserwiseGroupModal(group);
-                                }}
-                                title="Edit Prices"
-                              >
-                                <Edit2 size={16} />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Child Rows (Sub-table) */}
-                        {isExpanded && (
-                          <TableRow className="bg-white">
-                            <TableCell colSpan={activeTab === 'userwise' ? 5 : 4} className="p-0">
-                              <div className="px-6 py-2 animate-in slide-in-from-top-2 duration-300">
-                                <div className="rounded-xl border border-cyan-100/50 overflow-hidden bg-white shadow-sm">
-                                  <Table>
-                                    <thead className="bg-cyan-50/50">
-                                      <tr>
-                                        <th className="py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-cyan-700/60">Currency Details</th>
-                                        <th className="py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-cyan-700/60 text-right">Price</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-cyan-50/50">
-                                      {group.prices.map((price: any) => (
-                                        <TableRow key={price.id} className="hover:bg-cyan-50/20 transition-colors">
-                                          <TableCell>
-                                            <div className="flex items-center gap-2">
-                                              <span className="w-7 h-7 flex items-center justify-center rounded-lg bg-cyan-600 text-white text-xs font-bold shadow-sm">
-                                                {getCurrencySymbol(price.currency)}
-                                              </span>
-                                              <span className="text-sm font-bold text-gray-900">{price.currency}</span>
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="text-right">
-                                            <span className="text-sm font-black text-gray-800 tracking-tight">
-                                              {price.price.toFixed(2)}
-                                            </span>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </tbody>
-                                  </Table>
-                                </div>
+                {activeTab === 'userwise' ? (
+                  items.length > 0 ? (
+                    items.map((price: any) => (
+                      <TableRow key={price.id} className="hover:bg-gray-50/50 cursor-pointer transition-colors">
+                        <TableCell className="pl-6 text-sm font-medium text-gray-700">{price.username}</TableCell>
+                        <TableCell className="text-sm font-bold text-gray-800">{price.serviceName}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 h-7 flex items-center justify-center rounded-lg bg-cyan-600 text-white text-xs font-medium shadow-sm">
+                              {getCurrencySymbol(price.currency)}
+                            </span>
+                            <span className="text-sm font-bold text-gray-900">{price.currency}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-black text-gray-800 tracking-tight">
+                          {price.price?.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost-cyan"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingId(price.id);
+                                setFormUserId(price.userId);
+                                setFormServiceId(price.serviceId);
+                                setFormCurrencyPrices({ [price.currency]: price.price });
+                                setFormError(null);
+                                setFieldErrors({});
+                                setIsModalOpen(true);
+                              }}
+                              title="Edit Price"
+                            >
+                              <Edit2 size={16} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-12 text-center text-sm text-gray-500">
+                        {isLoading ? 'Fetching data...' : 'No prices found.'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                ) : (
+                  groupedItems.length > 0 ? (
+                    groupedItems.map((group: any) => {
+                      const isExpanded = expandedRows.has(group.key);
+                      const currencyCodes = group.prices.map((p: any) => p.currency);
+                      
+                      return (
+                        <Fragment key={group.key}>
+                          <TableRow 
+                            onClick={() => toggleRow(group.key)}
+                            className={`group cursor-pointer ${isExpanded ? 'bg-cyan-50/30' : 'hover:bg-gray-50/50'}`}
+                          >
+                            <TableCell className="pl-6">
+                              <ChevronDown 
+                                size={18} 
+                                className={`text-gray-400 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`} 
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm font-bold text-gray-800">
+                              {group.serviceName}
+                            </TableCell>
+                            <TableCell className="text-xs font-medium text-gray-400">
+                              {currencyCodes.join(', ')}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost-cyan"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditGeneralGroupModal(group);
+                                  }}
+                                  title="Edit Prices"
+                                >
+                                  <Edit2 size={16} />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
-                        )}
-                      </Fragment>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={activeTab === 'userwise' ? 5 : 4} className="py-12 text-center text-sm text-gray-500">
-                      {isLoading ? 'Fetching data...' : 'No prices found.'}
-                    </TableCell>
-                  </TableRow>
+
+                          {isExpanded && (
+                            <TableRow className="bg-white">
+                              <TableCell colSpan={4} className="p-0">
+                                <div className="px-6 py-2 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="rounded-xl border border-cyan-100/50 overflow-hidden bg-white shadow-sm">
+                                    <Table>
+                                      <thead className="bg-cyan-50/50">
+                                        <tr>
+                                          <th className="py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-cyan-700/60">Currency Details</th>
+                                          <th className="py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-cyan-700/60 text-right">Price</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-cyan-50/50">
+                                        {group.prices.map((price: any) => (
+                                          <TableRow key={price.id} className="hover:bg-cyan-50/20 transition-colors">
+                                            <TableCell>
+                                              <div className="flex items-center gap-2">
+                                                <span className="w-7 h-7 flex items-center justify-center rounded-lg bg-cyan-600 text-white text-xs font-medium shadow-sm">
+                                                  {getCurrencySymbol(price.currency)}
+                                                </span>
+                                                <span className="text-sm font-bold text-gray-900">{price.currency}</span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                              <span className="text-sm font-black text-gray-800 tracking-tight">
+                                                {price.price?.toFixed(2)}
+                                              </span>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </tbody>
+                                    </Table>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-12 text-center text-sm text-gray-500">
+                        {isLoading ? 'Fetching data...' : 'No prices found.'}
+                      </TableCell>
+                    </TableRow>
+                  )
                 )}
               </TableBody>
             </Table>

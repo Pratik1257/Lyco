@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   ShoppingCart, FileText, CreditCard, Receipt,
-  Users, UserCog, Building2, Tag, Megaphone, Lock, LayoutGrid, type LucideIcon
+  Users, UserCog, Building2, Tag, Megaphone, Lock, LayoutGrid, ChevronDown, type LucideIcon
 } from 'lucide-react';
 import lycoLogo from '../../assets/LycoLogo.png';
 
@@ -10,6 +11,7 @@ interface NavItem {
   icon: LucideIcon;
   label: string;
   badge?: number;
+  subItems?: { to: string; label: string }[];
 }
 
 const navSections: { label: string; items: NavItem[] }[] = [
@@ -31,7 +33,16 @@ const navSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'PEOPLE',
     items: [
-      { to: '/customers', icon: Users, label: 'Manage Customers' },
+      { 
+        to: '/customers', 
+        icon: Users, 
+        label: 'Manage Customers',
+        subItems: [
+          { to: '/customers/status', label: 'Customer Status' },
+          { to: '/customers/card-summary', label: 'Card Summary' },
+          { to: '/customers/card-details', label: 'Customer Card Details' }
+        ]
+      },
       { to: '/employees', icon: UserCog, label: 'Manage Employee' },
       { to: '/vendors', icon: Building2, label: 'Manage Vendor' },
     ],
@@ -54,9 +65,68 @@ const navSections: { label: string; items: NavItem[] }[] = [
 
 function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void }) {
   const location = useLocation();
-  const isActive = item.to === '/'
-    ? location.pathname === '/'
-    : location.pathname.startsWith(item.to);
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const isExactActive = item.to === '/' ? location.pathname === '/' : location.pathname === item.to;
+  const isSubActive = item.subItems?.some(s => location.pathname.startsWith(s.to)) || false;
+  const isActive = isExactActive || isSubActive || (item.to !== '/' && location.pathname.startsWith(item.to) && !item.subItems);
+
+  if (item.subItems) {
+    // If it has subItems, we show a button instead of a direct link, which toggles the submenu
+    return (
+      <div className="mb-0.5">
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-[13px] font-medium group ${
+            isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
+          }`}
+        >
+          {isActive && (
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#0891b2]/25 via-[#06b6d4]/15 to-transparent" />
+          )}
+          {isActive && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[#06b6d4] to-[#0891b2]" />
+          )}
+          {!isActive && (
+            <div className="absolute inset-0 rounded-xl bg-white/0 group-hover:bg-white/5 transition-colors" />
+          )}
+          
+          <div className="flex items-center gap-3 relative z-10">
+            <div className={`relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+              isActive
+                ? 'bg-gradient-to-br from-[#0891b2] to-[#06b6d4] shadow-lg shadow-cyan-500/30'
+                : 'bg-white/5 group-hover:bg-white/10'
+            }`}>
+              <item.icon size={14} className={isActive ? 'text-white' : 'text-[#8892b0] group-hover:text-white'} />
+            </div>
+            <span>{item.label}</span>
+          </div>
+
+          <ChevronDown 
+            size={14} 
+            className={`relative z-10 transition-transform duration-200 text-[#8892b0] group-hover:text-white ${isOpen ? 'rotate-180' : ''}`} 
+          />
+        </button>
+
+        {isOpen && (
+          <div className="mt-1 ml-[44px] space-y-1 animate-in slide-in-from-top-2 duration-200 border-l border-white/10 pl-2">
+            {item.subItems.map((subItem) => (
+              <NavLink
+                key={subItem.to}
+                to={subItem.to}
+                onClick={onClose}
+                className={({ isActive: subIsActive }) => `block px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  subIsActive ? 'text-[#06b6d4] bg-white/5' : 'text-[#8892b0] hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {subItem.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <NavLink to={item.to} className="block" onClick={onClose}>

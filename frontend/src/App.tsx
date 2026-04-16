@@ -7,7 +7,10 @@ import Dashboard from './pages/Dashboard';
 import Services from './pages/Services';
 import Prices from './pages/Prices';
 import ChangePassword from './pages/ChangePassword.tsx';
-
+import CustomerPage from './pages/CustomerPage.tsx';
+import CustomerFormModelTwo from './pages/CustomerFormModelTwo.tsx';
+import ExpiryCard from './pages/ExpiryCard.tsx';
+import CardDetailsPage from './pages/CardDetailsPage.tsx';
 
 const queryClient = new QueryClient();
 
@@ -50,7 +53,11 @@ export default function App() {
               <Route path="quotes" element={<div className="p-4 text-gray-500">Manage Quotes — coming soon</div>} />
               <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
               <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoices — coming soon</div>} />
-              <Route path="customers" element={<div className="p-4 text-gray-500">Manage Customers — coming soon</div>} />
+              <Route path="customers/status" element={<CustomerPage />} />
+              <Route path="customers/add-two" element={<CustomerFormModelTwo />} />
+              <Route path="customers/card-summary" element={<ExpiryCard />} />
+              <Route path="customers/card-details" element={<CardDetailsPage />} />
+              <Route path="customers" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Customers</div>} />
               <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employees — coming soon</div>} />
               <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendors — coming soon</div>} />
               <Route path="prices" element={<Prices />} />
