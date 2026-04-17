@@ -21,7 +21,8 @@ public record UserRegistrationDto(
     string? AccountEmail,
     string? IsActive,
     string? UserType,
-    DateTime? CreatedDate
+    DateTime? CreatedDate,
+    bool HasValidCard = false
 );
 
 public record CreateUserRequest

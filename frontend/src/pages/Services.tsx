@@ -277,7 +277,7 @@ export default function Services() {
                 <div className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="serviceName" className="block text-sm font-bold text-gray-700 mb-2">
+                      <label htmlFor="serviceName" className="block text-xs font-medium text-gray-600 mb-2">
                         Service Name <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -298,7 +298,7 @@ export default function Services() {
                         }`}
                       />
                       {nameError && (
-                        <p className="text-red-500 text-xs mt-2 font-medium flex items-center gap-1">
+                        <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1">
                           <AlertCircle size={14} /> {nameError}
                         </p>
                       )}

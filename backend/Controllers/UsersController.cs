@@ -27,10 +27,11 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResult<UserRegistrationDto>>> GetPaged(
         [FromQuery] string? search,
+        [FromQuery] string? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var result = await _userService.GetPagedAsync(search, page, pageSize);
+        var result = await _userService.GetPagedAsync(search, status, page, pageSize);
         return Ok(result);
     }
 

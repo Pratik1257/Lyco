@@ -4,7 +4,7 @@ namespace Lyco.Api.Repositories;
 
 public interface IUserRepository
 {
-    Task<(IEnumerable<UserRegistration> Items, int TotalCount)> GetPagedAsync(string? search, int page, int pageSize);
+    Task<(IEnumerable<UserRegistration> Items, int TotalCount)> GetPagedAsync(string? search, string? status, int page, int pageSize);
     Task<UserRegistration?> GetByIdAsync(long id);
     Task<UserRegistration> CreateAsync(UserRegistration user);
     Task UpdateAsync(UserRegistration user);

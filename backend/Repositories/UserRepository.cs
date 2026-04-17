@@ -10,26 +10,64 @@ public class UserRepository : IUserRepository
 
     public UserRepository(LycoDbContext context) => _context = context;
 
-    public async Task<(IEnumerable<UserRegistration> Items, int TotalCount)> GetPagedAsync(string? search, int page, int pageSize)
+    // Handles both "MM/YYYY" and ISO "YYYY-MM-DD" formats stored in the DB
+    private static bool IsCardValid(string? expDate)
     {
-        var query = _context.UserRegistrations.AsQueryable();
+        if (string.IsNullOrEmpty(expDate)) return false;
+        try
+        {
+            var now = DateTime.UtcNow;
+            // Format: MM/YYYY
+            if (expDate.Contains('/') && expDate.Length >= 7)
+            {
+                var parts = expDate.Split('/');
+                if (parts.Length != 2) return false;
+                var month = int.Parse(parts[0]);
+                var year = parts[1].Length == 4 ? int.Parse(parts[1]) : int.Parse(parts[1]);
+                return year > now.Year || (year == now.Year && month >= now.Month);
+            }
+            // Format: YYYY-MM-DD
+            if (DateTime.TryParse(expDate, out var dt))
+            {
+                return dt.Year > now.Year || (dt.Year == now.Year && dt.Month >= now.Month);
+            }
+            return false;
+        }
+        catch { return false; }
+    }
+
+    public async Task<(IEnumerable<UserRegistration> Items, int TotalCount)> GetPagedAsync(string? search, string? status, int page, int pageSize)
+    {
+        // Step 1: Apply text search in SQL and include card details
+        var query = _context.UserRegistrations
+            .Include(u => u.CardDetails)
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.ToLower();
             query = query.Where(u =>
-                (u.Username != null && u.Username.ToLower().Contains(s)) ||
                 (u.Firstname != null && u.Firstname.ToLower().Contains(s)) ||
                 (u.Lastname != null && u.Lastname.ToLower().Contains(s)) ||
-                (u.PrimaryEmail != null && u.PrimaryEmail.ToLower().Contains(s)));
+                (u.Companyname != null && u.Companyname.ToLower().Contains(s)));
         }
 
-        var total = await query.CountAsync();
-        var items = await query
+        // Step 2: Load all matching users with their cards into memory
+        var allItems = await query
             .OrderByDescending(u => u.CreatedDate)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .ToListAsync();
+
+        // Step 3: Apply card-based status filter client-side
+        if (!string.IsNullOrWhiteSpace(status) && status != "all")
+        {
+            allItems = status == "active"
+                ? allItems.Where(u => u.CardDetails.Any(c => IsCardValid(c.ExpDate))).ToList()
+                : allItems.Where(u => !u.CardDetails.Any(c => IsCardValid(c.ExpDate))).ToList();
+        }
+
+        // Step 4: Apply pagination
+        var total = allItems.Count;
+        var items = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
         return (items, total);
     }

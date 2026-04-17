@@ -52,6 +52,17 @@ public class PriceRepository : IPriceRepository
     public async Task<PriceMst?> GetGeneralByIdAsync(long id) =>
         await _db.PriceMsts.Include(p => p.Service).FirstOrDefaultAsync(p => p.PriceId == id);
 
+    public async Task<decimal?> GetGeneralPriceValueAsync(long serviceId, string currency)
+    {
+        var priceStr = await _db.PriceMsts
+            .Where(p => p.ServiceId == serviceId && p.Currency == currency)
+            .Select(p => p.Price)
+            .FirstOrDefaultAsync();
+
+        if (priceStr == null) return null;
+        return decimal.TryParse(priceStr, out var p) ? p : null;
+    }
+
     public async Task<bool> GeneralPriceExistsAsync(long serviceId, string currency, long? excludeId = null)
     {
         var query = _db.PriceMsts.Where(p => p.ServiceId == serviceId && p.Currency == currency);

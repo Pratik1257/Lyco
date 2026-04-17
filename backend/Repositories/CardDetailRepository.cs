@@ -20,10 +20,9 @@ public class CardDetailRepository : ICardDetailRepository
         {
             var s = search.ToLower();
             query = query.Where(c =>
-                (c.CardNo != null && c.CardNo.ToLower().Contains(s)) ||
-                (c.User != null && c.User.Username != null && c.User.Username.ToLower().Contains(s)) ||
                 (c.FirstName != null && c.FirstName.ToLower().Contains(s)) ||
-                (c.LastName != null && c.LastName.ToLower().Contains(s)));
+                (c.LastName != null && c.LastName.ToLower().Contains(s)) ||
+                (c.User != null && c.User.Companyname != null && c.User.Companyname.ToLower().Contains(s)));
         }
 
         var total = await query.CountAsync();

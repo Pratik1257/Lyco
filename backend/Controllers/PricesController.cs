@@ -49,6 +49,13 @@ public class PricesController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("general/lookup")]
+    public async Task<IActionResult> GetGeneralPrice(long serviceId, string currency)
+    {
+        var price = await _service.GetGeneralPriceAsync(serviceId, currency);
+        return Ok(new { price });
+    }
+
     // ── Userwise Prices ───────────────────────────────────────────────────────
 
     [HttpGet("userwise")]

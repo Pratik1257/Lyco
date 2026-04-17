@@ -13,6 +13,8 @@ export interface UserwisePrice {
   id: number;
   userId: number;
   username: string;
+  firstname?: string;
+  lastname?: string;
   serviceId: number;
   serviceName: string;
   currency: string;
@@ -31,6 +33,9 @@ export interface PagedResult<T> {
 export interface UserDto {
   id: number;
   username: string;
+  firstname?: string;
+  lastname?: string;
+  currency?: string;
 }
 
 export interface CurrencyDto {
@@ -98,6 +103,13 @@ export const pricesApi = {
   getCurrencies: async () => {
     const response = await apiClient.get<CurrencyDto[]>('/Currencies');
     return response.data;
+  },
+  
+  getGeneralPriceLookup: async (serviceId: number, currency: string) => {
+    const response = await apiClient.get<{ price: number | null }>('/Prices/general/lookup', {
+      params: { serviceId, currency }
+    });
+    return response.data.price;
   },
   
   // --- Group Deletion ---

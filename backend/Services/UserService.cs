@@ -11,12 +11,12 @@ public class UserService : IUserService
 
     public UserService(IUserRepository repo) => _repo = repo;
 
-    public async Task<PagedResult<UserRegistrationDto>> GetPagedAsync(string? search, int page, int pageSize)
+    public async Task<PagedResult<UserRegistrationDto>> GetPagedAsync(string? search, string? status, int page, int pageSize)
     {
         pageSize = AllowedPageSizes.Contains(pageSize) ? pageSize : 10;
         page = Math.Max(1, page);
 
-        var (items, total) = await _repo.GetPagedAsync(search, page, pageSize);
+        var (items, total) = await _repo.GetPagedAsync(search, status, page, pageSize);
         var totalPages = (int)Math.Ceiling((double)total / pageSize);
 
         var dtos = items.Select(MapToDto);
@@ -95,8 +95,38 @@ public class UserService : IUserService
         return true;
     }
 
-    private static UserRegistrationDto MapToDto(UserRegistration user) =>
-        new UserRegistrationDto(
+    // Handles both "MM/YYYY" and ISO "YYYY-MM-DD" formats stored in the DB
+    private static bool CardIsValid(string? expDate)
+    {
+        if (string.IsNullOrEmpty(expDate)) return false;
+        try
+        {
+            var now = DateTime.UtcNow;
+            // Format: MM/YYYY
+            if (expDate.Contains('/') && expDate.Length >= 7)
+            {
+                var parts = expDate.Split('/');
+                if (parts.Length != 2) return false;
+                var month = int.Parse(parts[0]);
+                var year = int.Parse(parts[1]);
+                return year > now.Year || (year == now.Year && month >= now.Month);
+            }
+            // Format: YYYY-MM-DD (or any parseable date)
+            if (DateTime.TryParse(expDate, out var dt))
+            {
+                return dt.Year > now.Year || (dt.Year == now.Year && dt.Month >= now.Month);
+            }
+            return false;
+        }
+        catch { return false; }
+    }
+
+    private static UserRegistrationDto MapToDto(UserRegistration user)
+    {
+        // Computed from card data — does NOT touch the database IsActive column
+        var hasValidCard = user.CardDetails != null && user.CardDetails.Any(c => CardIsValid(c.ExpDate));
+
+        return new UserRegistrationDto(
             user.UserId,
             user.Username,
             user.Firstname,
@@ -113,8 +143,10 @@ public class UserService : IUserService
             user.CountryId,
             user.Currency,
             user.AccountEmail,
-            user.IsActive,
+            user.IsActive,       // ← untouched DB field
             user.UserType,
-            user.CreatedDate
+            user.CreatedDate,
+            hasValidCard         // ← new computed field from card expiry
         );
+    }
 }

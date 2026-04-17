@@ -84,6 +84,9 @@ public class PriceService : IPriceService
         return (dto, null);
     }
 
+    public Task<decimal?> GetGeneralPriceAsync(long serviceId, string currency) =>
+        _repo.GetGeneralPriceValueAsync(serviceId, currency);
+
     // ── Userwise Prices ───────────────────────────────────────────────────────
 
     public async Task<PagedResult<UserwisePriceDto>> GetUserwisePagedAsync(string? search, int page, int pageSize)
@@ -106,6 +109,8 @@ public class PriceService : IPriceService
             p.UserPriceId,
             p.UserId ?? 0,
             p.User?.Username ?? "Unknown",
+            p.User?.Firstname,
+            p.User?.Lastname,
             p.ServiceId ?? 0,
             p.Service?.ServiceName ?? "Unknown",
             p.Currency ?? "",
@@ -128,6 +133,8 @@ public class PriceService : IPriceService
             entity.UserPriceId,
             entity.UserId ?? 0,
             entity.User?.Username ?? "Unknown",
+            entity.User?.Firstname,
+            entity.User?.Lastname,
             entity.ServiceId ?? 0,
             entity.Service?.ServiceName ?? "Unknown",
             entity.Currency ?? "",
@@ -157,6 +164,8 @@ public class PriceService : IPriceService
             entity.UserPriceId,
             entity.UserId ?? 0,
             entity.User?.Username ?? "Unknown",
+            entity.User?.Firstname,
+            entity.User?.Lastname,
             entity.ServiceId ?? 0,
             entity.Service?.ServiceName ?? "Unknown",
             entity.Currency ?? "",
@@ -170,7 +179,7 @@ public class PriceService : IPriceService
     public async Task<IEnumerable<UserDto>> GetUsersAsync()
     {
         var users = await _repo.GetAllUsersAsync();
-        return users.Select(u => new UserDto(u.UserId, u.Username ?? ""));
+        return users.Select(u => new UserDto(u.UserId, u.Username ?? "", u.Firstname, u.Lastname, u.Currency));
     }
 
     // ── Deletion ──────────────────────────────────────────────────────────────

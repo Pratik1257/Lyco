@@ -7,6 +7,7 @@ public interface IPriceRepository
     // General Prices
     Task<(IEnumerable<PriceMst> Items, int Total)> GetGeneralPagedAsync(string? search, int page, int pageSize);
     Task<PriceMst?> GetGeneralByIdAsync(long id);
+    Task<decimal?> GetGeneralPriceValueAsync(long serviceId, string currency);
     Task<bool> GeneralPriceExistsAsync(long serviceId, string currency, long? excludeId = null);
     Task<PriceMst> CreateGeneralAsync(long serviceId, string currency, decimal price);
     Task UpdateGeneralAsync(PriceMst price);

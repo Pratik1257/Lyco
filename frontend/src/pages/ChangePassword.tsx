@@ -86,7 +86,7 @@ export default function ChangePassword() {
                 {/* Field Group: Current */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-[13px] font-bold text-gray-700 tracking-tight">Current Password</label>
+                    <label className="text-xs font-medium text-gray-600">Current Password</label>
                     <span className="text-[11px] font-medium text-gray-400">Required</span>
                   </div>
                   <div className="relative group/field transition-all">
@@ -116,7 +116,7 @@ export default function ChangePassword() {
                 {/* Field Group: New Password */}
                 <div className="space-y-2 text-left">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-[13px] font-bold text-gray-700 tracking-tight">New Password</label>
+                    <label className="text-xs font-medium text-gray-600">New Password</label>
                   </div>
                   <div className="relative group/field transition-all">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-focus-within/field:bg-cyan-50 group-focus-within/field:text-cyan-600 transition-all duration-300">
@@ -146,7 +146,7 @@ export default function ChangePassword() {
                 {/* Field Group: Confirm Password */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-center px-1">
-                    <label className="text-[13px] font-bold text-gray-700 tracking-tight">Verify New Password</label>
+                    <label className="text-xs font-medium text-gray-600">Verify New Password</label>
                   </div>
                   <div className="relative group/field transition-all">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-focus-within/field:bg-cyan-50 group-focus-within/field:text-cyan-600 transition-all duration-300">

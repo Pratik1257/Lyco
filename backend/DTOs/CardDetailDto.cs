@@ -21,7 +21,11 @@ public record CardDetailDto(
     long? CountryId,
     string? State,
     string? Currency,
-    string? Comments
+    string? Comments,
+    string? CompanyName = null,
+    string? Email = null,
+    string? Telephone = null,
+    string? ClientFullName = null
 );
 
 public record CreateCardRequest

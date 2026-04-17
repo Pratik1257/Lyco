@@ -305,7 +305,7 @@ export default function CustomSelect({
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-[13px] font-bold text-gray-700 ml-1">
+        <label className="block text-xs font-medium text-gray-600 ml-1">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}

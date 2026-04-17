@@ -8,6 +8,7 @@ public interface IPriceService
     Task<PagedResult<GeneralPriceDto>> GetGeneralPagedAsync(string? search, int page, int pageSize);
     Task<(GeneralPriceDto? Dto, string? Error)> CreateGeneralAsync(CreateGeneralPriceRequest req);
     Task<(GeneralPriceDto? Dto, string? Error)> UpdateGeneralAsync(long id, UpdateGeneralPriceRequest req);
+    Task<decimal?> GetGeneralPriceAsync(long serviceId, string currency);
 
     // Userwise
     Task<PagedResult<UserwisePriceDto>> GetUserwisePagedAsync(string? search, int page, int pageSize);

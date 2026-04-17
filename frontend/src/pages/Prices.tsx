@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, X, ChevronDown, AlertCircle, Loader2 } from 'lucide-react';
 import { pricesApi, usersApi } from '../api/pricesApi';
@@ -32,6 +32,7 @@ export default function Prices() {
   const [formCurrencyPrices, setFormCurrencyPrices] = useState<Record<string, number | ''>>({});
   const [formCurrencyIds, setFormCurrencyIds] = useState<Record<string, number>>({}); // Tracks existing IDs for update
   const [formUserId, setFormUserId] = useState<number | ''>('');
+  const [baselinePrice, setBaselinePrice] = useState<number | null>(null);
 
   // Reset pagination when tab changes
   const handleTabChange = (tab: TabType) => {
@@ -61,6 +62,30 @@ export default function Prices() {
     queryFn: () => pricesApi.getCurrencies()
   });
   const currenciesList = currenciesData ?? [];
+
+  // Auto-set currency when user is selected in Userwise tab
+  useEffect(() => {
+    if (activeTab === 'userwise' && formUserId && usersList.length > 0 && !editingId) {
+      const selectedUser = usersList.find(u => u.id === Number(formUserId));
+      if (selectedUser?.currency) {
+        setFormCurrencyPrices({ [selectedUser.currency]: '' });
+      } else {
+        setFormCurrencyPrices({});
+      }
+    }
+  }, [formUserId, activeTab, usersList, editingId]);
+
+  // Fetch baseline general price when service + user currency are both known
+  useEffect(() => {
+    const currency = Object.keys(formCurrencyPrices)[0];
+    if (activeTab === 'userwise' && formServiceId && currency) {
+      pricesApi.getGeneralPriceLookup(Number(formServiceId), currency)
+        .then(price => setBaselinePrice(price))
+        .catch(() => setBaselinePrice(null));
+    } else {
+      setBaselinePrice(null);
+    }
+  }, [formServiceId, formCurrencyPrices, activeTab]);
 
   // Fetch General Prices
   const { data: generalData, isLoading: isGeneralLoading, isError: isGeneralError, error: generalError } = useQuery({
@@ -186,7 +211,16 @@ export default function Prices() {
   const openAddModal = () => {
     setEditingId(null);
     setFormServiceId('');
-    setFormCurrencyPrices({});
+    
+    // Initialize currencies based on active tab
+    const initPrices: Record<string, number | ''> = {};
+    if (activeTab === 'general') {
+      currenciesList.forEach(c => {
+        initPrices[c.code] = '';
+      });
+    }
+    setFormCurrencyPrices(initPrices);
+    
     setFormUserId('');
     setFormError(null);
     setFieldErrors({});
@@ -199,9 +233,18 @@ export default function Prices() {
     
     const pricesMap: Record<string, number | ''> = {};
     const idsMap: Record<string, number> = {};
+    
+    // Populate existing prices
     group.prices.forEach((p: any) => {
       pricesMap[p.currency] = p.price;
       idsMap[p.currency] = p.id;
+    });
+
+    // Ensure all other currencies are also present with empty values
+    currenciesList.forEach(c => {
+      if (!(c.code in pricesMap)) {
+        pricesMap[c.code] = '';
+      }
     });
     
     setFormCurrencyPrices(pricesMap);
@@ -219,24 +262,13 @@ export default function Prices() {
     setFieldErrors({});
   };
 
-  const selectedCurrencies = Object.keys(formCurrencyPrices);
+  const selectedCurrencies = useMemo(() => 
+    Object.entries(formCurrencyPrices)
+      .filter(([_, val]) => val !== '' && val !== undefined)
+      .map(([code]) => code),
+  [formCurrencyPrices]);
 
-  const toggleCurrency = (code: string) => {
-    setFormCurrencyPrices((prev: Record<string, number | ''>) => {
-      const next = { ...prev };
-      if (code in next) {
-        delete next[code];
-        setFieldErrors((e: Record<string, string>) => {
-          const newE = { ...e };
-          delete newE[`price_${code}`];
-          return newE;
-        });
-      } else {
-        next[code] = '';
-      }
-      return next;
-    });
-  };
+  // toggleCurrency removed - all currencies are now visible by default
 
   const setCurrencyPrice = (code: string, value: number | '') => {
     setFormCurrencyPrices((prev: Record<string, number | ''>) => ({ ...prev, [code]: value }));
@@ -467,7 +499,7 @@ export default function Prices() {
               <TableHeader>
                 <TableRow>
                   {activeTab === 'general' && <TableHead className="w-10 pl-6"></TableHead>}
-                  {activeTab === 'userwise' && <TableHead className="pl-6">Username</TableHead>}
+                  {activeTab === 'userwise' && <TableHead className="pl-6">Full Name</TableHead>}
                   <TableHead>Service</TableHead>
                   <TableHead>{activeTab === 'general' ? 'Currencies' : 'Currency'}</TableHead>
                   {activeTab === 'userwise' && <TableHead>Price</TableHead>}
@@ -479,7 +511,9 @@ export default function Prices() {
                   items.length > 0 ? (
                     items.map((price: any) => (
                       <TableRow key={price.id} className="hover:bg-gray-50/50 cursor-pointer transition-colors">
-                        <TableCell className="pl-6 text-sm font-medium text-gray-700">{price.username}</TableCell>
+                        <TableCell className="pl-6 text-sm font-medium text-gray-700">
+                          {price.firstname || price.lastname ? `${price.firstname} ${price.lastname}` : price.username}
+                        </TableCell>
                         <TableCell className="text-sm font-bold text-gray-800">{price.serviceName}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -662,14 +696,17 @@ export default function Prices() {
                     {activeTab === 'userwise' && (
                       <div className="space-y-1">
                         <CustomSelect
-                          label="Username"
+                          label="Full Name"
                           required
                           value={formUserId}
                           onChange={(v: string) => {
                             setFormUserId(v ? Number(v) : '');
                             setFieldErrors((e: Record<string, string>) => { const { user, ...rest } = e; return rest; });
                           }}
-                          options={usersList.map((u: any) => ({ value: u.id, label: u.username }))}
+                          options={usersList.map((u: any) => ({ 
+                            value: u.id, 
+                            label: u.firstname || u.lastname ? `${u.firstname} ${u.lastname}` : u.username 
+                          }))}
                           placeholder="Choose User"
                         />
                         {fieldErrors.user && <p className="text-red-500 text-xs font-medium ml-1">{fieldErrors.user}</p>}
@@ -693,134 +730,132 @@ export default function Prices() {
 
                     {activeTab === 'general' ? (
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
                           Currencies & prices <span className="text-red-500">*</span>
                         </label>
                         <p className="text-xs text-gray-400 mb-3">Select currencies and enter price for each.</p>
-                        <div className="border border-gray-200 rounded-xl overflow-hidden max-h-[260px] overflow-y-auto">
+                        <div className="border border-gray-200 rounded-xl overflow-hidden max-h-[320px] overflow-y-auto bg-slate-50/20">
                           {currenciesList.map(c => {
-                            const isChecked = c.code in formCurrencyPrices;
-                            const isDisabledRow = editingId !== null && !isChecked;
+                            const hasValue = formCurrencyPrices[c.code] !== '' && formCurrencyPrices[c.code] !== undefined;
+                            
                             return (
                               <div
                                 key={c.code}
-                                className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 last:border-b-0 transition-colors ${
-                                  isChecked ? 'bg-cyan-50/40' : 'hover:bg-gray-50/50'
-                                } ${isDisabledRow ? 'opacity-40 pointer-events-none' : ''}`}
+                                className={`flex items-center gap-4 px-5 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${
+                                  hasValue ? 'bg-cyan-50/40' : 'hover:bg-gray-50/50'
+                                }`}
                               >
-                                {/* Checkbox */}
-                                <label className="flex items-center cursor-pointer shrink-0">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => toggleCurrency(c.code)}
-                                    disabled={editingId !== null && !isChecked}
-                                    className="sr-only peer"
-                                  />
-                                  <span className="w-[18px] h-[18px] rounded-[5px] border-2 border-gray-300 flex items-center justify-center transition-all peer-checked:bg-cyan-600 peer-checked:border-cyan-600 peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/30">
-                                    {isChecked && (
-                                      <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
-                                        <path d="M1 3.5L4 6.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                  </span>
-                                </label>
-
-                                {/* Currency symbol + info */}
-                                <span className="text-sm font-bold text-gray-500 w-5 text-center shrink-0">{c.symbol}</span>
-                                <span className="text-sm font-bold text-gray-800 shrink-0">{c.code}</span>
-                                <span className="text-xs text-gray-400 truncate">— {c.name}</span>
+                                {/* Currency Details */}
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-bold shadow-sm ring-1 ring-gray-900/5">
+                                    {c.symbol}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-black text-gray-800 leading-none mb-0.5">{c.code}</span>
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">— {c.name}</span>
+                                  </div>
+                                </div>
 
                                 {/* Inline price input */}
-                                {isChecked && (
-                                  <div className="ml-auto w-[164px] flex flex-col shrink-0 relative">
-                                    <div className="flex items-center">
-                                      <span className={`flex items-center justify-center w-8 h-9 bg-gray-100 border ${fieldErrors[`price_${c.code}`] ? 'border-red-300' : 'border-gray-200'} border-r-0 rounded-l-lg text-sm font-bold text-gray-500 transition-colors`}>{c.symbol}</span>
-                                      <input
-                                        type="number"
-                                        step="1"
-                                        min="0"
-                                        placeholder="0"
-                                        value={formCurrencyPrices[c.code] ?? ''}
-                                        onKeyDown={(e) => {
-                                          if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault();
-                                        }}
-                                        onChange={(e) => {
-                                          const val = e.target.value ? Number(e.target.value) : '';
-                                          if (typeof val === 'number' && val < 0) return;
-                                          setCurrencyPrice(c.code, val);
-                                        }}
-                                        className={`w-[132px] h-9 px-3 bg-white border ${fieldErrors[`price_${c.code}`] ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-200 focus:ring-cyan-500/20 focus:border-cyan-500'} rounded-r-lg text-sm focus:outline-none focus:ring-2 transition-all font-medium text-gray-800`}
-                                        autoFocus
-                                      />
+                                <div className="ml-auto w-[164px] flex flex-col shrink-0 relative">
+                                  <div className="flex items-center shadow-sm rounded-lg overflow-hidden group">
+                                    <div className={`flex items-center justify-center w-8 h-9 bg-teal-50 border ${fieldErrors[`price_${c.code}`] ? 'border-red-300' : 'border-[#1ab3c8]/30'} border-r-0 transition-colors group-hover:bg-teal-100/50`}>
+                                      <span className="text-sm font-bold text-[#1ab3c8]">
+                                        {c.symbol}
+                                      </span>
                                     </div>
-                                    {fieldErrors[`price_${c.code}`] && (
-                                      <span className="absolute -bottom-5 right-1 text-[10px] font-bold text-red-500 text-right whitespace-nowrap">{fieldErrors[`price_${c.code}`]}</span>
-                                    )}
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      min="0"
+                                      placeholder="0"
+                                      value={formCurrencyPrices[c.code] ?? ''}
+                                      onKeyDown={(e) => {
+                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault();
+                                      }}
+                                      onChange={(e) => {
+                                        const val = e.target.value ? Number(e.target.value) : '';
+                                        if (typeof val === 'number' && val < 0) return;
+                                        setCurrencyPrice(c.code, val);
+                                      }}
+                                      className={`w-[132px] h-9 px-3 bg-white border ${fieldErrors[`price_${c.code}`] ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-200 focus:ring-cyan-500/20 focus:border-cyan-500'} text-sm focus:outline-none focus:ring-2 transition-all font-bold text-gray-800`}
+                                    />
                                   </div>
-                                )}
+                                  {fieldErrors[`price_${c.code}`] && (
+                                    <span className="absolute -bottom-5 right-1 text-[10px] font-bold text-red-500 text-right whitespace-nowrap">{fieldErrors[`price_${c.code}`]}</span>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
                         </div>
                       </div>
                     ) : (
-                      <div className="pt-1">
-                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
-                          Currency & price <span className="text-red-500">*</span>
-                        </label>
-                        <div className="flex items-start gap-4">
-                          <div className="flex-[0.6]">
-                            <CurrencySelect
-                              value={Object.keys(formCurrencyPrices)[0] || ''}
-                              onChange={(val) => {
-                                setFormCurrencyPrices(val ? { [val]: '' } : {});
-                                setFieldErrors((e: Record<string, string>) => { const newE = { ...e }; delete newE[`price_${val}`]; delete newE.general; return newE; });
+                      <div className="flex items-start gap-4 pt-1">
+                        {/* Left: User Price Entry */}
+                        <div className="flex-[0.4]">
+                          <label className="block text-xs font-medium text-gray-600 mb-2 ml-1">
+                            Price <span className="text-red-500">*</span>
+                          </label>
+                          <div className={`flex w-full h-[42px] bg-white border ${fieldErrors[`price_${Object.keys(formCurrencyPrices)[0]}`] ? 'border-red-300 focus-within:ring-red-500/20 focus-within:border-red-500' : 'border-gray-200 focus-within:ring-cyan-500/20 focus-within:border-cyan-500'} rounded-[20px] shadow-sm overflow-hidden transition-all group mt-0.5`}>
+                            <div className="flex justify-center items-center px-3.5 bg-teal-50 border-r border-[#1ab3c8]/30">
+                              <span className="text-base font-bold text-[#1ab3c8]">
+                                {Object.keys(formCurrencyPrices)[0] ? getCurrencySymbol(Object.keys(formCurrencyPrices)[0]) : '$'}
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              placeholder="Enter price"
+                              value={formCurrencyPrices[Object.keys(formCurrencyPrices)[0]] ?? ''}
+                              onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault();
                               }}
-                              options={currenciesList.map((c: any) => ({
-                                value: c.code,
-                                label: `${getCurrencyFlag(c.code)}, ${c.code}, ${c.name}`,
-                                name: c.name,
-                                symbol: c.symbol
-                              }))}
+                              onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : '';
+                                if (typeof val === 'number' && val < 0) return;
+                                setCurrencyPrice(Object.keys(formCurrencyPrices)[0], val);
+                              }}
+                              disabled={!Object.keys(formCurrencyPrices)[0]}
+                              className="flex-1 px-3 w-full text-[13px] font-bold text-gray-800 bg-transparent focus:outline-none disabled:opacity-50 disabled:bg-gray-50"
                             />
                           </div>
-                          <div className="flex-[0.4] pr-1">
-                            <div className={`flex w-full h-[42px] bg-white border ${fieldErrors[`price_${Object.keys(formCurrencyPrices)[0]}`] ? 'border-red-300 focus-within:ring-red-500/20 focus-within:border-red-500' : 'border-gray-200 focus-within:ring-cyan-500/20 focus-within:border-cyan-500'} rounded-[20px] shadow-sm overflow-hidden transition-all group mt-0.5`}>
-                              <div className="flex justify-center items-center px-3.5 bg-teal-50 border-r border-[#1ab3c8]/30">
-                                <span className="text-base font-bold text-[#1ab3c8]">
-                                  {Object.keys(formCurrencyPrices)[0] ? getCurrencySymbol(Object.keys(formCurrencyPrices)[0]) : '$'}
-                                </span>
-                              </div>
-                              <input
-                                type="number"
-                                step="1"
-                                min="0"
-                                placeholder="Enter price"
-                                value={formCurrencyPrices[Object.keys(formCurrencyPrices)[0]] ?? ''}
-                                onKeyDown={(e) => {
-                                  if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault();
-                                }}
-                                onChange={(e) => {
-                                  const val = e.target.value ? Number(e.target.value) : '';
-                                  if (typeof val === 'number' && val < 0) return;
-                                  setCurrencyPrice(Object.keys(formCurrencyPrices)[0], val);
-                                }}
-                                disabled={!Object.keys(formCurrencyPrices)[0]}
-                                className="flex-1 px-3 w-full text-[13px] font-bold text-gray-800 bg-transparent focus:outline-none disabled:opacity-50 disabled:bg-gray-50"
-                              />
-                            </div>
-                            {fieldErrors[`price_${Object.keys(formCurrencyPrices)[0]}`] && (
-                              <p className="text-red-500 text-[11px] font-bold ml-1 mt-1 text-right">{fieldErrors[`price_${Object.keys(formCurrencyPrices)[0]}`]}</p>
+                          {fieldErrors[`price_${Object.keys(formCurrencyPrices)[0]}`] && (
+                            <p className="text-red-500 text-[11px] font-bold ml-1 mt-1 text-right">{fieldErrors[`price_${Object.keys(formCurrencyPrices)[0]}`]}</p>
+                          )}
+                        </div>
+
+                        {/* Right: General Price Reference */}
+                        <div className="flex-[0.6]">
+                          <label className="block text-xs font-medium text-gray-600 mb-2 ml-1">
+                            General price <span className="text-red-500">*</span>
+                          </label>
+                          <div className={`flex flex-col justify-center h-[42px] px-4 rounded-[20px] border mt-0.5 transition-colors ${
+                            baselinePrice !== null
+                              ? 'bg-amber-50/60 border-amber-200'
+                              : 'bg-gray-50/60 border-gray-200'
+                          }`}>
+                            {baselinePrice !== null ? (
+                              <span className="text-sm font-black text-amber-900 leading-none">
+                                {getCurrencySymbol(Object.keys(formCurrencyPrices)[0] || '')} {baselinePrice.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-bold text-gray-400">
+                                {formUserId && formServiceId
+                                  ? 'No general price set'
+                                  : formUserId
+                                  ? 'Pick a service'
+                                  : 'Choose a User First'}
+                              </span>
                             )}
                           </div>
                         </div>
-
                       </div>
                     )}
                     
                     {fieldErrors.general && (
-                      <p className="text-red-500 text-xs mt-2 font-medium flex items-center gap-1">
+                      <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1">
                         <AlertCircle size={14} /> {fieldErrors.general}
                       </p>
                     )}

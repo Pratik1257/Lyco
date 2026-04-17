@@ -49,6 +49,8 @@ public record UserwisePriceDto(
     long Id,
     long UserId,
     string Username,
+    string? Firstname,
+    string? Lastname,
     long ServiceId,
     string ServiceName,
     string Currency,
@@ -96,4 +98,4 @@ public record UpdateUserwisePriceRequest
 
 // ── User DTO (for dropdown) ───────────────────────────────────────────────────
 
-public record UserDto(long Id, string Username);
+public record UserDto(long Id, string Username, string? Firstname, string? Lastname, string? Currency);

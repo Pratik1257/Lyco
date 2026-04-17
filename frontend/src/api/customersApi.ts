@@ -18,9 +18,10 @@ export interface Customer {
   countryId: number | null;
   currency: string;
   accountEmail: string;
-  isActive: string;
+  isActive: string;      // untouched DB field
   userType: string;
   createdDate: string;
+  hasValidCard: boolean; // computed from card expiry dates — not from DB
 }
 
 export interface Country {
@@ -42,10 +43,14 @@ export const customersApi = {
     return response.data;
   },
 
-  getCustomers: async (page: number, pageSize: number, search: string = '') => {
-    const response = await apiClient.get<PagedResult<Customer>>('/Users', {
-      params: { page, pageSize, search }
-    });
+  getCustomers: async (page = 1, pageSize = 10, search = '', status = 'all') => {
+    const params = {
+      page,
+      pageSize,
+      search,
+      ...(status !== 'all' && { status })
+    };
+    const response = await apiClient.get<PagedResult<Customer>>('/Users', { params });
     return response.data;
   },
 

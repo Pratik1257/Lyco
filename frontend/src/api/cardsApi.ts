@@ -21,6 +21,10 @@ export interface CardDetail {
   state: string | null;
   currency: string | null;
   comments: string | null;
+  companyName: string | null;
+  email: string | null;
+  telephone: string | null;
+  clientFullName: string | null;
 }
 
 export const cardsApi = {

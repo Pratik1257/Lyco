@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, AlertCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { customersApi, type Customer } from '../api/customersApi';
+import CustomSelect from '../components/ui/CustomSelect';
 
 import { Button } from '../components/ui/Button';
 import { SearchBar } from '../components/ui/SearchBar';
@@ -18,6 +19,7 @@ export default function CustomerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState('all');
   
   // UI State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -25,8 +27,8 @@ export default function CustomerPage() {
 
   // Fetch Customers (Server-side Search & pagination)
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['customers', currentPage, itemsPerPage, searchQuery],
-    queryFn: () => customersApi.getCustomers(currentPage, itemsPerPage, searchQuery),
+    queryKey: ['customers', currentPage, itemsPerPage, searchQuery, statusFilter],
+    queryFn: () => customersApi.getCustomers(currentPage, itemsPerPage, searchQuery, statusFilter),
   });
 
   const deleteMutation = useMutation({
@@ -77,12 +79,14 @@ export default function CustomerPage() {
   const indexOfFirstItem = (safeCurrentPage - 1) * itemsPerPage;
   const indexOfLastItem = indexOfFirstItem + customers.length;
 
-  const getStatusBadge = (isActive: string) => {
-    const active = isActive === 'Y';
+  // Status is computed from card expiry — nothing to do with the DB isActive field
+  const getStatusBadge = (hasValidCard: boolean) => {
     return (
-        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {active ? 'Active' : 'Inactive'}
-        </span>
+      <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${
+        hasValidCard ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+      }`}>
+        {hasValidCard ? 'Active' : 'Inactive'}
+      </span>
     );
   };
 
@@ -90,7 +94,7 @@ export default function CustomerPage() {
     <>
       {[...Array(5)].map((_, i) => (
         <TableRow key={i} className="animate-pulse">
-          <TableCell><div className="h-5 bg-gray-200 rounded-lg w-12 shadow-sm"></div></TableCell>
+          {/* <TableCell><div className="h-5 bg-gray-200 rounded-lg w-12 shadow-sm"></div></TableCell> */}
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-20 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-24 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-32 shadow-sm"></div></TableCell>
@@ -98,10 +102,10 @@ export default function CustomerPage() {
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-24 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-16 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-16 shadow-sm"></div></TableCell>
-          <TableCell><div className="h-5 bg-gray-200 rounded-lg w-12 shadow-sm"></div></TableCell>
+          {/* <TableCell><div className="h-5 bg-gray-200 rounded-lg w-12 shadow-sm"></div></TableCell> */}
           <TableCell className="text-right">
             <div className="flex justify-end">
-              <div className="h-8 w-8 bg-gray-200 rounded-lg shadow-sm"></div>
+              {/* <div className="h-8 w-8 bg-gray-200 rounded-lg shadow-sm"></div> */}
             </div>
           </TableCell>
         </TableRow>
@@ -123,13 +127,30 @@ export default function CustomerPage() {
           <div className="py-2.5 px-6 border-b border-gray-100 flex items-center justify-between gap-4">
             <SearchBar
               containerClassName="flex-1 max-w-md"
-              placeholder="Search customers..."
+              placeholder="Search by name or company..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
             />
+
+            <div className="w-[180px]">
+              <CustomSelect
+                label=""
+                value={statusFilter}
+                onChange={(val: string) => {
+                  setStatusFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'all', label: 'All Users' },
+                  { value: 'active', label: 'Active User' },
+                  { value: 'inactive', label: 'Inactive User' },
+                ]}
+                placeholder="Status"
+              />
+            </div>
             <Button
               variant="primary"
               onClick={handleAddCustomer}
@@ -144,15 +165,14 @@ export default function CustomerPage() {
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead className="whitespace-nowrap">Client Id</TableHead>
-                    <TableHead className="whitespace-nowrap">Username</TableHead>
-                    <TableHead className="whitespace-nowrap">Company Name</TableHead>
+                    {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
                     <TableHead className="whitespace-nowrap">Full Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Company Name</TableHead>
                     <TableHead className="whitespace-nowrap">Email</TableHead>
                     <TableHead className="whitespace-nowrap">Telephone</TableHead>
                     <TableHead className="whitespace-nowrap">City</TableHead>
                     <TableHead className="whitespace-nowrap">State</TableHead>
-                    <TableHead className="whitespace-nowrap">Status</TableHead>
+                    {/* <TableHead className="whitespace-nowrap">Status</TableHead> */}
                     <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                 </TableRow>
                 </TableHeader>
@@ -162,15 +182,14 @@ export default function CustomerPage() {
                 ) : customers.length > 0 ? (
                     customers.map((customer) => (
                     <TableRow key={customer.userId} className="group hover:bg-gray-50/50">
-                        <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{customer.userId}</TableCell>
-                        <TableCell className="text-sm font-semibold text-gray-800 whitespace-nowrap">{customer.username}</TableCell>
-                        <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.companyname || '--'}</TableCell>
+                        {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{customer.userId}</TableCell> */}
                         <TableCell className="text-sm font-medium text-gray-800 whitespace-nowrap">{`${customer.firstname || ''} ${customer.lastname || ''}`.trim() || '--'}</TableCell>
+                        <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.companyname || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.primaryEmail || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.telephone || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.city || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.state || '--'}</TableCell>
-                        <TableCell className="whitespace-nowrap">{getStatusBadge(customer.isActive)}</TableCell>
+                        {/* <TableCell className="whitespace-nowrap">{getStatusBadge(customer.hasValidCard)}</TableCell> */}
                         <TableCell className="text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                             <Button 
@@ -195,7 +214,7 @@ export default function CustomerPage() {
                     ))
                 ) : (
                     <TableRow>
-                    <TableCell colSpan={10} className="py-12 text-center text-sm text-gray-500">
+                    <TableCell colSpan={7} className="py-12 text-center text-sm text-gray-500">
                         No customers found.
                     </TableCell>
                     </TableRow>
@@ -237,7 +256,7 @@ export default function CustomerPage() {
                 
                 <h3 className="text-xl font-black text-gray-900 mb-3">Delete Customer</h3>
                 <p className="text-sm text-gray-500 leading-relaxed px-2 font-medium">
-                  Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete?.username}"</span>? This action cannot be undone.
+                  Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? `${customerToDelete.firstname} ${customerToDelete.lastname}` : ''}"</span>? This action cannot be undone.
                 </p>
               </div>
 
