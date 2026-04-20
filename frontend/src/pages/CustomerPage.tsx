@@ -166,7 +166,7 @@ export default function CustomerPage() {
                 <TableHeader>
                 <TableRow>
                     {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
-                    <TableHead className="whitespace-nowrap">Full Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Username</TableHead>
                     <TableHead className="whitespace-nowrap">Company Name</TableHead>
                     <TableHead className="whitespace-nowrap">Email</TableHead>
                     <TableHead className="whitespace-nowrap">Telephone</TableHead>
@@ -183,7 +183,7 @@ export default function CustomerPage() {
                     customers.map((customer) => (
                     <TableRow key={customer.userId} className="group hover:bg-gray-50/50">
                         {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{customer.userId}</TableCell> */}
-                        <TableCell className="text-sm font-medium text-gray-800 whitespace-nowrap">{`${customer.firstname || ''} ${customer.lastname || ''}`.trim() || '--'}</TableCell>
+                        <TableCell className="text-sm font-medium text-gray-800 whitespace-nowrap">{customer.username || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.companyname || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.primaryEmail || '--'}</TableCell>
                         <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.telephone || '--'}</TableCell>
@@ -256,7 +256,7 @@ export default function CustomerPage() {
                 
                 <h3 className="text-xl font-black text-gray-900 mb-3">Delete Customer</h3>
                 <p className="text-sm text-gray-500 leading-relaxed px-2 font-medium">
-                  Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? `${customerToDelete.firstname} ${customerToDelete.lastname}` : ''}"</span>? This action cannot be undone.
+                  Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? customerToDelete.username : ''}"</span>? This action cannot be undone.
                 </p>
               </div>
 

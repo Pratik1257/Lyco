@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Lyco.Api.Models;
@@ -18,4 +18,6 @@ public partial class ServiceMst
     public virtual ICollection<Quote> Quotes { get; set; } = new List<Quote>();
 
     public virtual ICollection<UserPriceMst> UserPriceMsts { get; set; } = new List<UserPriceMst>();
+
+    public virtual ICollection<ExpenseMst> ExpenseMsts { get; set; } = new List<ExpenseMst>();
 }

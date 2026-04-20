@@ -28,6 +28,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
       { to: '/quotes', icon: FileText, label: 'Manage Quote' },
       { to: '/payments', icon: CreditCard, label: 'Manage Payment' },
       { to: '/invoices', icon: Receipt, label: 'Manage Invoice' },
+      { to: '/expenses', icon: Receipt, label: 'Manage Expenses' },
     ],
   },
   {
@@ -38,9 +39,9 @@ const navSections: { label: string; items: NavItem[] }[] = [
         icon: Users, 
         label: 'Manage Customers',
         subItems: [
-          { to: '/customers/status', label: 'Customer Status' },
+          { to: '/customers/status', label: 'Customer Summary' },
           { to: '/customers/card-summary', label: 'Card Summary' },
-          { to: '/customers/card-details', label: 'Customer Card Details' }
+          // { to: '/customers/card-details', label: 'Customer Card Details' }
         ]
       },
       { to: '/employees', icon: UserCog, label: 'Manage Employee' },

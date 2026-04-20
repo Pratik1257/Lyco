@@ -24,10 +24,8 @@ export default function ProfilePreview({
 }: ProfilePreviewProps) {
   
   const initials = useMemo(() => {
-    const f = firstname?.charAt(0) || '';
-    const l = lastname?.charAt(0) || '';
-    return (f + l).toUpperCase() || '?';
-  }, [firstname, lastname]);
+    return username?.charAt(0).toUpperCase() || '?';
+  }, [username]);
 
   // Premium Palette: Deep Ocean to Electric Indigo
   const activeGradient = isActive === 'Y' 
@@ -70,7 +68,7 @@ export default function ProfilePreview({
         <div className="relative z-10 space-y-1 mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-[20px] font-black text-slate-900 tracking-tight leading-none truncate">
-              {firstname || lastname ? `${firstname} ${lastname}` : 'Customer Identity'}
+              {username || 'Customer Identity'}
             </h3>
             {isActive === 'Y' && <ShieldCheck size={18} className="text-cyan-500 shrink-0" />}
           </div>
@@ -91,8 +89,8 @@ export default function ProfilePreview({
               <Hash size={14} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Alias</p>
-              <p className="text-[13px] font-bold text-slate-700 truncate">{username || 'unassigned'}</p>
+              <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Full Name</p>
+              <p className="text-[13px] font-bold text-slate-700 truncate">{firstname || lastname ? `${firstname} ${lastname}` : 'Unassigned'}</p>
             </div>
           </div>
 

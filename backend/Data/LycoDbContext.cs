@@ -48,6 +48,8 @@ public partial class LycoDbContext : DbContext
 
     public virtual DbSet<CurrencyMst> CurrencyMsts { get; set; }
 
+    public virtual DbSet<ExpenseMst> ExpenseMsts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<BillingPaypalMaster>(entity =>
@@ -471,6 +473,33 @@ public partial class LycoDbContext : DbContext
             entity.Property(e => e.ServiceName)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<ExpenseMst>(entity =>
+        {
+            entity.HasKey(e => e.ExpenseId);
+
+            entity.ToTable("ExpenseMst");
+
+            entity.Property(e => e.Title)
+                .HasMaxLength(250)
+                .IsUnicode(false);
+            entity.Property(e => e.Amount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Currency)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ExpenseDate)
+                .HasColumnType("datetime");
+            entity.Property(e => e.Notes)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CreatedDate)
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.Service).WithMany(p => p.ExpenseMsts)
+                .HasForeignKey(d => d.ServiceId)
+                .HasConstraintName("FK_ExpenseMst_ServiceMst");
         });
 
         modelBuilder.Entity<UserPriceMst>(entity =>

@@ -12,6 +12,7 @@ import CustomerFormModelTwo from './pages/CustomerFormModelTwo.tsx';
 import CustomerFormModal from './components/customers/CustomerFormModal.tsx';
 import ExpiryCard from './pages/ExpiryCard.tsx';
 import CardDetailsPage from './pages/CardDetailsPage.tsx';
+import Expenses from './pages/Expenses.tsx';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employees — coming soon</div>} />
               <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendors — coming soon</div>} />
               <Route path="prices" element={<Prices />} />
+              <Route path="expenses" element={<Expenses />} />
               <Route path="change-password" element={<ChangePassword />} />
               <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
             </Route>

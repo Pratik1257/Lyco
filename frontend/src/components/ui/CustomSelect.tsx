@@ -30,6 +30,7 @@ interface CustomSelectProps {
   maxMenuHeight?: number;
   menuPlacement?: 'auto' | 'bottom' | 'top';
   menuAlign?: 'left' | 'right';
+  error?: string;
 }
 
 // Custom Selected Value rendering (collapsed state)
@@ -162,7 +163,8 @@ export default function CustomSelect({
   required = false,
   maxMenuHeight = 230,
   menuPlacement = 'auto',
-  menuAlign = 'left'
+  menuAlign = 'left',
+  error
 }: CustomSelectProps) {
   const [searchText, setSearchText] = useState('');
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -192,10 +194,10 @@ export default function CustomSelect({
     control: (base, state) => ({
       ...base,
       backgroundColor: state.selectProps.menuIsOpen ? '#ffffff' : '#f9fafb',
-      borderColor: state.selectProps.menuIsOpen ? '#06b6d4' : '#e5e7eb',
-      boxShadow: state.selectProps.menuIsOpen
-        ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
-        : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      borderColor: error ? '#ef4444' : (state.selectProps.menuIsOpen ? '#06b6d4' : '#e5e7eb'),
+      boxShadow: error 
+        ? '0 0 0 4px rgba(239, 68, 68, 0.1)' 
+        : (state.selectProps.menuIsOpen ? '0 0 0 4px rgba(6, 182, 212, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'),
       borderRadius: '0.5rem',
       padding: '0px',
       minHeight: '38px',
@@ -206,11 +208,13 @@ export default function CustomSelect({
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       borderWidth: '1.5px',
       '&:hover': {
-        borderColor: state.selectProps.menuIsOpen ? '#06b6d4' : '#d1d5db',
+        borderColor: error ? '#ef4444' : (state.selectProps.menuIsOpen ? '#06b6d4' : '#d1d5db'),
         transform: state.selectProps.menuIsOpen ? 'none' : 'translateY(-1px)',
-        boxShadow: state.selectProps.menuIsOpen
-          ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
-          : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        boxShadow: error
+          ? '0 0 0 4px rgba(239, 68, 68, 0.1)'
+          : state.selectProps.menuIsOpen
+            ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
       }
     }),
     valueContainer: (base) => ({
@@ -303,13 +307,13 @@ export default function CustomSelect({
   const ExtendedSelect = Select as unknown as React.ComponentType<ExtendedSelectProps>;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       {label && (
-        <label className="block text-xs font-medium text-gray-600 ml-1">
+        <label className="block text-[13px] font-semibold text-slate-900 ml-1">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div>
+      <div className={error ? 'animate-shake' : ''}>
         <ExtendedSelect
           options={filteredOptions}
           value={selectedOption}
@@ -355,6 +359,13 @@ export default function CustomSelect({
           )}
         />
       </div>
+      {error && (
+        <div className="flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <span className="text-[11px] font-medium text-red-500 leading-none">
+            {error}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

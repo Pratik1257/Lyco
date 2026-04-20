@@ -187,7 +187,7 @@ export default function ExpiryCard() {
             <TableHeader>
               <TableRow>
                 {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
-                <TableHead className="whitespace-nowrap">Full Name</TableHead>
+                <TableHead className="whitespace-nowrap">Username</TableHead>
                 <TableHead className="whitespace-nowrap">Company Name</TableHead>
                 <TableHead className="whitespace-nowrap">Email</TableHead>
                 <TableHead className="whitespace-nowrap">Telephone</TableHead>
@@ -202,7 +202,7 @@ export default function ExpiryCard() {
                 cards.map((card) => (
                   <TableRow key={card.cardId} className="group hover:bg-gray-50/50">
                     {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{card.userId || '--'}</TableCell> */}
-                    <TableCell className="text-sm font-semibold text-gray-800 whitespace-nowrap">{card.clientFullName || '--'}</TableCell>
+                    <TableCell className="text-sm font-semibold text-gray-800 whitespace-nowrap">{card.username || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.companyName || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.email || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.telephone || '--'}</TableCell>
@@ -346,7 +346,7 @@ export default function ExpiryCard() {
                           <div className="flex justify-between items-end">
                             <div className="space-y-1">
                               <span className="text-[8px] uppercase tracking-widest text-white/40 block font-bold">Card Holder</span>
-                              <span className="text-[13px] font-bold uppercase tracking-wide">{`${cardToView.firstName || ''} ${cardToView.lastName || ''}`.trim() || '--'}</span>
+                              <span className="text-[13px] font-bold uppercase tracking-wide">{cardToView.username || '--'}</span>
                             </div>
                             <div className="text-right space-y-1">
                               <span className="text-[8px] uppercase tracking-widest text-white/40 block font-bold">Expires</span>
@@ -401,8 +401,8 @@ export default function ExpiryCard() {
                     <User size={14} className="text-cyan-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Client Full Name</p>
-                    <p className="text-sm font-bold text-gray-900 truncate">{cardToView.clientFullName || '--'}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Username</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">{cardToView.username || '--'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">ID</p>

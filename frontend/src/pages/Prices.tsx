@@ -499,7 +499,7 @@ export default function Prices() {
               <TableHeader>
                 <TableRow>
                   {activeTab === 'general' && <TableHead className="w-10 pl-6"></TableHead>}
-                  {activeTab === 'userwise' && <TableHead className="pl-6">Full Name</TableHead>}
+                  {activeTab === 'userwise' && <TableHead className="pl-6">Username</TableHead>}
                   <TableHead>Service</TableHead>
                   <TableHead>{activeTab === 'general' ? 'Currencies' : 'Currency'}</TableHead>
                   {activeTab === 'userwise' && <TableHead>Price</TableHead>}
@@ -512,7 +512,7 @@ export default function Prices() {
                     items.map((price: any) => (
                       <TableRow key={price.id} className="hover:bg-gray-50/50 cursor-pointer transition-colors">
                         <TableCell className="pl-6 text-sm font-medium text-gray-700">
-                          {price.firstname || price.lastname ? `${price.firstname} ${price.lastname}` : price.username}
+                          {price.username}
                         </TableCell>
                         <TableCell className="text-sm font-bold text-gray-800">{price.serviceName}</TableCell>
                         <TableCell>
@@ -705,7 +705,7 @@ export default function Prices() {
                           }}
                           options={usersList.map((u: any) => ({ 
                             value: u.id, 
-                            label: u.firstname || u.lastname ? `${u.firstname} ${u.lastname}` : u.username 
+                            label: u.username
                           }))}
                           placeholder="Choose User"
                         />
