@@ -185,7 +185,7 @@ export default function CustomSelect({
   const filteredOptions = useMemo(
     () =>
       options.filter((opt) =>
-        opt.label.toLowerCase().includes(searchText.toLowerCase())
+        (opt.label || '').toLowerCase().includes(searchText.toLowerCase())
       ),
     [options, searchText]
   );
@@ -200,8 +200,8 @@ export default function CustomSelect({
         : (state.selectProps.menuIsOpen ? '0 0 0 4px rgba(6, 182, 212, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'),
       borderRadius: '0.5rem',
       padding: '0px',
-      minHeight: '38px',
-      height: '38px',
+      minHeight: '40px',
+      height: '40px',
       fontSize: '0.875rem',
       fontWeight: 500,
       cursor: 'pointer',

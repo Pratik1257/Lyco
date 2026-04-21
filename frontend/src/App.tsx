@@ -13,6 +13,8 @@ import CustomerFormModal from './components/customers/CustomerFormModal.tsx';
 import ExpiryCard from './pages/ExpiryCard.tsx';
 import CardDetailsPage from './pages/CardDetailsPage.tsx';
 import Expenses from './pages/Expenses.tsx';
+import OrdersSummaryPage from './pages/OrdersSummaryPage.tsx';
+import PlaceOrderPage from './pages/PlaceOrderPage.tsx';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -63,7 +65,11 @@ export default function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
               <Route path="services" element={<Services />} />
-              <Route path="orders" element={<div className="p-4 text-gray-500">Manage Orders — coming soon</div>} />
+              <Route path="orders/new" element={<PlaceOrderPage />} />
+              <Route path="orders/summary" element={<OrdersSummaryPage />} />
+              <Route path="orders/complete" element={<div className="p-4 text-gray-500">Complete an Order — coming soon</div>} />
+              <Route path="orders/remove" element={<div className="p-4 text-gray-500">Remove an Order — coming soon</div>} />
+              <Route path="orders" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Orders</div>} />
               <Route path="quotes" element={<div className="p-4 text-gray-500">Manage Quotes — coming soon</div>} />
               <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
               <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoices — coming soon</div>} />

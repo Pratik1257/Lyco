@@ -180,6 +180,17 @@ public class PriceRepository : IPriceRepository
         await _db.SaveChangesAsync();
     }
 
+    public async Task<decimal?> GetUserwisePriceValueAsync(long userId, long serviceId)
+    {
+        var priceStr = await _db.UserPriceMsts
+            .Where(p => p.UserId == userId && p.ServiceId == serviceId)
+            .Select(p => p.Price)
+            .FirstOrDefaultAsync();
+
+        if (priceStr == null) return null;
+        return decimal.TryParse(priceStr, out var p) ? p : null;
+    }
+
     // ── Users ─────────────────────────────────────────────────────────────────
 
     public async Task<IEnumerable<UserRegistration>> GetAllUsersAsync() =>

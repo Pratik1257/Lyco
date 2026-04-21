@@ -95,6 +95,13 @@ public class PricesController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("userwise/lookup")]
+    public async Task<IActionResult> GetUserwisePrice(long userId, long serviceId)
+    {
+        var price = await _service.GetUserwisePriceAsync(userId, serviceId);
+        return Ok(new { price });
+    }
+
     [HttpDelete("general/group/{serviceId:long}")]
     public async Task<IActionResult> DeleteGeneralGroup(long serviceId)
     {

@@ -22,6 +22,7 @@ export interface Customer {
   userType: string;
   createdDate: string;
   hasValidCard: boolean; // computed from card expiry dates — not from DB
+  uniqueNo?: number;
 }
 
 export interface Country {

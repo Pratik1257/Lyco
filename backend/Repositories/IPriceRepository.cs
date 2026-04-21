@@ -18,6 +18,7 @@ public interface IPriceRepository
     Task<bool> UserwisePriceExistsAsync(long userId, long serviceId, string currency, long? excludeId = null);
     Task<UserPriceMst> CreateUserwiseAsync(long userId, long serviceId, string currency, decimal price);
     Task UpdateUserwiseAsync(UserPriceMst price);
+    Task<decimal?> GetUserwisePriceValueAsync(long userId, long serviceId);
 
     // Users for dropdown
     Task<IEnumerable<UserRegistration>> GetAllUsersAsync();

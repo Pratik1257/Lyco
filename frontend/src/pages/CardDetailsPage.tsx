@@ -144,7 +144,7 @@ export default function CardDetailsPage() {
     }
 
     if (!formData.firstName) errors.firstName = 'First name is required';
-    if (!formData.middlename) errors.middlename = 'Middle name is required';
+    // Middle name is optional
     if (!formData.lastName) errors.lastName = 'Last name is required';
     if (!formData.address1) errors.address1 = 'Billing address is required';
     if (!formData.city) errors.city = 'City is required';
@@ -180,13 +180,10 @@ export default function CardDetailsPage() {
   const isFormComplete = !!(
     formData.userId &&
     formData.cardNo &&
-    formData.cardNo.length >= 13 &&
     expMonth &&
     expYear &&
     formData.cvv &&
-    formData.cvv.length >= 3 &&
     formData.firstName &&
-    formData.middlename &&
     formData.lastName &&
     formData.address1 &&
     formData.city &&
@@ -218,7 +215,7 @@ export default function CardDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-5">
+    <div className="bg-slate-50/50 py-5">
       <div className="max-w-[1000px] mx-auto px-4 sm:px-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form 
@@ -320,9 +317,8 @@ export default function CardDetailsPage() {
                     {renderError('firstName')}
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Middle Name <span className="text-red-500">*</span></label>
-                    <input type="text" name="middlename" value={formData.middlename || ''} onChange={handleInputChange} className={`${premiumInput} ${fieldErrors.middlename ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} />
-                    {renderError('middlename')}
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Middle Name</label>
+                    <input type="text" name="middlename" value={formData.middlename || ''} onChange={handleInputChange} className={premiumInput} />
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Last Name <span className="text-red-500">*</span></label>

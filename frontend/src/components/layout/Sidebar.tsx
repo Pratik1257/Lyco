@@ -24,7 +24,18 @@ const navSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'OPERATIONS',
     items: [
-      { to: '/orders', icon: ShoppingCart, label: 'Manage Orders', badge: 10 },
+      { 
+        to: '/orders', 
+        icon: ShoppingCart, 
+        label: 'Manage Orders', 
+        badge: 10,
+        subItems: [
+          { to: '/orders/new', label: 'Place New Order' },
+          { to: '/orders/summary', label: 'Summary' },
+          { to: '/orders/complete', label: 'Complete an Order' },
+          { to: '/orders/remove', label: 'Remove an Order' },
+        ]
+      },
       { to: '/quotes', icon: FileText, label: 'Manage Quote' },
       { to: '/payments', icon: CreditCard, label: 'Manage Payment' },
       { to: '/invoices', icon: Receipt, label: 'Manage Invoice' },

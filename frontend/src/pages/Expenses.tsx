@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Edit2, Trash2, Search, AlertCircle, X,
-  Receipt, Calendar, DollarSign, FileText, Filter
+  Receipt, DollarSign, FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -14,6 +14,7 @@ import { SearchBar } from '../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 import CustomSelect from '../components/ui/CustomSelect';
+import DatePicker from '../components/ui/DatePicker';
 
 // ── Form defaults ────────────────────────────────────────────────────────────
 const emptyForm: CreateExpensePayload = {
@@ -266,7 +267,7 @@ export default function Expenses() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto relative min-h-[400px]">
+        <div className="overflow-x-auto relative">
           <Table>
             <TableHeader>
               <TableRow>
@@ -346,7 +347,7 @@ export default function Expenses() {
       {isFormOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={closeForm} />
-          <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-white/20">
+          <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 border border-white/20">
             {/* Modal Header */}
             <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8">
               <div className="absolute top-0 right-0 p-4">
@@ -445,14 +446,15 @@ export default function Expenses() {
               {/* Date */}
               <div className="space-y-1">
                 <label className="block text-[13px] font-semibold text-slate-900 ml-1">Expense Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
+                <DatePicker
+                  direction="up"
                   value={formData.expenseDate}
-                  onChange={(e) => {
-                    setFormData(p => ({ ...p, expenseDate: e.target.value }));
+                  onChange={(val) => {
+                    setFormData(p => ({ ...p, expenseDate: val }));
                     if (fieldErrors.expenseDate) setFieldErrors(p => { const n = { ...p }; delete n.expenseDate; return n; });
                   }}
-                  className={`${premiumInput} ${fieldErrors.expenseDate ? 'border-red-500 ring-4 ring-red-500/5' : ''}`}
+                  placeholder="Select expense date"
+                  error={fieldErrors.expenseDate}
                 />
                 {fieldErrors.expenseDate && <p className="text-red-500 text-xs font-medium ml-1">{fieldErrors.expenseDate}</p>}
               </div>

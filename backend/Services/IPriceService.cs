@@ -14,6 +14,7 @@ public interface IPriceService
     Task<PagedResult<UserwisePriceDto>> GetUserwisePagedAsync(string? search, int page, int pageSize);
     Task<(UserwisePriceDto? Dto, string? Error)> CreateUserwiseAsync(CreateUserwisePriceRequest req);
     Task<(UserwisePriceDto? Dto, string? Error)> UpdateUserwiseAsync(long id, UpdateUserwisePriceRequest req);
+    Task<decimal?> GetUserwisePriceAsync(long userId, long serviceId);
 
     // Users for dropdown
     Task<IEnumerable<UserDto>> GetUsersAsync();

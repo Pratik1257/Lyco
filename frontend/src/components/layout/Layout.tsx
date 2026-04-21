@@ -42,7 +42,7 @@ export default function Layout() {
         subtitle={meta.subtitle} 
         onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
       />
-      <main className="lg:ml-[260px] pt-[60px] min-h-screen transition-all duration-300">
+      <main className="lg:ml-[260px] pt-[60px] transition-all duration-300">
         <div className="px-6 py-2">
           <Outlet />
         </div>

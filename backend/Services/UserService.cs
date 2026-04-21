@@ -146,7 +146,8 @@ public class UserService : IUserService
             user.IsActive,       // ← untouched DB field
             user.UserType,
             user.CreatedDate,
-            hasValidCard         // ← new computed field from card expiry
+            hasValidCard,        // ← new computed field from card expiry
+            user.UniqueNo
         );
     }
 }

@@ -174,6 +174,9 @@ public class PriceService : IPriceService
         return (dto, null);
     }
 
+    public Task<decimal?> GetUserwisePriceAsync(long userId, long serviceId) =>
+        _repo.GetUserwisePriceValueAsync(userId, serviceId);
+
     // ── Users ─────────────────────────────────────────────────────────────────
 
     public async Task<IEnumerable<UserDto>> GetUsersAsync()

@@ -112,6 +112,13 @@ export const pricesApi = {
     return response.data.price;
   },
   
+  getUserwisePriceLookup: async (userId: number, serviceId: number) => {
+    const response = await apiClient.get<{ price: number | null }>('/Prices/userwise/lookup', {
+      params: { userId, serviceId }
+    });
+    return response.data.price;
+  },
+  
   // --- Group Deletion ---
   deleteGeneralGroup: async (serviceId: number) => {
     await apiClient.delete(`/Prices/general/group/${serviceId}`);
