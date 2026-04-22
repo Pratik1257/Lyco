@@ -18,10 +18,11 @@ public class CardDetailsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResult<CardDetailDto>>> GetPaged(
         [FromQuery] string? search,
+        [FromQuery] string? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var result = await _cardService.GetPagedAsync(search, page, pageSize);
+        var result = await _cardService.GetPagedAsync(search, status, page, pageSize);
         return Ok(result);
     }
 

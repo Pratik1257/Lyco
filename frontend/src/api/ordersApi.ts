@@ -46,6 +46,11 @@ export const ordersApi = {
     return res.data;
   },
 
+  getOrderById: async (id: number) => {
+    const res = await apiClient.get(`/Orders/${id}`);
+    return res.data;
+  },
+
   createOrder: async (data: any) => {
     const res = await apiClient.post('/Orders', data);
     return res.data;
@@ -56,5 +61,15 @@ export const ordersApi = {
       params: { uniqueNo }
     });
     return res.data.orderNo;
+  },
+
+  updateOrder: async (id: number, data: any) => {
+    const res = await apiClient.put(`/Orders/${id}`, data);
+    return res.data;
+  },
+
+  deleteOrder: async (id: number) => {
+    const res = await apiClient.delete(`/Orders/${id}`);
+    return res.data;
   }
 };

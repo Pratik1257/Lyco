@@ -19,7 +19,6 @@ export default function CustomerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [statusFilter, setStatusFilter] = useState('all');
   
   // UI State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -27,8 +26,8 @@ export default function CustomerPage() {
 
   // Fetch Customers (Server-side Search & pagination)
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['customers', currentPage, itemsPerPage, searchQuery, statusFilter],
-    queryFn: () => customersApi.getCustomers(currentPage, itemsPerPage, searchQuery, statusFilter),
+    queryKey: ['customers', currentPage, itemsPerPage, searchQuery],
+    queryFn: () => customersApi.getCustomers(currentPage, itemsPerPage, searchQuery),
   });
 
   const deleteMutation = useMutation({
@@ -135,22 +134,6 @@ export default function CustomerPage() {
               }}
             />
 
-            <div className="w-[180px]">
-              <CustomSelect
-                label=""
-                value={statusFilter}
-                onChange={(val: string) => {
-                  setStatusFilter(val);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: 'all', label: 'All Users' },
-                  { value: 'active', label: 'Active User' },
-                  { value: 'inactive', label: 'Inactive User' },
-                ]}
-                placeholder="Status"
-              />
-            </div>
             <Button
               variant="primary"
               onClick={handleAddCustomer}

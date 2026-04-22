@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ShoppingBag, User, Briefcase, FileText,
+  User, Briefcase, FileText,
   Mail, Hash, DollarSign, PenTool, Layers,
   Maximize2, Paperclip, ChevronLeft, AlertCircle
 } from 'lucide-react';
@@ -14,10 +14,13 @@ import { customersApi } from '../api/customersApi';
 import { pricesApi, usersApi } from '../api/pricesApi';
 import { Button } from '../components/ui/Button';
 import CustomSelect from '../components/ui/CustomSelect';
+import { X, FileIcon } from 'lucide-react';
 
 export default function PlaceOrderPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
 
   const [formData, setFormData] = useState({
     uniqueNo: null as number | null,
@@ -32,11 +35,15 @@ export default function PlaceOrderPage() {
     currency: 'USD',
     email: '',
     companyName: '',
-    orderNo: ''
+    orderNo: '',
+    orderStatus: 'In Process'
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [initialData, setInitialData] = useState<any>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch users for dropdown
   const { data: users = [] } = useQuery({
@@ -93,9 +100,12 @@ export default function PlaceOrderPage() {
 
   // Auto-generate Order # when uniqueNo/userId changes
   useEffect(() => {
+    // Skip if in edit mode
+    if (isEditMode) return;
+
     const { uniqueNo, userId } = formData;
     const identifier = uniqueNo || userId;
-    
+
     if (identifier !== null && identifier !== undefined) {
       ordersApi.getNextOrderNumber(identifier).then(no => {
         setFormData(prev => ({ ...prev, orderNo: no }));
@@ -105,13 +115,93 @@ export default function PlaceOrderPage() {
     } else {
       setFormData(prev => ({ ...prev, orderNo: '' }));
     }
-  }, [formData.uniqueNo, formData.userId]);
+  }, [formData.uniqueNo, formData.userId, isEditMode]);
+
+  // Reset form when switching from edit to create mode
+  useEffect(() => {
+    if (!isEditMode) {
+      setFormData({
+        uniqueNo: null,
+        userId: null,
+        serviceId: null,
+        workTitle: '',
+        instructions: '',
+        fileFormat: '',
+        size: '',
+        sizetype: 'Inches',
+        amount: '',
+        currency: 'USD',
+        email: '',
+        companyName: '',
+        orderNo: '',
+        orderStatus: 'In Process'
+      });
+      setFieldErrors({});
+    }
+  }, [isEditMode]);
+
+  // Load data for edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      ordersApi.getOrderById(Number(id)).then(order => {
+        // We need to map the user back to its userId from the users list
+        // Or find it by uniqueNo
+        const matchingUser = users.find(u =>
+          (u.uniqueNo && order.uniqueNo && String(u.uniqueNo) === String(order.uniqueNo)) ||
+          (u.username && order.username && u.username === order.username)
+        );
+
+        const orderData = {
+          uniqueNo: order.uniqueNo,
+          userId: matchingUser ? matchingUser.id : null,
+          serviceId: order.serviceId,
+          workTitle: order.workTitle || '',
+          instructions: order.instructions || '',
+          fileFormat: order.fileFormat || '',
+          size: order.size || '',
+          sizetype: order.sizetype || 'Inches',
+          amount: order.amount || '',
+          currency: order.currency || 'USD',
+          email: order.email || '',
+          companyName: order.companyName || '',
+          orderNo: order.orderNo || '',
+          orderStatus: order.orderStatus || 'In Process'
+        };
+
+        setFormData(orderData);
+        setInitialData(orderData);
+      }).catch(() => {
+        toast.error('Failed to load order details');
+        navigate('/orders/summary');
+      });
+    }
+  }, [id, isEditMode, users, navigate]);
+
+  const hasChanges = useMemo(() => {
+    if (!isEditMode) return true;
+    if (!initialData) return false;
+    return JSON.stringify(formData) !== JSON.stringify(initialData);
+  }, [formData, initialData, isEditMode]);
 
   const mutation = useMutation({
-    mutationFn: (data: any) => ordersApi.createOrder(data),
+    mutationFn: (data: any) => {
+      const formDataToSend = new FormData();
+      Object.keys(data).forEach(key => {
+        if (data[key] !== null && data[key] !== undefined) {
+          formDataToSend.append(key, data[key]);
+        }
+      });
+      selectedFiles.forEach(file => {
+        formDataToSend.append('files', file);
+      });
+
+      return isEditMode
+        ? ordersApi.updateOrder(Number(id), formDataToSend)
+        : ordersApi.createOrder(formDataToSend);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Order placed successfully');
+      toast.success(isEditMode ? 'Order updated successfully' : 'Order placed successfully');
       navigate('/orders/summary');
     },
     onError: (err: any) => {
@@ -147,7 +237,8 @@ export default function PlaceOrderPage() {
       sizetype: formData.sizetype,
       amount: formData.amount,
       currency: formData.currency,
-      email: formData.email
+      email: formData.email,
+      orderStatus: formData.orderStatus
     });
   };
 
@@ -167,25 +258,12 @@ export default function PlaceOrderPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-5">
-      <div className="max-w-[1000px] mx-auto px-4 sm:px-6">
+      <div className="w-full px-4 sm:px-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form
             onSubmit={handleSubmit}
             className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden"
           >
-            {/* Header */}
-            <div className="bg-slate-900 p-4 sm:p-5 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-              <div className="relative flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <ShoppingBag size={20} className="text-cyan-400" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold tracking-tight">Place New Order</h1>
-                  <p className="text-slate-400 text-xs font-medium">Create a new service request for your account</p>
-                </div>
-              </div>
-            </div>
 
             <div className="p-5 sm:p-6 space-y-4">
               {formError && (
@@ -210,6 +288,7 @@ export default function PlaceOrderPage() {
                         options={users.map(u => ({ value: u.id, label: u.username || 'Unknown' }))}
                         placeholder="Choose Username"
                         error={fieldErrors.userId}
+                        isDisabled={isEditMode}
                       />
                     </div>
                     <div className="space-y-1">
@@ -280,6 +359,20 @@ export default function PlaceOrderPage() {
                         />
                       </div>
                     </div>
+                    {isEditMode && (
+                      <div className="space-y-1">
+                        <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order Status</label>
+                        <CustomSelect
+                          value={formData.orderStatus}
+                          onChange={(val) => setFormData(p => ({ ...p, orderStatus: val }))}
+                          options={[
+                            { value: 'In Process', label: 'In Process' },
+                            { value: 'Cancelled', label: 'Cancelled' },
+                            { value: 'Completed', label: 'Completed' },
+                          ]}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
@@ -359,13 +452,58 @@ export default function PlaceOrderPage() {
               {/* Section 3: Attachments */}
               <section className="space-y-4">
                 <h4 className={sectionLabel('text-purple-800/50')}><Paperclip size={12} /> Attachments</h4>
-                <div className="border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-50 transition-colors group cursor-pointer">
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                    }
+                  }}
+                  multiple
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,.ai,.psd"
+                />
+
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-50 transition-colors group cursor-pointer"
+                >
                   <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100 mb-3 group-hover:scale-110 transition-transform">
                     <Paperclip size={20} className="text-slate-400 group-hover:text-cyan-600" />
                   </div>
                   <p className="text-sm font-bold text-slate-600">Click to upload or drag and drop</p>
                   <p className="text-[11px] text-slate-400 font-medium mt-1">Upto 30 MB (JPG, PNG, PDF, AI, PSD)</p>
                 </div>
+
+                {selectedFiles.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {selectedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
+                            <FileIcon size={16} className="text-cyan-600" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[12px] font-bold text-slate-700 truncate">{file.name}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                          className="w-7 h-7 rounded-full bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             </div>
 
@@ -379,24 +517,31 @@ export default function PlaceOrderPage() {
                 <ChevronLeft size={16} /> Cancel Order
               </button>
               <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData({
-                    uniqueNo: null, userId: null, serviceId: null, workTitle: '',
-                    instructions: '', fileFormat: '', size: '', sizetype: 'Inches',
-                    amount: '', currency: 'USD', email: '', companyName: '', orderNo: ''
-                  })}
-                  className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-cyan-600 transition-colors"
-                >
-                  Reset
-                </button>
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        uniqueNo: null, userId: null, serviceId: null, workTitle: '',
+                        instructions: '', fileFormat: '', size: '', sizetype: 'Inches',
+                        amount: '', currency: 'USD', email: '', companyName: '', orderNo: '',
+                        orderStatus: 'In Process'
+                      });
+                      setSelectedFiles([]);
+                    }}
+                    className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-cyan-600 transition-colors"
+                  >
+                    Reset
+                  </button>
+                )}
                 <Button
                   type="submit"
                   variant="primary"
                   isLoading={mutation.isPending}
-                  className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all"
+                  disabled={!hasChanges}
+                  className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
                 >
-                  Place Order
+                  {isEditMode ? 'Update Order' : 'Place Order'}
                 </Button>
               </div>
             </div>

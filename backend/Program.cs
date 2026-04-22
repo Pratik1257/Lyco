@@ -58,6 +58,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lyco API v1"));
 }
 
+app.UseStaticFiles();
 app.UseCors("LycoCors");
 app.UseAuthorization();
 app.MapControllers();

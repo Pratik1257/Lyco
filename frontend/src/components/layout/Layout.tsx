@@ -5,6 +5,10 @@ import Header from './Header';
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/':             { title: 'Dashboard',      subtitle: 'statistics and more' },
   '/dashboard-fx': { title: 'Dashboard FX',   subtitle: 'futuristic view' },
+  '/orders/new':   { title: 'Manage Orders',  subtitle: 'Place New Order' },
+  '/orders/summary':{ title: 'Manage Orders', subtitle: 'Order Summary' },
+  '/orders/complete':{ title: 'Manage Orders',subtitle: 'Complete an Order' },
+  '/orders/remove': { title: 'Manage Orders', subtitle: 'Remove an Order' },
   '/orders':       { title: 'Manage Orders',  subtitle: 'view and manage orders' },
   '/quotes':       { title: 'Manage Quote',   subtitle: 'quote requests' },
   '/payments':     { title: 'Manage Payments',subtitle: 'payment records' },
@@ -27,7 +31,14 @@ import { useState } from 'react';
 
 export default function Layout() {
   const { pathname } = useLocation();
-  const meta = pageMeta[pathname] ?? { title: 'Dashboard', subtitle: '' };
+  let meta = pageMeta[pathname];
+  
+  // Handle dynamic paths
+  if (!meta && pathname.startsWith('/orders/edit/')) {
+    meta = { title: 'Manage Orders', subtitle: 'Update Order' };
+  }
+  
+  meta = meta ?? { title: 'Dashboard', subtitle: '' };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (

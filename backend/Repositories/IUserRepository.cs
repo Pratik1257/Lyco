@@ -10,4 +10,5 @@ public interface IUserRepository
     Task UpdateAsync(UserRegistration user);
     Task DeleteAsync(long id);
     Task<bool> ExistsAsync(long id);
+    Task<long> GetNextUniqueNoAsync();
 }

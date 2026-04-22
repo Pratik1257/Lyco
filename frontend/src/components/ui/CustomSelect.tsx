@@ -31,6 +31,7 @@ interface CustomSelectProps {
   menuPlacement?: 'auto' | 'bottom' | 'top';
   menuAlign?: 'left' | 'right';
   error?: string;
+  isDisabled?: boolean;
 }
 
 // Custom Selected Value rendering (collapsed state)
@@ -164,7 +165,8 @@ export default function CustomSelect({
   maxMenuHeight = 230,
   menuPlacement = 'auto',
   menuAlign = 'left',
-  error
+  error,
+  isDisabled = false
 }: CustomSelectProps) {
   const [searchText, setSearchText] = useState('');
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -325,6 +327,7 @@ export default function CustomSelect({
           placeholder={placeholder}
           styles={customStyles}
           isSearchable={false}
+          isDisabled={isDisabled}
           menuIsOpen={menuIsOpen}
           maxMenuHeight={maxMenuHeight}
           onMenuOpen={() => {

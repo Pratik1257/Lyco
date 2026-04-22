@@ -182,7 +182,15 @@ public class PriceService : IPriceService
     public async Task<IEnumerable<UserDto>> GetUsersAsync()
     {
         var users = await _repo.GetAllUsersAsync();
-        return users.Select(u => new UserDto(u.UserId, u.Username ?? "", u.Firstname, u.Lastname, u.Currency));
+        return users.Select(u => new UserDto(
+            u.UserId, 
+            u.Username ?? "", 
+            u.Firstname, 
+            u.Lastname, 
+            u.Currency,
+            u.CardDetails.FirstOrDefault()?.CardId,
+            u.UniqueNo
+        ));
     }
 
     // ── Deletion ──────────────────────────────────────────────────────────────

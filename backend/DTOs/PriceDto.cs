@@ -98,4 +98,4 @@ public record UpdateUserwisePriceRequest
 
 // ── User DTO (for dropdown) ───────────────────────────────────────────────────
 
-public record UserDto(long Id, string Username, string? Firstname, string? Lastname, string? Currency);
+public record UserDto(long Id, string Username, string? Firstname, string? Lastname, string? Currency, long? CardId = null, long? UniqueNo = null);

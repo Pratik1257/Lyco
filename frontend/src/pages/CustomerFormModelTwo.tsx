@@ -344,7 +344,7 @@ export default function CustomerFormModelTwo() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-5">
-      <div className="max-w-[1000px] mx-auto px-4 sm:px-6">
+      <div className="w-full px-4 sm:px-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form 
             onSubmit={handleSaveCustomer} 

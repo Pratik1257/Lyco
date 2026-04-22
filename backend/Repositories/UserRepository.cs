@@ -100,4 +100,10 @@ public class UserRepository : IUserRepository
 
     public Task<bool> ExistsAsync(long id) =>
         _context.UserRegistrations.AnyAsync(u => u.UserId == id);
+
+    public async Task<long> GetNextUniqueNoAsync()
+    {
+        var max = await _context.UserRegistrations.MaxAsync(u => (long?)u.UniqueNo) ?? 99;
+        return Math.Max(100, max + 1);
+    }
 }

@@ -13,9 +13,9 @@ public class CardDetailService : ICardDetailService
         _cardRepository = cardRepository;
     }
 
-    public async Task<PagedResult<CardDetailDto>> GetPagedAsync(string? search, int page, int pageSize)
+    public async Task<PagedResult<CardDetailDto>> GetPagedAsync(string? search, string? status, int page, int pageSize)
     {
-        var (items, total) = await _cardRepository.GetPagedAsync(search, page, pageSize);
+        var (items, total) = await _cardRepository.GetPagedAsync(search, status, page, pageSize);
         var dtos = items.Select(MapToDto).ToList();
 
         var totalPages = (int)Math.Ceiling(total / (double)pageSize);
@@ -30,6 +30,11 @@ public class CardDetailService : ICardDetailService
 
     public async Task<(CardDetailDto? Dto, string? Error)> CreateAsync(CreateCardRequest req)
     {
+        if (req.UserId.HasValue && await _cardRepository.ExistsForUserAsync(req.UserId.Value))
+        {
+            return (null, "This customer already has card details configured.");
+        }
+
         var card = new CardDetail
         {
             UserId = req.UserId,

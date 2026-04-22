@@ -195,6 +195,7 @@ public class PriceRepository : IPriceRepository
 
     public async Task<IEnumerable<UserRegistration>> GetAllUsersAsync() =>
         await _db.UserRegistrations
+            .Include(u => u.CardDetails)
             .Where(u => u.Username != null && u.Username != "")
             .OrderBy(u => u.Username)
             .ToListAsync();

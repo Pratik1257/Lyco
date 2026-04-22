@@ -7,6 +7,7 @@ import { cardsApi, type CardDetail } from '../api/cardsApi';
 
 import { Button } from '../components/ui/Button';
 import { SearchBar } from '../components/ui/SearchBar';
+import CustomSelect from '../components/ui/CustomSelect';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { Pagination } from '../components/ui/Pagination';
 
@@ -18,6 +19,7 @@ export default function ExpiryCard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // UI State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -29,8 +31,8 @@ export default function ExpiryCard() {
 
   // Fetch Cards
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['cards', currentPage, itemsPerPage, searchQuery],
-    queryFn: () => cardsApi.getCards(currentPage, itemsPerPage, searchQuery),
+    queryKey: ['cards', currentPage, itemsPerPage, searchQuery, statusFilter],
+    queryFn: () => cardsApi.getCards(currentPage, itemsPerPage, searchQuery, statusFilter),
   });
 
   const deleteMutation = useMutation({
@@ -121,7 +123,7 @@ export default function ExpiryCard() {
     const expired = isExpired(expDate);
     return (
       <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${!expired ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-        {!expired ? 'Valid' : 'Expired'}
+        {!expired ? 'Active' : 'Inactive'}
       </span>
     );
   };
@@ -137,6 +139,7 @@ export default function ExpiryCard() {
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-24 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-28 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-16 shadow-sm"></div></TableCell>
+          <TableCell><div className="h-5 bg-gray-200 rounded-lg w-20 shadow-sm mx-auto"></div></TableCell>
           <TableCell className="text-right">
             <div className="flex justify-end gap-2">
               <div className="h-8 w-8 bg-gray-200 rounded-lg shadow-sm"></div>
@@ -172,6 +175,22 @@ export default function ExpiryCard() {
               setCurrentPage(1);
             }}
           />
+          <div className="w-[180px]">
+            <CustomSelect
+              label=""
+              value={statusFilter}
+              onChange={(val: string) => {
+                setStatusFilter(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'All Cards' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+              placeholder="Status"
+            />
+          </div>
           <Button
             variant="primary"
             onClick={() => navigate('/customers/card-details')}
@@ -192,6 +211,7 @@ export default function ExpiryCard() {
                 <TableHead className="whitespace-nowrap">Email</TableHead>
                 <TableHead className="whitespace-nowrap">Telephone</TableHead>
                 <TableHead className="whitespace-nowrap">Expiry Date</TableHead>
+                <TableHead className="whitespace-nowrap text-center">Status</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -206,11 +226,9 @@ export default function ExpiryCard() {
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.companyName || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.email || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.telephone || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span>{card.expDate || '--'}</span>
-                        {/* {getStatusBadge(card.expDate)} */}
-                      </div>
+                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.expDate || '--'}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap">
+                      {getStatusBadge(card.expDate)}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">

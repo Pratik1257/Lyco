@@ -66,6 +66,7 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="services" element={<Services />} />
               <Route path="orders/new" element={<PlaceOrderPage />} />
+              <Route path="orders/edit/:id" element={<PlaceOrderPage />} />
               <Route path="orders/summary" element={<OrdersSummaryPage />} />
               <Route path="orders/complete" element={<div className="p-4 text-gray-500">Complete an Order — coming soon</div>} />
               <Route path="orders/remove" element={<div className="p-4 text-gray-500">Remove an Order — coming soon</div>} />

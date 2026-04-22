@@ -28,9 +28,9 @@ export interface CardDetail {
 }
 
 export const cardsApi = {
-  getCards: async (page: number, pageSize: number, search: string = '') => {
+  getCards: async (page: number, pageSize: number, search: string = '', status: string = 'all') => {
     const response = await apiClient.get<PagedResult<CardDetail>>('/CardDetails', {
-      params: { page, pageSize, search }
+      params: { page, pageSize, search, status }
     });
     return response.data;
   },

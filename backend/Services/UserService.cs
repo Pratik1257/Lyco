@@ -53,6 +53,7 @@ public class UserService : IUserService
             AccountEmail = req.AccountEmail,
             IsActive = req.IsActive,
             UserType = req.UserType,
+            UniqueNo = await _repo.GetNextUniqueNoAsync(),
             CreatedDate = DateTime.UtcNow
         };
 

@@ -52,7 +52,7 @@ export default function CardDetailsPage() {
     queryKey: ['users-dropdown'],
     queryFn: async () => {
       const res = await apiClient.get('/Users/dropdown');
-      return res.data as { id: number, username: string, firstname?: string, lastname?: string }[];
+      return res.data as { id: number, username: string, firstname?: string, lastname?: string, cardId?: number | null }[];
     }
   });
 
@@ -216,7 +216,7 @@ export default function CardDetailsPage() {
 
   return (
     <div className="bg-slate-50/50 py-5">
-      <div className="max-w-[1000px] mx-auto px-4 sm:px-6">
+      <div className="w-full px-4 sm:px-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form 
             onSubmit={handleSubmit} 
@@ -239,7 +239,18 @@ export default function CardDetailsPage() {
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Username <span className="text-red-500">*</span></label>
                     <CustomSelect
                       value={formData.userId || ''}
-                      onChange={(val) => setFormData(p => ({ ...p, userId: val ? Number(val) : null }))}
+                      onChange={(val) => {
+                        const userId = val ? Number(val) : null;
+                        if (!isEdit && userId) {
+                          const user = users.find(u => u.id === userId);
+                          if (user?.cardId) {
+                            toast.loading('Redirecting to existing card details...', { duration: 2000 });
+                            navigate(`/customers/card-details?id=${user.cardId}`);
+                            return;
+                          }
+                        }
+                        setFormData(p => ({ ...p, userId }));
+                      }}
                       options={users.map(u => ({ 
                         value: u.id, 
                         label: u.username 

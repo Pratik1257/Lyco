@@ -4,7 +4,7 @@ namespace Lyco.Api.Services;
 
 public interface ICardDetailService
 {
-    Task<PagedResult<CardDetailDto>> GetPagedAsync(string? search, int page, int pageSize);
+    Task<PagedResult<CardDetailDto>> GetPagedAsync(string? search, string? status, int page, int pageSize);
     Task<CardDetailDto?> GetByIdAsync(long id);
     Task<(CardDetailDto? Dto, string? Error)> CreateAsync(CreateCardRequest req);
     Task<(CardDetailDto? Dto, string? Error)> UpdateAsync(long id, UpdateCardRequest req);

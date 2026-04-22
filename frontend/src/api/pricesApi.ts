@@ -36,6 +36,7 @@ export interface UserDto {
   firstname?: string;
   lastname?: string;
   currency?: string;
+  uniqueNo?: number;
 }
 
 export interface CurrencyDto {

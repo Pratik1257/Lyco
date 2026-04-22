@@ -13,4 +13,5 @@ public class OrderCreateDto
     public string? Amount { get; set; }
     public string? Currency { get; set; }
     public string? Email { get; set; }
+    public string? OrderStatus { get; set; }
 }
