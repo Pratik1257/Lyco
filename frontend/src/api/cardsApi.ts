@@ -25,6 +25,7 @@ export interface CardDetail {
   email: string | null;
   telephone: string | null;
   clientFullName: string | null;
+  lastOrderDate: string | null;
 }
 
 export const cardsApi = {

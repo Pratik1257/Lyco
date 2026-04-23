@@ -59,3 +59,67 @@
 .rotate-y-180 {
   transform: rotateY(180deg);
 }
+
+/* React Quill Premium Styling */
+.quill-premium-editor .ql-toolbar.ql-snow {
+  border: none !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: #f8fafc;
+  padding: 8px 12px !important;
+}
+
+.quill-premium-editor .ql-container.ql-snow {
+  border: none !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  min-height: 120px;
+}
+
+.quill-premium-editor .ql-editor {
+  padding: 12px 16px !important;
+  color: #334155 !important;
+  line-height: 1.6;
+}
+
+.quill-premium-editor .ql-editor.ql-blank::before {
+  color: #94a3b8 !important;
+  font-style: normal !important;
+  left: 16px !important;
+}
+
+.quill-premium-editor .ql-snow .ql-stroke {
+  stroke: #64748b !important;
+}
+
+.quill-premium-editor .ql-snow .ql-fill {
+  fill: #64748b !important;
+}
+
+.quill-premium-editor .ql-snow.ql-toolbar button:hover .ql-stroke,
+.quill-premium-editor .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+  stroke: #0891b2 !important;
+}
+
+.quill-premium-editor .ql-snow.ql-toolbar button:hover .ql-fill,
+.quill-premium-editor .ql-snow.ql-toolbar button.ql-active .ql-fill {
+  fill: #0891b2 !important;
+}
+
+/* Rich Text Rendering Styles */
+.prose-slate ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-slate ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-slate li {
+  margin-bottom: 0.25rem;
+}

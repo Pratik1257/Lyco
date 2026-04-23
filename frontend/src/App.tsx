@@ -3,18 +3,20 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/layout/Layout';
-import Dashboard from './pages/Dashboard';
-import Services from './pages/Services';
-import Prices from './pages/Prices';
-import ChangePassword from './pages/ChangePassword.tsx';
-import CustomerPage from './pages/CustomerPage.tsx';
-import CustomerFormModelTwo from './pages/CustomerFormModelTwo.tsx';
-import CustomerFormModal from './components/customers/CustomerFormModal.tsx';
-import ExpiryCard from './pages/ExpiryCard.tsx';
-import CardDetailsPage from './pages/CardDetailsPage.tsx';
-import Expenses from './pages/Expenses.tsx';
-import OrdersSummaryPage from './pages/OrdersSummaryPage.tsx';
-import PlaceOrderPage from './pages/PlaceOrderPage.tsx';
+import Dashboard from './pages/dashboard/Dashboard';
+import ServiceList from './pages/services/ServiceList';
+import PriceManagement from './pages/prices/PriceManagement';
+import ChangePasswordForm from './pages/auth/ChangePasswordForm';
+import CustomerList from './pages/customers/CustomerList';
+import CustomerForm from './pages/customers/CustomerForm';
+import CustomerFormModal from './components/customers/CustomerFormModal';
+import CardExpiryList from './pages/customers/CardExpiryList';
+import CardForm from './pages/customers/CardForm';
+import ExpenseList from './pages/expenses/ExpenseList';
+import OrderList from './pages/orders/OrderList';
+import OrderForm from './pages/orders/OrderForm';
+import CompleteOrderList from './pages/orders/CompleteOrderList';
+import CompleteOrderForm from './pages/orders/CompleteOrderForm';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -64,27 +66,28 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
-              <Route path="services" element={<Services />} />
-              <Route path="orders/new" element={<PlaceOrderPage />} />
-              <Route path="orders/edit/:id" element={<PlaceOrderPage />} />
-              <Route path="orders/summary" element={<OrdersSummaryPage />} />
-              <Route path="orders/complete" element={<div className="p-4 text-gray-500">Complete an Order — coming soon</div>} />
+              <Route path="services" element={<ServiceList />} />
+              <Route path="orders/new" element={<OrderForm />} />
+              <Route path="orders/edit/:id" element={<OrderForm />} />
+              <Route path="orders/summary" element={<OrderList />} />
+              <Route path="orders/complete" element={<CompleteOrderList />} />
+              <Route path="orders/complete/manual" element={<CompleteOrderForm />} />
               <Route path="orders/remove" element={<div className="p-4 text-gray-500">Remove an Order — coming soon</div>} />
               <Route path="orders" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Orders</div>} />
-              <Route path="quotes" element={<div className="p-4 text-gray-500">Manage Quotes — coming soon</div>} />
+              <Route path="quotes" element={<div className="p-4 text-gray-500">Manage Quote — coming soon</div>} />
               <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
-              <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoices — coming soon</div>} />
-              <Route path="customers/status" element={<CustomerPage />} />
-              <Route path="customers/add-two" element={<CustomerFormModelTwo />} />
+              <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoice — coming soon</div>} />
+              <Route path="customers/status" element={<CustomerList />} />
+              <Route path="customers/add-two" element={<CustomerForm />} />
               <Route path="customers/add-three" element={<CustomerFormModalPage />} />
-              <Route path="customers/card-summary" element={<ExpiryCard />} />
-              <Route path="customers/card-details" element={<CardDetailsPage />} />
+              <Route path="customers/card-summary" element={<CardExpiryList />} />
+              <Route path="customers/card-details" element={<CardForm />} />
               <Route path="customers" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Customers</div>} />
-              <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employees — coming soon</div>} />
-              <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendors — coming soon</div>} />
-              <Route path="prices" element={<Prices />} />
-              <Route path="expenses" element={<Expenses />} />
-              <Route path="change-password" element={<ChangePassword />} />
+              <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employee — coming soon</div>} />
+              <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendor — coming soon</div>} />
+              <Route path="prices" element={<PriceManagement />} />
+              <Route path="expenses" element={<ExpenseList />} />
+              <Route path="change-password" element={<ChangePasswordForm />} />
               <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
             </Route>
           </Routes>

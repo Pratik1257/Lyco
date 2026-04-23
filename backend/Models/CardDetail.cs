@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Lyco.Api.Models;
 
@@ -43,5 +44,9 @@ public partial class CardDetail
 
     public virtual CountryMst? Country { get; set; }
 
+
     public virtual UserRegistration? User { get; set; }
+
+    [NotMapped]
+    public DateTime? LastOrderDate { get; set; }
 }

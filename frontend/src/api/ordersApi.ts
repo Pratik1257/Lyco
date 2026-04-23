@@ -13,6 +13,11 @@ export interface Order {
   username: string;
   serviceName: string;
   serviceId: number | null;
+  instructions: string | null;
+  externalLink: string | null;
+  files: any[] | null;
+  size: string | null;
+  sizetype: string | null;
 }
 
 export interface OrdersResponse {
@@ -30,6 +35,7 @@ export const ordersApi = {
     search: string = '',
     status: string = 'all',
     serviceId?: number,
+    uniqueNo?: number,
     startDate?: string,
     endDate?: string
   ): Promise<OrdersResponse> => {
@@ -39,6 +45,7 @@ export const ordersApi = {
     if (search) params.append('search', search);
     if (status) params.append('status', status);
     if (serviceId) params.append('serviceId', serviceId.toString());
+    if (uniqueNo) params.append('uniqueNo', uniqueNo.toString());
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
 

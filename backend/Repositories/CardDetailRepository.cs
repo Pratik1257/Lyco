@@ -65,13 +65,38 @@ public class CardDetailRepository : ICardDetailRepository
         var total = allItems.Count;
         var items = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
+        foreach (var item in items)
+        {
+            if (item.User?.UniqueNo != null)
+            {
+                item.LastOrderDate = await _context.OrderDetails
+                    .Where(o => o.UniqueNo == item.User.UniqueNo)
+                    .OrderByDescending(o => o.OrderDate)
+                    .Select(o => o.OrderDate)
+                    .FirstOrDefaultAsync();
+            }
+        }
+
         return (items, total);
     }
 
-    public Task<CardDetail?> GetByIdAsync(long id) =>
-        _context.CardDetails
+    public async Task<CardDetail?> GetByIdAsync(long id)
+    {
+        var card = await _context.CardDetails
             .Include(c => c.User)
             .FirstOrDefaultAsync(c => c.CardId == id);
+
+        if (card?.User?.UniqueNo != null)
+        {
+            card.LastOrderDate = await _context.OrderDetails
+                .Where(o => o.UniqueNo == card.User.UniqueNo)
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => o.OrderDate)
+                .FirstOrDefaultAsync();
+        }
+
+        return card;
+    }
 
     public async Task<CardDetail> CreateAsync(CardDetail card)
     {

@@ -28,12 +28,12 @@ export function TableRow({ className = '', ...props }: HTMLAttributes<HTMLTableR
 
 export function TableHead({ className = '', ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th className={`py-2 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest ${className}`} {...props} />
+    <th className={`py-1.5 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest ${className}`} {...props} />
   );
 }
 
 export function TableCell({ className = '', ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <td className={`py-1.5 px-6 ${className}`} {...props} />
+    <td className={`py-1 px-6 ${className}`} {...props} />
   );
 }

@@ -25,7 +25,8 @@ public record CardDetailDto(
     string? CompanyName = null,
     string? Email = null,
     string? Telephone = null,
-    string? ClientFullName = null
+    string? ClientFullName = null,
+    DateTime? LastOrderDate = null
 );
 
 public record CreateCardRequest

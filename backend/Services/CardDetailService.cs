@@ -120,6 +120,7 @@ public class CardDetailService : ICardDetailService
         c.User?.Companyname,
         c.User?.PrimaryEmail,
         c.User?.Telephone,
-        c.User != null ? $"{c.User.Firstname} {c.User.Lastname}".Trim() : null
+        c.User != null ? $"{c.User.Firstname} {c.User.Lastname}".Trim() : null,
+        c.LastOrderDate
     );
 }

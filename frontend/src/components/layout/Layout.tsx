@@ -54,7 +54,7 @@ export default function Layout() {
         onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
       />
       <main className="lg:ml-[260px] pt-[60px] transition-all duration-300">
-        <div className="px-6 py-2">
+        <div className="px-3 sm:px-6 py-2">
           <Outlet />
         </div>
       </main>

@@ -29,6 +29,7 @@ public class OrdersController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] string? status = null,
         [FromQuery] long? serviceId = null,
+        [FromQuery] long? uniqueNo = null,
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
     {
@@ -58,7 +59,12 @@ public class OrdersController : ControllerBase
                              o.Size,
                              o.Sizetype,
                              o.Instructions,
-                             o.FileFormat
+                             FileFormat = o.FileFormat,
+                             UniqueNo = o.UniqueNo,
+                             ExternalLink = _context.OrderFileMsts
+                                .Where(f => f.OrderNo == o.OrderNo && f.FileName == "External Asset Link")
+                                .Select(f => f.FileUrl)
+                                .FirstOrDefault() ?? o.Note
                          };
 
         // Filters
@@ -80,6 +86,11 @@ public class OrdersController : ControllerBase
         if (serviceId.HasValue)
         {
             joinedQuery = joinedQuery.Where(o => o.ServiceId == serviceId.Value);
+        }
+
+        if (uniqueNo.HasValue)
+        {
+            joinedQuery = joinedQuery.Where(o => o.UniqueNo == uniqueNo.Value);
         }
 
         if (startDate.HasValue)
@@ -125,6 +136,23 @@ public class OrdersController : ControllerBase
         // Also get user info
         var user = await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == order.UniqueNo);
 
+        // Get external link from files table
+        var externalLink = await _context.OrderFileMsts
+            .Where(f => f.OrderNo == order.OrderNo && f.FileName == "External Asset Link")
+            .Select(f => f.FileUrl)
+            .FirstOrDefaultAsync();
+
+        // Fallback to Note for older orders
+        if (string.IsNullOrEmpty(externalLink))
+        {
+            externalLink = order.Note;
+        }
+
+        // Get all other files
+        var orderFiles = await _context.OrderFileMsts
+            .Where(f => f.OrderNo == order.OrderNo && f.FileName != "External Asset Link")
+            .ToListAsync();
+
         return Ok(new
         {
             order.OrderId,
@@ -141,8 +169,11 @@ public class OrdersController : ControllerBase
             order.UniqueNo,
             order.ServiceId,
             order.OrderStatus,
+            ExternalLink = externalLink,
+            Files = orderFiles,
             Username = user?.Username ?? "--",
-            CompanyName = user?.Companyname ?? "--"
+            CompanyName = user?.Companyname ?? "--",
+            ServiceName = order.Service?.ServiceName ?? "Others"
         });
     }
 
@@ -207,12 +238,27 @@ public class OrdersController : ControllerBase
             Orderuq = Guid.NewGuid().ToString()
         };
 
+        // Manual Validation: Check if User and Service exist
+        var userExists = await _context.UserRegistrations.AnyAsync(u => u.UniqueNo == dto.UniqueNo);
+        if (!userExists) return BadRequest(new { message = "Selected user does not exist" });
+
+        var serviceExists = await _context.ServiceMsts.AnyAsync(s => s.ServiceId == dto.ServiceId);
+        if (!serviceExists) return BadRequest(new { message = "Selected service does not exist" });
+
+        // Validate Amount is numeric
+        if (!decimal.TryParse(dto.Amount, out _)) return BadRequest(new { message = "Rate must be a valid number" });
+
         _context.OrderDetails.Add(order);
         await _context.SaveChangesAsync();
 
         if (files != null && files.Count > 0)
         {
             await SaveFilesAsync(order.OrderNo ?? "", files);
+        }
+
+        if (!string.IsNullOrEmpty(dto.ExternalLink))
+        {
+            await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink);
         }
 
         return Ok(order);
@@ -233,6 +279,12 @@ public class OrdersController : ControllerBase
         order.Amount = dto.Amount;
         order.Currency = dto.Currency;
         order.Email = dto.Email;
+
+        // Manual Validation
+        var serviceExistsUpdate = await _context.ServiceMsts.AnyAsync(s => s.ServiceId == dto.ServiceId);
+        if (!serviceExistsUpdate) return BadRequest(new { message = "Selected service does not exist" });
+
+        if (!decimal.TryParse(dto.Amount, out _)) return BadRequest(new { message = "Rate must be a valid number" });
         
         // Update Status
         if (!string.IsNullOrEmpty(dto.OrderStatus))
@@ -254,6 +306,34 @@ public class OrdersController : ControllerBase
         if (files != null && files.Count > 0)
         {
             await SaveFilesAsync(order.OrderNo ?? "", files);
+        }
+
+        // Handle file deletions
+        if (dto.FilesToDelete != null && dto.FilesToDelete.Count > 0)
+        {
+            var filesToRemove = await _context.OrderFileMsts
+                .Where(f => f.OrderNo == order.OrderNo && dto.FilesToDelete.Contains(f.OrderFileId))
+                .ToListAsync();
+
+            if (filesToRemove.Any())
+            {
+                foreach (var file in filesToRemove)
+                {
+                    // Delete from physical storage
+                    var fullPath = Path.Combine(_env.ContentRootPath, "wwwroot", file.FileUrl?.TrimStart('/') ?? "");
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        try { System.IO.File.Delete(fullPath); } catch {}
+                    }
+                }
+                _context.OrderFileMsts.RemoveRange(filesToRemove);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        if (!string.IsNullOrEmpty(dto.ExternalLink))
+        {
+            await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink);
         }
 
         return Ok(order);
@@ -292,6 +372,35 @@ public class OrdersController : ControllerBase
 
                 await _context.OrderFileMsts.AddAsync(orderFile);
             }
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SaveExternalLinkAsync(string orderNo, string externalLink)
+    {
+        // Check if an external link already exists for this order
+        var existingLink = await _context.OrderFileMsts
+            .FirstOrDefaultAsync(f => f.OrderNo == orderNo && f.FileName == "External Asset Link");
+
+        if (existingLink != null)
+        {
+            existingLink.FileUrl = externalLink;
+            existingLink.LastModifieddate = DateTime.Now;
+        }
+        else
+        {
+            var orderFile = new OrderFileMst
+            {
+                OrderNo = orderNo,
+                FileName = "External Asset Link",
+                FileUrl = externalLink,
+                FileStatus = "Active",
+                LastModifieddate = DateTime.Now,
+                LastModifiedBy = "Admin",
+                LastModifiedUserType = "Admin"
+            };
+            await _context.OrderFileMsts.AddAsync(orderFile);
         }
 
         await _context.SaveChangesAsync();
