@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'danger' | 'secondary' | 'ghost' | 'ghost-cyan' | 'ghost-red' | 'ghost-blue' | 'unstyled';
+  variant?: 'primary' | 'danger' | 'secondary' | 'ghost' | 'ghost-cyan' | 'ghost-red' | 'ghost-blue' | 'ghost-green' | 'unstyled';
   size?: 'sm' | 'md' | 'lg' | 'icon' | 'unstyled';
   isLoading?: boolean;
 }
@@ -26,6 +26,7 @@ export function Button({
     "ghost-cyan": "text-cyan-600 bg-cyan-50 hover:bg-cyan-100",
     "ghost-red": "text-red-500 bg-red-50 hover:bg-red-100",
     "ghost-blue": "text-blue-600 bg-blue-50 hover:bg-blue-100",
+    "ghost-green": "text-green-600 bg-green-50 hover:bg-green-100",
     unstyled: ""
   };
   

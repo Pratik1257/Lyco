@@ -18,6 +18,8 @@ export interface Order {
   files: any[] | null;
   size: string | null;
   sizetype: string | null;
+  uniqueNo: number | null;
+  fileFormat: string | null;
 }
 
 export interface OrdersResponse {

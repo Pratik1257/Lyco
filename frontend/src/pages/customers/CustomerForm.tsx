@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertCircle, User, MapPin, Settings, Eye, EyeOff
+  AlertCircle, User, MapPin, Settings, Eye, EyeOff, ChevronLeft
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import _PhoneInput from 'react-phone-input-2';
@@ -563,17 +563,24 @@ export default function CustomerForm() {
 
             {/* Actions */}
             <div className="bg-slate-50/50 border-t border-slate-100 p-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-slate-400 group cursor-help">
-                {/* Info text or icon if needed */}
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/customers/status')}
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <ChevronLeft size={16} /> Cancel
+              </button>
+
               <div className="flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={isEdit ? () => navigate('/customers/status') : handleReset}
-                  className="text-[11px] font-black uppercase text-slate-400 hover:text-cyan-700 tracking-widest transition-colors px-6"
-                >
-                  {isEdit ? 'Cancel' : 'Reset'}
-                </button>
+                {!isEdit && (
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="text-[11px] font-black uppercase text-slate-400 hover:text-cyan-700 tracking-widest transition-colors px-6"
+                  >
+                    Reset
+                  </button>
+                )}
                 <Button
                   variant="primary"
                   type="submit"

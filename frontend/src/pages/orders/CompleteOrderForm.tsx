@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ChevronLeft, AlertCircle, PenTool, 
-  Upload, X, File as FileIcon 
+  Upload, X, File as FileIcon, Info, Link 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ordersApi } from '../../api/ordersApi';
@@ -22,7 +22,8 @@ export default function CompleteOrderForm() {
     orderId: null as number | null,
     poNo: '',
     note: '',
-    orderNo: ''
+    orderNo: '',
+    externalLink: ''
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
@@ -48,10 +49,29 @@ export default function CompleteOrderForm() {
   // Mutation
   const mutation = useMutation({
     mutationFn: (_data: any) => {
+      const selectedOrder = userOrders.find(o => o.orderId === formData.orderId);
       const formDataToSend = new FormData();
+
+      if (selectedOrder) {
+        formDataToSend.append('uniqueNo', selectedOrder.uniqueNo?.toString() || '');
+        formDataToSend.append('serviceId', selectedOrder.serviceId?.toString() || '');
+        formDataToSend.append('workTitle', selectedOrder.workTitle || '');
+        if (selectedOrder.fileFormat) formDataToSend.append('fileFormat', selectedOrder.fileFormat);
+        if (selectedOrder.size) formDataToSend.append('size', selectedOrder.size);
+        if (selectedOrder.sizetype) formDataToSend.append('sizetype', selectedOrder.sizetype);
+        formDataToSend.append('amount', selectedOrder.amount?.toString() || '0');
+        if (selectedOrder.currency) formDataToSend.append('currency', selectedOrder.currency);
+        if (selectedOrder.email) formDataToSend.append('email', selectedOrder.email);
+        if (selectedOrder.instructions) formDataToSend.append('instructions', selectedOrder.instructions);
+      }
+
       formDataToSend.append('orderStatus', 'Completed');
-      formDataToSend.append('instructions', formData.note); // Using instructions field for Note
+      formDataToSend.append('note', formData.note); 
       
+      if (formData.externalLink) {
+        formDataToSend.append('externalLink', formData.externalLink);
+      }
+
       selectedFiles.forEach(file => {
         formDataToSend.append('files', file);
       });
@@ -76,7 +96,6 @@ export default function CompleteOrderForm() {
 
     if (!formData.userId) errors.userId = 'User is required';
     if (!formData.orderId) errors.orderId = 'Order # is required';
-    if (selectedFiles.length === 0) errors.files = 'At least one attachment is required';
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -119,7 +138,7 @@ export default function CompleteOrderForm() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-5">
-      <div className="w-full px-4 sm:px-6 max-w-5xl mx-auto">
+      <div className="w-full px-4 sm:px-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
             <div className="p-5 sm:p-6 space-y-6">
@@ -184,7 +203,7 @@ export default function CompleteOrderForm() {
 
                 {/* Attachments Section */}
                 <div className="space-y-3 lg:col-span-12">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Attachments (Upto 30 MB) <span className="text-red-500">*</span></label>
+                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Attachments (Upto 30 MB)</label>
                   
                   <div 
                     onClick={() => fileInputRef.current?.click()}
@@ -196,13 +215,25 @@ export default function CompleteOrderForm() {
                       e.preventDefault();
                       e.stopPropagation();
                       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        const newFiles = Array.from(e.dataTransfer.files).filter(file => 
+                        const files = Array.from(e.dataTransfer.files).filter(file => 
                           !selectedFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
                         );
-                        if (newFiles.length < e.dataTransfer.files.length) {
+                        if (files.length < e.dataTransfer.files.length) {
                           toast.error('Duplicate files were skipped');
                         }
-                        setSelectedFiles(prev => [...prev, ...newFiles]);
+
+                        const largeFiles = files.filter(f => f.size > 30 * 1024 * 1024);
+                        if (largeFiles.length > 0) {
+                          toast.error(
+                            "Some files exceed the 30MB limit. Please provide a transfer link for these assets instead.",
+                            { duration: 5000, icon: '⚠️' }
+                          );
+                          const validFiles = files.filter(f => f.size <= 30 * 1024 * 1024);
+                          setSelectedFiles(prev => [...prev, ...validFiles]);
+                        } else {
+                          setSelectedFiles(prev => [...prev, ...files]);
+                        }
+
                         if (fieldErrors.files) setFieldErrors(p => { const n = { ...p }; delete n.files; return n; });
                       }
                     }}
@@ -215,13 +246,25 @@ export default function CompleteOrderForm() {
                       multiple
                       onChange={(e) => {
                         if (e.target.files) {
-                          const newFiles = Array.from(e.target.files).filter(file => 
+                          const files = Array.from(e.target.files).filter(file => 
                             !selectedFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
                           );
-                          if (newFiles.length < e.target.files!.length) {
+                          if (files.length < e.target.files!.length) {
                             toast.error('Duplicate files were skipped');
                           }
-                          setSelectedFiles(prev => [...prev, ...newFiles]);
+
+                          const largeFiles = files.filter(f => f.size > 30 * 1024 * 1024);
+                          if (largeFiles.length > 0) {
+                            toast.error(
+                              "Some files exceed the 30MB limit. Please provide a transfer link for these assets instead.",
+                              { duration: 5000, icon: '⚠️' }
+                            );
+                            const validFiles = files.filter(f => f.size <= 30 * 1024 * 1024);
+                            setSelectedFiles(prev => [...prev, ...validFiles]);
+                          } else {
+                            setSelectedFiles(prev => [...prev, ...files]);
+                          }
+
                           if (fieldErrors.files) setFieldErrors(p => { const n = { ...p }; delete n.files; return n; });
                         }
                       }}
@@ -237,6 +280,31 @@ export default function CompleteOrderForm() {
                     </div>
                   </div>
                   {renderError('files')}
+
+                  {/* Professional Message for Large Files */}
+                  <div className="flex items-center gap-3 py-2 px-4 bg-cyan-50/50 border border-cyan-100/50 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="w-7 h-7 rounded-lg bg-cyan-100 flex items-center justify-center shrink-0">
+                      <Info size={14} className="text-cyan-600" />
+                    </div>
+                    <p className="text-[12px] text-cyan-800 leading-relaxed font-medium">
+                      For assets exceeding <span className="font-bold">30MB</span>, please provide a direct transfer link (e.g., Google Drive, or Dropbox) in the field below to ensure optimal processing.
+                    </p>
+                  </div>
+
+                  {/* External Link Input */}
+                  <div className="space-y-1">
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Asset Transfer Link (for large files)</label>
+                    <div className="relative group">
+                      <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                      <input
+                        type="url"
+                        placeholder="https://wetransfer.com/downloads/..."
+                        value={formData.externalLink}
+                        onChange={(e) => setFormData(p => ({ ...p, externalLink: e.target.value }))}
+                        className={`${premiumInput} pl-10`}
+                      />
+                    </div>
+                  </div>
 
                   {/* File List */}
                   {selectedFiles.length > 0 && (
@@ -281,7 +349,7 @@ export default function CompleteOrderForm() {
                 <button
                   type="button"
                   onClick={() => {
-                    setFormData({ userId: null, orderId: null, poNo: '', note: '', orderNo: '' });
+                    setFormData({ userId: null, orderId: null, poNo: '', note: '', orderNo: '', externalLink: '' });
                     setSelectedFiles([]);
                     setFieldErrors({});
                   }}

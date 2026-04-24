@@ -108,7 +108,7 @@ export default function CardForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     let { name, value } = e.target;
-    
+
     // Numeric shielding for financial fields
     if (name === 'cardNo' || name === 'cvv') {
       value = value.replace(/\D/g, ''); // Strip non-digits
@@ -128,7 +128,7 @@ export default function CardForm() {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.userId) errors.userId = 'Please associate an account';
-    
+
     if (!formData.cardNo) {
       errors.cardNo = 'Card number is required';
     } else if (formData.cardNo.length < 13 || formData.cardNo.length > 19) {
@@ -136,7 +136,7 @@ export default function CardForm() {
     }
 
     if (!expMonth || !expYear) errors.expDate = 'Expiry is required';
-    
+
     if (!formData.cvv) {
       errors.cvv = 'CVV is required';
     } else if (formData.cvv.length < 3 || formData.cvv.length > 4) {
@@ -218,13 +218,13 @@ export default function CardForm() {
     <div className="bg-slate-50/50 py-5">
       <div className="w-full px-4 sm:px-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <form 
-            onSubmit={handleSubmit} 
+          <form
+            onSubmit={handleSubmit}
             noValidate
             className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
           >
             <div className="p-6 sm:p-7 space-y-5">
-              
+
               {formError && (
                 <div className="text-red-600 text-sm font-bold flex items-center gap-3 bg-red-50 p-4 rounded-2xl border border-red-100/50 animate-in zoom-in-95">
                   <AlertCircle size={20} /> {formError}
@@ -251,9 +251,9 @@ export default function CardForm() {
                         }
                         setFormData(p => ({ ...p, userId }));
                       }}
-                      options={users.map(u => ({ 
-                        value: u.id, 
-                        label: u.username 
+                      options={users.map(u => ({
+                        value: u.id,
+                        label: u.username
                       }))}
                       placeholder="Select Username"
                       error={fieldErrors.userId}
@@ -376,7 +376,7 @@ export default function CardForm() {
                       error={fieldErrors.countryId}
                     />
                   </div>
-                  
+
                   <div className="space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">ZIP / Postcode</label>
                     <input type="text" name="postcode" placeholder="Postal Code" value={formData.postcode || ''} onChange={handleInputChange} className={premiumInput} />
@@ -400,12 +400,12 @@ export default function CardForm() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
                   <div className="md:col-span-8 space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Comments</label>
-                    <textarea 
-                      name="comments" 
-                      placeholder="Internal financial notes..." 
-                      value={formData.comments || ''} 
-                      onChange={handleInputChange} 
-                      className={`${premiumInput} h-24 py-3 resize-none`} 
+                    <textarea
+                      name="comments"
+                      placeholder="Internal financial notes..."
+                      value={formData.comments || ''}
+                      onChange={handleInputChange}
+                      className={`${premiumInput} h-24 py-3 resize-none`}
                     />
                   </div>
                   <div className="md:col-span-4 self-center p-5 bg-cyan-50/40 rounded-2xl border border-cyan-100/50">
@@ -422,29 +422,31 @@ export default function CardForm() {
 
             {/* Bottom Actions */}
             <div className="bg-slate-50/50 p-6 sm:p-7 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-3 opacity-50 hover:opacity-100 transition-opacity">
-                <ShieldCheck size={18} className="text-cyan-600" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 max-w-[200px] leading-tight">
-                  High-Encryption vault activated for PCI-DSS compliance.
-                </p>
-              </div>
-              
+              <button
+                type="button"
+                onClick={() => navigate('/customers/card-summary')}
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <ChevronLeft size={16} /> Cancel
+              </button>
+
               <div className="flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={isEdit ? () => navigate('/customers/card-summary') : () => setFormData({ userId: null, cardType: 'Visa', cardNo: '', expDate: '', cvv: '', asRegistered: 'Y', firstName: '', middlename: '', lastName: '', address1: '', address2: '', city: '', state: '', postcode: '', countryId: null, currency: 'USD', comments: '' })}
-                  className="text-[11px] font-black uppercase text-slate-400 hover:text-cyan-700 tracking-widest transition-colors px-6"
-                >
-                  {isEdit ? 'Cancel' : 'Reset'}
-                </button>
+                {!isEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ userId: null, cardType: 'Visa', cardNo: '', expDate: '', cvv: '', asRegistered: 'Y', firstName: '', middlename: '', lastName: '', address1: '', address2: '', city: '', state: '', postcode: '', countryId: null, currency: 'USD', comments: '' })}
+                    className="text-[11px] font-black uppercase text-slate-400 hover:text-cyan-700 tracking-widest transition-colors px-6"
+                  >
+                    Reset
+                  </button>
+                )}
                 <Button
                   variant="primary"
                   type="submit"
-                  className={`w-full sm:w-auto px-10 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-white border-0 ${
-                    !isFormComplete || mutation.isPending
-                      ? 'bg-slate-200 cursor-not-allowed shadow-none'
-                      : 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 shadow-xl shadow-cyan-500/20 active:scale-[0.98]'
-                  }`}
+                  className={`w-full sm:w-auto px-10 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all text-white border-0 ${!isFormComplete || mutation.isPending
+                    ? 'bg-slate-200 cursor-not-allowed shadow-none'
+                    : 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 shadow-xl shadow-cyan-500/20 active:scale-[0.98]'
+                    }`}
                   disabled={!isFormComplete || mutation.isPending}
                   isLoading={mutation.isPending}
                 >
@@ -456,13 +458,7 @@ export default function CardForm() {
             </div>
           </form>
 
-          <button 
-            type="button"
-            onClick={() => navigate('/customers/card-summary')}
-            className="mt-8 mx-auto flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-cyan-600 transition-colors"
-          >
-            <ChevronLeft size={14} /> Back to card summary
-          </button>
+
         </div>
       </div>
     </div>

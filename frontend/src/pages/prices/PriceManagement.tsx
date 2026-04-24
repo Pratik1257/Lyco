@@ -668,21 +668,29 @@ export default function PriceManagement() {
           />
 
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-visible animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-t-2xl">
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  {editingId || Object.keys(formCurrencyIds).length > 0
-                    ? `Edit ${activeTab === 'general' ? 'General' : 'Userwise'} Price`
-                    : `New ${activeTab === 'general' ? 'General' : 'Userwise'} Price`}
-                </h3>
+            <div className="bg-slate-900 px-8 py-6 text-white flex items-center justify-between rounded-t-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 text-cyan-400">
+                  <Plus size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    {editingId || Object.keys(formCurrencyIds).length > 0
+                      ? `Edit ${activeTab === 'general' ? 'General' : 'Userwise'} Price`
+                      : `New ${activeTab === 'general' ? 'General' : 'Userwise'} Price`}
+                  </h3>
+                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">
+                    {editingId ? 'Update pricing record' : 'Create new pricing record'}
+                  </p>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 onClick={closeModal}
+                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               >
                 <X size={20} />
-              </Button>
+              </button>
             </div>
 
             <form onSubmit={handleSavePrice}>

@@ -17,6 +17,10 @@ import OrderList from './pages/orders/OrderList';
 import OrderForm from './pages/orders/OrderForm';
 import CompleteOrderList from './pages/orders/CompleteOrderList';
 import CompleteOrderForm from './pages/orders/CompleteOrderForm';
+import RemoveOrderForm from './pages/orders/RemoveOrderForm';
+
+import QuoteList from './pages/quotes/QuoteList';
+import QuoteForm from './pages/quotes/QuoteForm';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -72,9 +76,11 @@ export default function App() {
               <Route path="orders/summary" element={<OrderList />} />
               <Route path="orders/complete" element={<CompleteOrderList />} />
               <Route path="orders/complete/manual" element={<CompleteOrderForm />} />
-              <Route path="orders/remove" element={<div className="p-4 text-gray-500">Remove an Order — coming soon</div>} />
+              <Route path="orders/remove" element={<RemoveOrderForm />} />
               <Route path="orders" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Orders</div>} />
-              <Route path="quotes" element={<div className="p-4 text-gray-500">Manage Quote — coming soon</div>} />
+              <Route path="quotes" element={<QuoteList />} />
+              <Route path="quotes/new" element={<QuoteForm />} />
+              <Route path="quotes/edit/:id" element={<QuoteForm />} />
               <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
               <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoice — coming soon</div>} />
               <Route path="customers/status" element={<CustomerList />} />

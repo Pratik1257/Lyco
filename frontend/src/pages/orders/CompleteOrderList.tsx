@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, AlertCircle, Eye, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { ordersApi } from '../../api/ordersApi';
 
 import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
+import { OrderDetailsModal } from '../../components/ui/OrderDetailsModal';
 
 export default function CompleteOrderList() {
   const navigate = useNavigate();
@@ -16,6 +17,11 @@ export default function CompleteOrderList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Modal State
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [orderToView, setOrderToView] = useState<any>(null);
 
   // Fetch Orders (Filtered by Completed status)
   const { data, isLoading, isError, error } = useQuery({
@@ -50,11 +56,6 @@ export default function CompleteOrderList() {
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-28 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-32 shadow-sm"></div></TableCell>
           <TableCell><div className="h-5 bg-gray-200 rounded-lg w-24 shadow-sm"></div></TableCell>
-          <TableCell className="text-right">
-            <div className="flex justify-end gap-2">
-              <div className="h-8 w-8 bg-gray-200 rounded-lg shadow-sm"></div>
-            </div>
-          </TableCell>
         </TableRow>
       ))}
     </>
@@ -102,7 +103,6 @@ export default function CompleteOrderList() {
                 <TableHead className="py-3 px-4 whitespace-nowrap">Order Date</TableHead>
                 <TableHead className="py-3 px-4 whitespace-nowrap">PO No.</TableHead>
                 <TableHead className="py-3 px-4 whitespace-nowrap">Service</TableHead>
-                <TableHead className="py-3 px-6 text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -114,7 +114,14 @@ export default function CompleteOrderList() {
                     <TableCell className="text-sm font-medium text-gray-800 px-6 whitespace-nowrap">
                       {order.username}
                     </TableCell>
-                    <TableCell className="text-sm font-bold text-cyan-600 px-4 whitespace-nowrap">
+                    <TableCell
+                      className="text-sm font-bold text-cyan-600 px-4 whitespace-nowrap cursor-pointer hover:text-cyan-700 transition-colors"
+                      onClick={() => {
+                        setSelectedOrderId(order.orderId);
+                        setOrderToView(order);
+                        setIsViewModalOpen(true);
+                      }}
+                    >
                       {order.orderNo || '--'}
                     </TableCell>
                     <TableCell className="text-sm text-gray-500 px-4 whitespace-nowrap">
@@ -128,23 +135,11 @@ export default function CompleteOrderList() {
                         {order.serviceName}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right px-6 whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost-cyan"
-                          size="icon"
-                          onClick={() => navigate(`/orders/summary?id=${order.orderId}`)}
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-sm text-gray-500">
+                  <TableCell colSpan={5} className="py-12 text-center text-sm text-gray-500">
                     No completed orders found.
                   </TableCell>
                 </TableRow>
@@ -169,6 +164,17 @@ export default function CompleteOrderList() {
           }}
         />
       </div>
+
+      <OrderDetailsModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setSelectedOrderId(null);
+        }}
+        orderId={selectedOrderId}
+        initialOrderData={orderToView}
+      />
     </div>
   );
 }
+

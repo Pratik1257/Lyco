@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, X, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, Edit2, X, AlertCircle, Trash2, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { servicesApi, type Service } from '../../api/servicesApi';
 import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/ui/SearchBar';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
 
@@ -265,18 +266,25 @@ export default function ServiceList() {
 
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-cyan-600 to-cyan-500">
-              <div>
-                <h3 className="text-lg font-bold text-white">{editingServiceId ? 'Edit Service' : 'New Service'}</h3>
-                <p className="text-xs text-cyan-100 mt-0.5">{editingServiceId ? 'Update existing service details' : 'Configure a new customer service'}</p>
+            <div className="bg-slate-900 px-8 py-6 text-white flex items-center justify-between rounded-t-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 text-cyan-400">
+                  <Layers size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">{editingServiceId ? 'Edit Service' : 'New Service'}</h3>
+                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">
+                    {editingServiceId ? 'Update service details' : 'Configure new service'}
+                  </p>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 onClick={closeModal}
+                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               >
                 <X size={20} />
-              </Button>
+              </button>
             </div>
 
             <form onSubmit={handleSaveService}>
@@ -349,46 +357,18 @@ export default function ServiceList() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-            onClick={closeDeleteModal}
-          />
-
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-100">
-            <div className="p-8 text-center">
-              <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-red-500">
-                <Trash2 size={32} />
-              </div>
-
-              <h3 className="text-xl font-black text-gray-900 mb-3">Delete Service</h3>
-              <p className="text-sm text-gray-500 leading-relaxed px-2 font-medium">
-                Are you sure you want to delete <span className="font-bold text-gray-900">"{serviceToDelete?.name}"</span>? This action cannot be undone.
-              </p>
-            </div>
-
-            <div className="flex gap-3 p-6 pt-0">
-              <Button
-                variant="secondary"
-                className="flex-1 bg-gray-50 hover:bg-gray-100 rounded-2xl py-3 border-0 shadow-none"
-                onClick={closeDeleteModal}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                className="flex-1 py-3 border-0"
-                onClick={confirmDelete}
-                disabled={deleteMutation.isPending}
-                isLoading={deleteMutation.isPending}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        title="Delete Service"
+        message={
+          <>
+            Are you sure you want to delete <span className="font-bold text-gray-900">"{serviceToDelete?.name}"</span>? This action cannot be undone.
+          </>
+        }
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

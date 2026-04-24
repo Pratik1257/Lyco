@@ -59,12 +59,13 @@ public class OrdersController : ControllerBase
                              o.Size,
                              o.Sizetype,
                              o.Instructions,
+                             o.Note,
                              FileFormat = o.FileFormat,
                              UniqueNo = o.UniqueNo,
                              ExternalLink = _context.OrderFileMsts
                                 .Where(f => f.OrderNo == o.OrderNo && f.FileName == "External Asset Link")
                                 .Select(f => f.FileUrl)
-                                .FirstOrDefault() ?? o.Note
+                                .FirstOrDefault()
                          };
 
         // Filters
@@ -142,10 +143,10 @@ public class OrdersController : ControllerBase
             .Select(f => f.FileUrl)
             .FirstOrDefaultAsync();
 
-        // Fallback to Note for older orders
+        // Fallback removed to allow Note column to store actual notes
         if (string.IsNullOrEmpty(externalLink))
         {
-            externalLink = order.Note;
+            externalLink = null;
         }
 
         // Get all other files
@@ -160,6 +161,7 @@ public class OrdersController : ControllerBase
             order.OrderDate,
             order.WorkTitle,
             order.Instructions,
+            order.Note,
             order.FileFormat,
             order.Size,
             order.Sizetype,
@@ -180,31 +182,46 @@ public class OrdersController : ControllerBase
     [HttpGet("next-number")]
     public async Task<IActionResult> GetNextOrderNumber([FromQuery] long uniqueNo)
     {
-        // Find the last order number for this user to determine the next sequence
+        // Find max sequence in Orders
+        var maxOrderSeq = 0;
         var lastOrder = await _context.OrderDetails
             .Where(o => o.UniqueNo == uniqueNo && o.OrderNo != null && o.OrderNo.Contains("-"))
             .OrderByDescending(o => o.OrderId)
             .FirstOrDefaultAsync();
 
-        int sequence = 1;
-        if (lastOrder != null && lastOrder.OrderNo != null)
+        if (lastOrder?.OrderNo != null)
         {
             var parts = lastOrder.OrderNo.Split('-');
-            if (parts.Length >= 2 && int.TryParse(parts.Last(), out var lastSeq))
-            {
-                sequence = lastSeq + 1;
-            }
-            else
-            {
-                sequence = await _context.OrderDetails.CountAsync(o => o.UniqueNo == uniqueNo) + 1;
-            }
-        }
-        else
-        {
-            sequence = await _context.OrderDetails.CountAsync(o => o.UniqueNo == uniqueNo) + 1;
+            if (parts.Length >= 2 && int.TryParse(parts.Last(), out var seq))
+                maxOrderSeq = seq;
         }
 
-        return Ok(new { orderNo = $"{uniqueNo}-{sequence}" });
+        // Find max sequence in Quotes
+        var maxQuoteSeq = 0;
+        var lastQuote = await _context.Quotes
+            .Where(q => q.UniqueNo == uniqueNo && q.QuoteNo != null && q.QuoteNo.Contains("-"))
+            .OrderByDescending(q => q.QuoteId)
+            .FirstOrDefaultAsync();
+
+        if (lastQuote?.QuoteNo != null)
+        {
+            var parts = lastQuote.QuoteNo.Split('-');
+            if (parts.Length >= 2 && int.TryParse(parts.Last(), out var seq))
+                maxQuoteSeq = seq;
+        }
+
+        // Use the highest sequence across both tables + 1
+        var nextSequence = Math.Max(maxOrderSeq, maxQuoteSeq) + 1;
+        
+        // Fallback for cases where string parsing fails but records exist
+        if (nextSequence == 1)
+        {
+            var orderCount = await _context.OrderDetails.CountAsync(o => o.UniqueNo == uniqueNo);
+            var quoteCount = await _context.Quotes.CountAsync(q => q.UniqueNo == uniqueNo);
+            nextSequence = Math.Max(orderCount, quoteCount) + 1;
+        }
+
+        return Ok(new { orderNo = $"{uniqueNo}-{nextSequence}" });
     }
 
     [HttpPost]
@@ -228,6 +245,7 @@ public class OrdersController : ControllerBase
             ServiceId = dto.ServiceId,
             WorkTitle = dto.WorkTitle,
             Instructions = dto.Instructions,
+            Note = dto.Note,
             FileFormat = dto.FileFormat,
             Size = dto.Size,
             Sizetype = dto.Sizetype,
@@ -273,6 +291,7 @@ public class OrdersController : ControllerBase
         order.ServiceId = dto.ServiceId;
         order.WorkTitle = dto.WorkTitle;
         order.Instructions = dto.Instructions;
+        order.Note = dto.Note;
         order.FileFormat = dto.FileFormat;
         order.Size = dto.Size;
         order.Sizetype = dto.Sizetype;

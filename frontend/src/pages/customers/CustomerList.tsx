@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 export default function CustomerList() {
   const queryClient = useQueryClient();
@@ -213,46 +214,18 @@ export default function CustomerList() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-            onClick={closeDeleteModal}
-          />
-
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-100">
-            <div className="p-8 text-center">
-              <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-red-500">
-                <Trash2 size={32} />
-              </div>
-
-              <h3 className="text-xl font-black text-gray-900 mb-3">Delete Customer</h3>
-              <p className="text-sm text-gray-500 leading-relaxed px-2 font-medium">
-                Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? customerToDelete.username : ''}"</span>? This action cannot be undone.
-              </p>
-            </div>
-
-            <div className="flex gap-3 p-6 pt-0">
-              <Button
-                variant="secondary"
-                className="flex-1 bg-gray-50 hover:bg-gray-100 rounded-2xl py-3 border-0 shadow-none"
-                onClick={closeDeleteModal}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                className="flex-1 py-3 border-0"
-                onClick={confirmDelete}
-                disabled={deleteMutation.isPending}
-                isLoading={deleteMutation.isPending}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        title="Delete Customer"
+        message={
+          <>
+            Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? customerToDelete.username : ''}"</span>? This action cannot be undone.
+          </>
+        }
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

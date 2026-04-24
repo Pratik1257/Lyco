@@ -10,6 +10,7 @@ import { SearchBar } from '../../components/ui/SearchBar';
 import CustomSelect from '../../components/ui/CustomSelect';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 export default function CardExpiryList() {
   const queryClient = useQueryClient();
@@ -27,6 +28,9 @@ export default function CardExpiryList() {
   const [showFullCardNumber, setShowFullCardNumber] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState<CardDetail | null>(null);
+
   // Fetch Cards
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['cards', currentPage, itemsPerPage, searchQuery, statusFilter],
@@ -37,9 +41,13 @@ export default function CardExpiryList() {
     mutationFn: (id: number) => cardsApi.deleteCard(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cards'] });
+      setIsDeleteModalOpen(false);
+      setCardToDelete(null);
       toast.success('Card details deleted successfully.');
     },
     onError: (err: any) => {
+      setIsDeleteModalOpen(false);
+      setCardToDelete(null);
       const msg = err.response?.data?.error || err.message;
       toast.error(`Failed to delete card: ${msg}`);
     }
@@ -47,8 +55,13 @@ export default function CardExpiryList() {
 
   // Handlers
   const handleDeleteClick = (card: CardDetail) => {
-    if (window.confirm(`Are you sure you want to delete card for ${card.username}?`)) {
-      deleteMutation.mutate(card.cardId);
+    setCardToDelete(card);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (cardToDelete) {
+      deleteMutation.mutate(cardToDelete.cardId);
     }
   };
 
@@ -477,6 +490,23 @@ export default function CardExpiryList() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        title="Delete Card"
+        message={
+          <>
+            Are you sure you want to delete card for <span className="font-bold text-gray-900">"{cardToDelete?.username}"</span>? This action cannot be undone.
+          </>
+        }
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setCardToDelete(null);
+        }}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

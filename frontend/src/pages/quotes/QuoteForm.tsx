@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Mail, Hash, DollarSign, PenTool, Layers,
-  Maximize2, Paperclip, ChevronLeft, AlertCircle, Link, Info
+  Maximize2, Paperclip, ChevronLeft, Link, Info, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
-import { ordersApi } from '../../api/ordersApi';
+import { quotesApi } from '../../api/quotesApi';
 import { servicesApi } from '../../api/servicesApi';
 import { customersApi } from '../../api/customersApi';
 import { pricesApi, usersApi } from '../../api/pricesApi';
@@ -29,7 +29,7 @@ const quillFormats = [
   'bold', 'italic', 'underline', 'list'
 ];
 
-export default function OrderForm() {
+export default function QuoteForm() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -48,9 +48,9 @@ export default function OrderForm() {
     currency: 'USD',
     email: '',
     companyName: '',
-    orderNo: '',
-    orderStatus: 'In Process',
-    externalLink: ''
+    quoteNo: '',
+    quoteType: 'Standard',
+    imageUrl: ''
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -114,87 +114,58 @@ export default function OrderForm() {
     }
   }, [formData.userId, formData.serviceId, formData.currency]);
 
-  // Auto-generate Order # when uniqueNo/userId changes
+  // Auto-generate Quote # when uniqueNo/userId changes
   useEffect(() => {
-    // Skip if in edit mode
     if (isEditMode) return;
 
     const { uniqueNo, userId } = formData;
     const identifier = uniqueNo || userId;
 
     if (identifier !== null && identifier !== undefined) {
-      ordersApi.getNextOrderNumber(identifier).then(no => {
-        setFormData(prev => ({ ...prev, orderNo: no }));
+      quotesApi.getNextQuoteNumber(identifier).then(no => {
+        setFormData(prev => ({ ...prev, quoteNo: no }));
       }).catch(err => {
-        console.error('Failed to fetch next order number:', err);
+        console.error('Failed to fetch next quote number:', err);
       });
     } else {
-      setFormData(prev => ({ ...prev, orderNo: '' }));
+      setFormData(prev => ({ ...prev, quoteNo: '' }));
     }
   }, [formData.uniqueNo, formData.userId, isEditMode]);
-
-  // Reset form when switching from edit to create mode
-  useEffect(() => {
-    if (!isEditMode) {
-      setFormData({
-        uniqueNo: null,
-        userId: null,
-        serviceId: null,
-        workTitle: '',
-        instructions: '',
-        fileFormat: '',
-        size: '',
-        sizetype: 'Inches',
-        amount: '',
-        currency: 'USD',
-        email: '',
-        companyName: '',
-        orderNo: '',
-        orderStatus: 'In Process',
-        externalLink: ''
-      });
-      setFieldErrors({});
-      setSelectedFiles([]);
-      setExistingFiles([]);
-      setFilesToDelete([]);
-    }
-  }, [isEditMode]);
 
   // Load data for edit mode
   useEffect(() => {
     if (isEditMode) {
-      ordersApi.getOrderById(Number(id)).then(order => {
-        // We need to map the user back to its userId from the users list
-        // Or find it by uniqueNo
+      quotesApi.getQuoteById(Number(id)).then(quote => {
         const matchingUser = users.find(u =>
-          (u.uniqueNo && order.uniqueNo && String(u.uniqueNo) === String(order.uniqueNo)) ||
-          (u.username && order.username && u.username === order.username)
+          (u.uniqueNo && quote.uniqueNo && String(u.uniqueNo) === String(quote.uniqueNo)) ||
+          (u.username && quote.username && u.username === quote.username)
         );
 
-        const orderData = {
-          uniqueNo: order.uniqueNo,
+        const quoteData = {
+          uniqueNo: quote.uniqueNo,
           userId: matchingUser ? matchingUser.id : null,
-          serviceId: order.serviceId,
-          workTitle: order.workTitle || '',
-          instructions: order.instructions || '',
-          fileFormat: order.fileFormat || '',
-          size: order.size || '',
-          sizetype: order.sizetype || 'Inches',
-          amount: order.amount || '',
-          currency: order.currency || 'USD',
-          email: order.email || '',
-          companyName: order.companyName || '',
-          orderNo: order.orderNo || '',
-          orderStatus: order.orderStatus || 'In Process',
-          externalLink: (order as any).externalLink || ''
+          serviceId: quote.serviceId,
+          workTitle: quote.workTitle || '',
+          instructions: quote.instructions || '',
+          fileFormat: quote.fileFormat || '',
+          size: quote.size || '',
+          sizetype: quote.sizetype || 'Inches',
+          amount: quote.amount || '',
+          currency: quote.currency || 'USD',
+          email: quote.email || '',
+          companyName: quote.companyName || '',
+          quoteNo: quote.quoteNo || '',
+          quoteType: quote.quoteType || 'Standard',
+          imageUrl: quote.imageUrl || ''
         };
 
-        setFormData(orderData);
-        setInitialData(orderData);
-        setExistingFiles(order.files || []);
+        setFormData(quoteData);
+        setInitialData(quoteData);
+        // Assuming quotes don't have multiple files in this schema yet, but structure is ready
+        setExistingFiles((quote as any).files || []);
       }).catch(() => {
-        toast.error('Failed to load order details');
-        navigate('/orders/summary');
+        toast.error('Failed to load quote details');
+        navigate('/quotes');
       });
     }
   }, [id, isEditMode, users, navigate]);
@@ -202,12 +173,8 @@ export default function OrderForm() {
   const hasChanges = useMemo(() => {
     if (!isEditMode) return true;
     if (!initialData) return false;
-
     const basicInfoChanged = JSON.stringify(formData) !== JSON.stringify(initialData);
-    const filesAdded = selectedFiles.length > 0;
-    const filesRemoved = filesToDelete.length > 0;
-
-    return basicInfoChanged || filesAdded || filesRemoved;
+    return basicInfoChanged || selectedFiles.length > 0 || filesToDelete.length > 0;
   }, [formData, initialData, isEditMode, selectedFiles.length, filesToDelete.length]);
 
   const isFormValid = useMemo(() => {
@@ -221,31 +188,24 @@ export default function OrderForm() {
 
   const mutation = useMutation({
     mutationFn: (data: any) => {
-      const formDataToSend = new FormData();
-      Object.keys(data).forEach(key => {
-        if (data[key] !== null && data[key] !== undefined) {
-          formDataToSend.append(key, data[key]);
-        }
-      });
-      selectedFiles.forEach(file => {
-        formDataToSend.append('files', file);
-      });
-      filesToDelete.forEach(id => {
-        formDataToSend.append('filesToDelete', id.toString());
-      });
+      const payload = {
+        ...data,
+        files: selectedFiles,
+        filesToDelete: filesToDelete
+      };
 
       return isEditMode
-        ? ordersApi.updateOrder(Number(id), formDataToSend)
-        : ordersApi.createOrder(formDataToSend);
+        ? quotesApi.updateQuote(Number(id), payload)
+        : quotesApi.createQuote(payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success(isEditMode ? 'Order updated successfully' : 'Order placed successfully');
-      navigate('/orders/summary');
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast.success(isEditMode ? 'Quote updated successfully' : 'Quote placed successfully');
+      navigate('/quotes');
     },
     onError: (err: any) => {
       setFormError(err.response?.data?.message || err.message);
-      toast.error('Failed to place order');
+      toast.error('Failed to save quote');
     }
   });
 
@@ -253,48 +213,18 @@ export default function OrderForm() {
     e.preventDefault();
     setFormError(null);
 
-    // Robust validation
     const errors: Record<string, string> = {};
     if (!formData.userId) errors.userId = 'User is required';
     if (!formData.serviceId) errors.serviceId = 'Service is required';
-
     if (!formData.workTitle) {
       errors.workTitle = 'PO/Artwork Name is required';
     } else if (formData.workTitle.trim().length < 2) {
       errors.workTitle = 'PO/Artwork Name must be at least 2 characters';
     }
-
-    if (formData.fileFormat && formData.fileFormat.trim().length < 2) {
-      errors.fileFormat = 'File Format must be at least 2 characters';
-    }
-
     if (!formData.amount) {
       errors.amount = 'Rate is required';
     } else if (isNaN(Number(formData.amount)) || Number(formData.amount) < 0) {
       errors.amount = 'Please enter a valid positive number';
-    }
-
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    // Size & Dimensions Validation
-    if (formData.size) {
-      const sizeRegex = /^\s*(\d+(\.\d{1,2})?)\s*([x×]\s*(\d+(\.\d{1,2})?))?\s*$/i;
-      const match = formData.size.match(sizeRegex);
-
-      if (!match) {
-        errors.size = 'Enter a single value or format: width x height';
-      } else {
-        const val1 = parseFloat(match[1]);
-        const val2 = match[4] ? parseFloat(match[4]) : null;
-
-        if (val1 <= 0 || (val2 !== null && val2 <= 0)) {
-          errors.size = 'Dimensions must be greater than zero';
-        } else if (val1 > 1000 || (val2 !== null && val2 > 1000)) {
-          errors.size = 'Dimensions cannot exceed 1000';
-        }
-      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -303,30 +233,7 @@ export default function OrderForm() {
       return;
     }
 
-    mutation.mutate({
-      uniqueNo: formData.uniqueNo,
-      orderNo: formData.orderNo,
-      serviceId: formData.serviceId,
-      workTitle: formData.workTitle,
-      instructions: formData.instructions,
-      fileFormat: formData.fileFormat,
-      size: formData.size,
-      sizetype: formData.sizetype,
-      amount: formData.amount,
-      currency: formData.currency,
-      email: formData.email,
-      orderStatus: formData.orderStatus,
-      externalLink: formData.externalLink
-    });
-  };
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    // Only allow digits and one decimal point, no negative signs or special chars
-    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-      setFormData(p => ({ ...p, amount: val }));
-      if (fieldErrors.amount) setFieldErrors(p => { const n = { ...p }; delete n.amount; return n; });
-    }
+    mutation.mutate(formData);
   };
 
   const premiumInput = "w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all font-medium text-slate-800 placeholder:text-slate-400";
@@ -350,7 +257,6 @@ export default function OrderForm() {
             onSubmit={handleSubmit}
             className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
           >
-
             <div className="p-5 sm:p-6 space-y-4">
               {formError && (
                 <div className="text-red-600 text-sm font-bold flex items-center gap-3 bg-red-50 p-4 rounded-2xl border border-red-100/50 animate-in zoom-in-95">
@@ -358,10 +264,10 @@ export default function OrderForm() {
                 </div>
               )}
 
-              {/* Main Fields (Custom 12-Column Layout) */}
+              {/* Main Fields */}
               <section className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-6">
 
-                {/* --- Row 1 (3 items - 4 cols each) --- */}
+                {/* --- Row 1 (Username, Company Name, Quote #) --- */}
                 <div className="space-y-1 lg:col-span-4">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">Username <span className="text-red-500">*</span></label>
                   <CustomSelect
@@ -392,20 +298,20 @@ export default function OrderForm() {
                 </div>
 
                 <div className="space-y-1 lg:col-span-4">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order #</label>
+                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Quote #</label>
                   <div className="relative group">
                     <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input
                       type="text"
                       readOnly
                       placeholder="Auto-generated"
-                      value={formData.orderNo}
+                      value={formData.quoteNo}
                       className={`${premiumInput} pl-10 bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed`}
                     />
                   </div>
                 </div>
 
-                {/* --- Row 2 (4 items - 3 cols each) --- */}
+                {/* --- Row 2 (Service, Rate, PO / Artwork Name, File Format Required) --- */}
                 <div className="space-y-1 lg:col-span-3">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">Service <span className="text-red-500">*</span></label>
                   <CustomSelect
@@ -428,7 +334,13 @@ export default function OrderForm() {
                       type="text"
                       placeholder="0.00"
                       value={formData.amount}
-                      onChange={handleAmountChange}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                          setFormData(p => ({ ...p, amount: val }));
+                          if (fieldErrors.amount) setFieldErrors(p => { const n = { ...p }; delete n.amount; return n; });
+                        }
+                      }}
                       className={`${premiumInput} pl-10 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''}`}
                     />
                   </div>
@@ -461,17 +373,13 @@ export default function OrderForm() {
                       type="text"
                       placeholder="e.g. DST, PES, AI"
                       value={formData.fileFormat}
-                      onChange={(e) => {
-                        setFormData(p => ({ ...p, fileFormat: e.target.value }));
-                        if (fieldErrors.fileFormat) setFieldErrors(p => { const n = { ...p }; delete n.fileFormat; return n; });
-                      }}
-                      className={`${premiumInput} pl-10 ${fieldErrors.fileFormat ? 'border-red-500 ring-red-500/10' : ''}`}
+                      onChange={(e) => setFormData(p => ({ ...p, fileFormat: e.target.value }))}
+                      className={`${premiumInput} pl-10`}
                     />
                   </div>
-                  {renderError('fileFormat')}
                 </div>
 
-                {/* --- Row 3 (2 items - 6 cols each) --- */}
+                {/* --- Row 3 (Size, Email) --- */}
                 <div className="space-y-1 lg:col-span-6">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">Size & Dimensions</label>
                   <div className="flex gap-2">
@@ -481,21 +389,8 @@ export default function OrderForm() {
                         type="text"
                         placeholder="4.5x2.1"
                         value={formData.size}
-                        onChange={(e) => {
-                          setFormData(p => ({ ...p, size: e.target.value }));
-                          if (fieldErrors.size) setFieldErrors(p => { const n = { ...p }; delete n.size; return n; });
-                        }}
-                        onBlur={() => {
-                          if (formData.size) {
-                            // Standardize format: replace × with x, normalize spaces if it's a dual dimension
-                            let normalized = formData.size.replace(/×/g, 'x').trim();
-                            if (normalized.includes('x')) {
-                              normalized = normalized.replace(/\s*x\s*/i, ' x ');
-                            }
-                            setFormData(p => ({ ...p, size: normalized }));
-                          }
-                        }}
-                        className={`${premiumInput} pl-8 text-[13px] ${fieldErrors.size ? 'border-red-500 ring-red-500/10' : ''}`}
+                        onChange={(e) => setFormData(p => ({ ...p, size: e.target.value }))}
+                        className={`${premiumInput} pl-8 text-[13px]`}
                       />
                     </div>
                     <div className="w-[120px] shrink-0">
@@ -510,7 +405,6 @@ export default function OrderForm() {
                       />
                     </div>
                   </div>
-                  {renderError('size')}
                 </div>
 
                 <div className="space-y-1 lg:col-span-6">
@@ -521,121 +415,48 @@ export default function OrderForm() {
                       type="email"
                       placeholder="name@domain.com"
                       value={formData.email}
-                      onChange={(e) => {
-                        setFormData(p => ({ ...p, email: e.target.value }));
-                        if (fieldErrors.email) setFieldErrors(p => { const n = { ...p }; delete n.email; return n; });
-                      }}
-                      className={`${premiumInput} pl-10 ${fieldErrors.email ? 'border-red-500 ring-red-500/10' : ''}`}
+                      onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
+                      className={`${premiumInput} pl-10`}
                     />
                   </div>
-                  {renderError('email')}
                 </div>
-
-                {/* --- Row 4: Order Status (Edit Mode Only, spanning full width or 6 cols) --- */}
-                {isEditMode && (
-                  <div className="space-y-1 lg:col-span-6">
-                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order Status</label>
-                    <CustomSelect
-                      value={formData.orderStatus}
-                      onChange={(val) => setFormData(p => ({ ...p, orderStatus: val }))}
-                      options={[
-                        { value: 'In Process', label: 'In Process' },
-                        { value: 'Cancelled', label: 'Cancelled' },
-                        { value: 'Completed', label: 'Completed' },
-                      ]}
-                    />
-                  </div>
-                )}
               </section>
 
               {/* Instruction Section */}
-              <section>
-                <div className="space-y-1">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Instruction</label>
-                  <div className="quill-premium-editor">
-                    <ReactQuill
-                      theme="snow"
-                      value={formData.instructions}
-                      onChange={(content) => setFormData(p => ({ ...p, instructions: content }))}
-                      modules={quillModules}
-                      formats={quillFormats}
-                      placeholder="Enter specific instructions for the design team..."
-                      className="bg-white rounded-2xl overflow-hidden border border-slate-200 focus-within:border-cyan-500 focus-within:ring-4 focus-within:ring-cyan-500/10 transition-all"
-                    />
-                  </div>
+              <section className="space-y-1">
+                <label className="block text-[13px] font-semibold text-slate-900 ml-1">Instruction</label>
+                <div className="quill-premium-editor">
+                  <ReactQuill
+                    theme="snow"
+                    value={formData.instructions}
+                    onChange={(content) => setFormData(p => ({ ...p, instructions: content }))}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    placeholder="Enter specific instructions for the design team..."
+                    className="bg-white rounded-2xl overflow-hidden border border-slate-200 focus-within:border-cyan-500 focus-within:ring-4 focus-within:ring-cyan-500/10 transition-all"
+                  />
                 </div>
               </section>
 
-              {/* Section 3: Attachments */}
+              {/* Attachments Section */}
               <section className="space-y-4">
                 <label className="block text-[13px] font-semibold text-slate-900 ml-1">Attachments (Upto 30 MB)</label>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      const files = Array.from(e.target.files).filter(file =>
-                        !selectedFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
-                      );
-
-                      if (files.length < e.target.files.length) {
-                        toast.error('Duplicate files were skipped');
-                      }
-
-                      const largeFiles = files.filter(f => f.size > 30 * 1024 * 1024);
-
-                      if (largeFiles.length > 0) {
-                        toast.error(
-                          "Some files exceed the 30MB limit. Please provide a transfer link for these assets instead.",
-                          { duration: 5000, icon: '⚠️' }
-                        );
-                        const validFiles = files.filter(f => f.size <= 30 * 1024 * 1024);
-                        setSelectedFiles(prev => [...prev, ...validFiles]);
-                      } else {
-                        setSelectedFiles(prev => [...prev, ...files]);
-                      }
-                    }
-                  }}
-                  multiple
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,.ai,.psd"
-                />
-
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                      const files = Array.from(e.dataTransfer.files).filter(file =>
-                        !selectedFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
-                      );
-
-                      if (files.length < e.dataTransfer.files.length) {
-                        toast.error('Duplicate files were skipped');
-                      }
-
-                      const largeFiles = files.filter(f => f.size > 30 * 1024 * 1024);
-
-                      if (largeFiles.length > 0) {
-                        toast.error(
-                          "Some files exceed the 30MB limit. Please provide a transfer link for these assets instead.",
-                          { duration: 5000, icon: '⚠️' }
-                        );
-                        const validFiles = files.filter(f => f.size <= 30 * 1024 * 1024);
-                        setSelectedFiles(prev => [...prev, ...validFiles]);
-                      } else {
-                        setSelectedFiles(prev => [...prev, ...files]);
-                      }
-                    }
-                  }}
                   className="border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center transition-all hover:border-cyan-400 hover:bg-cyan-50/30 group cursor-pointer"
                 >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const files = Array.from(e.target.files);
+                        setSelectedFiles(prev => [...prev, ...files]);
+                      }
+                    }}
+                    multiple
+                    className="hidden"
+                  />
                   <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100 mb-3 group-hover:scale-110 transition-transform">
                     <Paperclip size={20} className="text-slate-400 group-hover:text-cyan-600" />
                   </div>
@@ -661,8 +482,8 @@ export default function OrderForm() {
                     <input
                       type="url"
                       placeholder="https://wetransfer.com/downloads/..."
-                      value={formData.externalLink}
-                      onChange={(e) => setFormData(p => ({ ...p, externalLink: e.target.value }))}
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData(p => ({ ...p, imageUrl: e.target.value }))}
                       className={`${premiumInput} pl-10`}
                     />
                   </div>
@@ -740,32 +561,12 @@ export default function OrderForm() {
             <div className="bg-slate-50/80 p-5 sm:p-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
               <button
                 type="button"
-                onClick={() => navigate('/orders/summary')}
+                onClick={() => navigate('/quotes')}
                 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <ChevronLeft size={16} /> Cancel
               </button>
               <div className="flex items-center gap-4">
-                {!isEditMode && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({
-                        uniqueNo: null, userId: null, serviceId: null, workTitle: '',
-                        instructions: '', fileFormat: '', size: '', sizetype: 'Inches',
-                        amount: '', currency: 'USD', email: '', companyName: '', orderNo: '',
-                        orderStatus: 'In Process',
-                        externalLink: ''
-                      });
-                      setSelectedFiles([]);
-                      setExistingFiles([]);
-                      setFilesToDelete([]);
-                    }}
-                    className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-cyan-600 transition-colors"
-                  >
-                    Reset
-                  </button>
-                )}
                 <Button
                   type="submit"
                   variant="primary"
@@ -773,7 +574,7 @@ export default function OrderForm() {
                   disabled={!hasChanges || !isFormValid}
                   className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEditMode ? 'Update Order' : 'Place Order'}
+                  {isEditMode ? 'Update Quote' : 'Create Quote'}
                 </Button>
               </div>
             </div>

@@ -15,6 +15,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Pagination } from '../../components/ui/Pagination';
 import CustomSelect from '../../components/ui/CustomSelect';
 import DatePicker from '../../components/ui/DatePicker';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 // ── Form defaults ────────────────────────────────────────────────────────────
 const emptyForm: CreateExpensePayload = {
@@ -496,35 +497,19 @@ export default function ExpenseList() {
         </div>
       )}
 
-      {/* ── Delete Confirmation Modal ──────────────────────────────────────── */}
-      {isDeleteOpen && expenseToDelete && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={closeDeleteModal} />
-          <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-white/20 p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
-              <Trash2 size={28} className="text-red-500" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-3">Delete Expense</h3>
-            <p className="text-sm text-gray-500 leading-relaxed px-2 font-medium">
-              Are you sure you want to delete <span className="font-bold text-gray-900">"{expenseToDelete.title}"</span>? This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-center gap-4 mt-8">
-              <button onClick={closeDeleteModal} className="text-[11px] font-black uppercase text-slate-400 hover:text-slate-700 tracking-widest transition-colors px-6 py-3">
-                Cancel
-              </button>
-              <Button
-                variant="primary"
-                onClick={() => deleteMutation.mutate(expenseToDelete.expenseId)}
-                className="px-8 py-3 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-xl shadow-red-500/20 text-white font-black text-xs uppercase tracking-widest border-0"
-                isLoading={deleteMutation.isPending}
-                disabled={deleteMutation.isPending}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteOpen}
+        title="Delete Expense"
+        message={
+          <>
+            Are you sure you want to delete <span className="font-bold text-gray-900">"{expenseToDelete?.title}"</span>? This action cannot be undone.
+          </>
+        }
+        onConfirm={() => deleteMutation.mutate(expenseToDelete!.expenseId)}
+        onCancel={closeDeleteModal}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }
