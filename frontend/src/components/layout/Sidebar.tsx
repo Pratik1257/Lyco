@@ -38,7 +38,16 @@ const navSections: { label: string; items: NavItem[] }[] = [
       },
       { to: '/quotes', icon: FileText, label: 'Manage Quote' },
       { to: '/payments', icon: CreditCard, label: 'Manage Payment' },
-      { to: '/invoices', icon: Receipt, label: 'Manage Invoice' },
+      { 
+        to: '/invoices', 
+        icon: Receipt, 
+        label: 'Manage Invoice',
+        subItems: [
+          { to: '/invoices/create', label: 'Create Invoice' },
+          { to: '/invoices/summary', label: 'Invoice Summary' },
+          { to: '/invoices/pending', label: 'Pending Invoice Summary' },
+        ]
+      },
       { to: '/expenses', icon: Receipt, label: 'Manage Expenses' },
     ],
   },

@@ -122,20 +122,27 @@ export default function CustomerForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     let { name, value } = e.target;
 
-    // Apply numeric-only restriction for ZIP code
+    // Apply numeric and hyphen restriction for ZIP code
     if (name === 'zipcode') {
-      value = value.replace(/\D/g, '');
+      value = value.replace(/[^0-9-]/g, '');
     }
 
-    // Remove spaces from username
+    // Strictly prevent typing numbers and special characters for name and location fields
+    if (['firstname', 'lastname', 'city', 'state'].includes(name)) {
+      value = value.replace(/[^a-zA-Z\s'-]/g, '');
+    }
+
+    // Strictly prevent typing spaces and most special characters for username
+    // Allowed: letters, numbers, dots, underscores
     if (name === 'username') {
-      value = value.replace(/\s/g, '');
+      value = value.replace(/[^a-zA-Z0-9._]/g, '');
     }
 
-    // Capitalize first letter for name and residency fields
-    if (['firstname', 'lastname', 'city', 'state'].includes(name) && value.length > 0) {
-      value = value.charAt(0).toUpperCase() + value.slice(1);
+    // Prevent special characters in company name but allow letters and numbers
+    if (name === 'companyname') {
+      value = value.replace(/[^a-zA-Z0-9\s&.,'-]/g, '');
     }
+
 
     setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
@@ -144,6 +151,17 @@ export default function CustomerForm() {
         delete next[name];
         return next;
       });
+    }
+  };
+
+  const handleWebsiteBlur = () => {
+    let url = formData.websiteUrl?.trim() || '';
+    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+      // Check if it looks like a domain before adding https
+      const domainRegex = /^([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/i;
+      if (domainRegex.test(url)) {
+        setFormData(prev => ({ ...prev, websiteUrl: `https://${url}` }));
+      }
     }
   };
 
@@ -185,15 +203,26 @@ export default function CustomerForm() {
       return true;
     };
 
-    req('username', 'Username');
+    const nameRegex = /^[a-zA-Z\s'-]*$/;
+    const alphaNumRegex = /^[a-zA-Z0-9][a-zA-Z0-9._]*$/;
+    const companyRegex = /^[a-zA-Z0-9\s&.,'-]*$/;
+
+    if (req('username', 'Username')) {
+      if (!alphaNumRegex.test(formData.username!)) {
+        errors.username = 'Must start with letter/number and use only letters, numbers, dots, or underscores';
+      } else if (formData.username!.includes('__')) {
+        errors.username = 'Double underscores are not allowed';
+      }
+    }
     req('firstname', 'First Name');
     req('lastname', 'Last Name');
 
     // Email Validation with Typo Detection
     const validateEmail = (email: string, fieldName: string, label: string) => {
       if (!email) return true;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      // Robust regex that prevents consecutive dots and invalid characters like commas
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email) || email.includes(',.') || email.includes('.,')) {
         errors[fieldName] = `Please enter a valid ${label.toLowerCase()}`;
         return false;
       }
@@ -234,10 +263,31 @@ export default function CustomerForm() {
         errors.telephone = 'Invalid phone number format';
       }
     }
-    req('address1', 'Address Line 1');
-    req('city', 'City');
-    req('state', 'State');
-    req('zipcode', 'ZIP / Postcode');
+    if (req('address1', 'Address')) {
+      if (formData.address1!.length < 5) errors.address1 = 'Address must be at least 5 characters';
+    }
+    if (req('city', 'City')) {
+      if (formData.city!.length < 2) errors.city = 'City must be at least 2 characters';
+    }
+    if (req('state', 'State')) {
+      if (formData.state!.length < 2) errors.state = 'State / Territory must be at least 2 characters';
+    }
+
+    if (req('zipcode', 'ZIP / Postcode')) {
+      // Find if selected country is US (assuming United States or USA)
+      const isUS = countries.find(c => c.countryId === formData.countryId)?.countryName.toLowerCase().includes('united states') || 
+                   countries.find(c => c.countryId === formData.countryId)?.countryName === 'USA';
+      
+      if (isUS) {
+        const zipRegex = /^\d{5}(-\d{4})?$/;
+        if (!zipRegex.test(formData.zipcode!)) {
+          errors.zipcode = 'Invalid ZIP code';
+        }
+      } else {
+        if (formData.zipcode!.length < 4) errors.zipcode = 'Postcode must be at least 4 characters';
+        if (formData.zipcode!.length > 10) errors.zipcode = 'Postcode cannot exceed 10 characters';
+      }
+    }
 
     if (!formData.countryId) errors.countryId = 'Please select a country';
     if (!formData.currency) errors.currency = 'Please select a currency';
@@ -257,7 +307,18 @@ export default function CustomerForm() {
     checkLen('city', 100, 'City');
     checkLen('state', 100, 'State / Territory');
     checkLen('zipcode', 20, 'ZIP / Postcode');
-    checkLen('websiteUrl', 200, 'Website URL');
+    checkLen('zipcode', 20, 'ZIP / Postcode');
+    
+    // Website Validation
+    if (formData.websiteUrl) {
+      const url = formData.websiteUrl.trim();
+      // Strict URL regex that blocks emails and random text
+      const websiteRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/i;
+      if (!websiteRegex.test(url) || url.includes('@') || url.includes(',.')) {
+        errors.websiteUrl = 'Please enter a valid website URL';
+      }
+      checkLen('websiteUrl', 200, 'Website URL');
+    }
 
     if (formData.username && formData.username.length < 3) errors.username = 'Username must be at least 3 characters';
     if (formData.username && /\s/.test(formData.username)) errors.username = 'Username cannot contain spaces';
@@ -449,7 +510,17 @@ export default function CustomerForm() {
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Website URL</label>
-                    <input type="url" name="websiteUrl" maxLength={200} placeholder="https://www.corporate.com" value={formData.websiteUrl || ''} onChange={handleInputChange} className={premiumInput} />
+                    <input 
+                      type="text" 
+                      name="websiteUrl" 
+                      maxLength={200} 
+                      placeholder="e.g. google.com" 
+                      value={formData.websiteUrl || ''} 
+                      onChange={handleInputChange} 
+                      onBlur={handleWebsiteBlur}
+                      className={`${premiumInput} ${fieldErrors.websiteUrl ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} 
+                    />
+                    {renderError('websiteUrl')}
                   </div>
                 </div>
               </section>
@@ -585,7 +656,21 @@ export default function CustomerForm() {
                   variant="primary"
                   type="submit"
                   className="w-full sm:w-auto px-12 py-4 rounded-2xl font-bold text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-2xl shadow-slate-200 tracking-[0.02em] active:scale-[0.98] transition-all flex items-center justify-center leading-none"
-                  disabled={mutation.isPending || (!formData.username?.trim())}
+                  disabled={
+                    mutation.isPending || 
+                    !formData.username?.trim() || 
+                    !formData.firstname?.trim() || 
+                    !formData.lastname?.trim() || 
+                    !formData.companyname?.trim() || 
+                    !formData.primaryEmail?.trim() || 
+                    !formData.address1?.trim() || 
+                    !formData.city?.trim() || 
+                    !formData.state?.trim() || 
+                    !formData.zipcode?.trim() || 
+                    !formData.countryId || 
+                    !formData.currency?.trim() || 
+                    (!isEdit && !formData.password?.trim())
+                  }
                   isLoading={mutation.isPending}
                 >
                   <span className="mt-[-1px]">

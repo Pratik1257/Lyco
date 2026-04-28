@@ -81,7 +81,7 @@ public class OrdersController : ControllerBase
 
         if (!string.IsNullOrEmpty(status) && status != "all")
         {
-            joinedQuery = joinedQuery.Where(o => o.OrderStatus == status);
+            joinedQuery = joinedQuery.Where(o => o.OrderStatus != null && o.OrderStatus.ToLower() == status.ToLower());
         }
 
         if (serviceId.HasValue)

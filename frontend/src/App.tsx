@@ -22,6 +22,10 @@ import RemoveOrderForm from './pages/orders/RemoveOrderForm';
 import QuoteList from './pages/quotes/QuoteList';
 import QuoteForm from './pages/quotes/QuoteForm';
 
+import CreateInvoice from './pages/invoices/CreateInvoice';
+import InvoiceList from './pages/invoices/InvoiceList';
+import PendingInvoiceList from './pages/invoices/PendingInvoiceList';
+
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
   const navigate = useNavigate();
@@ -82,7 +86,10 @@ export default function App() {
               <Route path="quotes/new" element={<QuoteForm />} />
               <Route path="quotes/edit/:id" element={<QuoteForm />} />
               <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
-              <Route path="invoices" element={<div className="p-4 text-gray-500">Manage Invoice — coming soon</div>} />
+              <Route path="invoices/create" element={<CreateInvoice />} />
+              <Route path="invoices/summary" element={<InvoiceList />} />
+              <Route path="invoices/pending" element={<PendingInvoiceList />} />
+              <Route path="invoices" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Invoice</div>} />
               <Route path="customers/status" element={<CustomerList />} />
               <Route path="customers/add-two" element={<CustomerForm />} />
               <Route path="customers/add-three" element={<CustomerFormModalPage />} />

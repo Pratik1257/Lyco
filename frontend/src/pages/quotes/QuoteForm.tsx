@@ -181,8 +181,8 @@ export default function QuoteForm() {
     return !!(
       formData.userId &&
       formData.serviceId &&
-      formData.workTitle && formData.workTitle.trim().length >= 2 &&
-      formData.amount && !isNaN(Number(formData.amount)) && Number(formData.amount) >= 0
+      formData.workTitle && formData.workTitle.trim().length > 0 &&
+      formData.amount && formData.amount.toString().trim().length > 0
     );
   }, [formData]);
 
@@ -216,11 +216,44 @@ export default function QuoteForm() {
     const errors: Record<string, string> = {};
     if (!formData.userId) errors.userId = 'User is required';
     if (!formData.serviceId) errors.serviceId = 'Service is required';
+    // PO/Artwork Name Validation
     if (!formData.workTitle) {
       errors.workTitle = 'PO/Artwork Name is required';
-    } else if (formData.workTitle.trim().length < 2) {
-      errors.workTitle = 'PO/Artwork Name must be at least 2 characters';
+    } else if (formData.workTitle.trim().length < 1) {
+      errors.workTitle = 'PO/Artwork Name is required';
     }
+
+    // Email Validation with Typo Detection
+    const validateEmail = (email: string, fieldName: string, label: string) => {
+      if (!email) return true;
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email) || email.includes(',.') || email.includes('.,')) {
+        errors[fieldName] = `Please enter a valid ${label.toLowerCase()}`;
+        return false;
+      }
+      if (email.length > 150) {
+        errors[fieldName] = `${label} cannot exceed 150 characters`;
+        return false;
+      }
+      const domainMap: Record<string, string> = {
+        'gmal.com': 'gmail.com',
+        'gmil.com': 'gmail.com',
+        'hotmal.com': 'hotmail.com',
+        'yaho.com': 'yahoo.com',
+        'outlok.com': 'outlook.com'
+      };
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (domainMap[domain]) {
+        errors[fieldName] = `Typo detected? Did you mean @${domainMap[domain]}?`;
+        return false;
+      }
+      return true;
+    };
+
+    if (formData.email) {
+      validateEmail(formData.email, 'email', 'Email');
+    }
+
     if (!formData.amount) {
       errors.amount = 'Rate is required';
     } else if (isNaN(Number(formData.amount)) || Number(formData.amount) < 0) {
@@ -255,6 +288,7 @@ export default function QuoteForm() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form
             onSubmit={handleSubmit}
+            noValidate
             className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
           >
             <div className="p-5 sm:p-6 space-y-4">
@@ -276,7 +310,7 @@ export default function QuoteForm() {
                       setFormData(p => ({ ...p, userId: val ? Number(val) : null }));
                       setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
                     }}
-                    options={users.map(u => ({
+                    options={(Array.isArray(users) ? users : []).map(u => ({
                       value: u.id,
                       label: `${u.username}${u.firstname || u.lastname ? ` (${[u.firstname, u.lastname].filter(Boolean).join(' ')})` : ''}`
                     }))}
@@ -320,14 +354,14 @@ export default function QuoteForm() {
                       setFormData(p => ({ ...p, serviceId: val ? Number(val) : null }));
                       setFieldErrors(p => { const n = { ...p }; delete n.serviceId; return n; });
                     }}
-                    options={services.map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
+                    options={(Array.isArray(services) ? services : []).map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
                     placeholder="Choose Service"
                     error={fieldErrors.serviceId}
                   />
                 </div>
 
                 <div className="space-y-1 lg:col-span-2">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate</label>
+                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate <span className="text-red-500">*</span></label>
                   <div className="relative group">
                     <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
                     <input
@@ -389,7 +423,10 @@ export default function QuoteForm() {
                         type="text"
                         placeholder="4.5x2.1"
                         value={formData.size}
-                        onChange={(e) => setFormData(p => ({ ...p, size: e.target.value }))}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.x*]/gi, '');
+                          setFormData(p => ({ ...p, size: val }));
+                        }}
                         className={`${premiumInput} pl-8 text-[13px]`}
                       />
                     </div>
@@ -412,13 +449,17 @@ export default function QuoteForm() {
                   <div className="relative group">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
                     <input
-                      type="email"
+                      type="text"
                       placeholder="name@domain.com"
                       value={formData.email}
-                      onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
-                      className={`${premiumInput} pl-10`}
+                      onChange={(e) => {
+                        setFormData(p => ({ ...p, email: e.target.value }));
+                        if (fieldErrors.email) setFieldErrors(p => { const n = { ...p }; delete n.email; return n; });
+                      }}
+                      className={`${premiumInput} pl-10 ${fieldErrors.email ? 'border-red-500 ring-4 ring-red-500/5' : ''}`}
                     />
                   </div>
+                  {renderError('email')}
                 </div>
               </section>
 

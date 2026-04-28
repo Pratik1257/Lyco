@@ -44,6 +44,7 @@ public record CreateCardRequest
     public string? CardNo { get; init; }
 
     [Required]
+    [RegularExpression(@"^(0[1-9]|1[0-2])\/\d{4}$", ErrorMessage = "Expiry must be in MM/YYYY format")]
     public string? ExpDate { get; init; }
 
     [Required]
@@ -55,28 +56,39 @@ public record CreateCardRequest
     public string? AsRegistered { get; init; }
 
     [Required]
+    [MinLength(3, ErrorMessage = "First Name must be at least 3 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? FirstName { get; init; }
 
-    [Required]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? Middlename { get; init; }
 
     [Required]
+    [MinLength(3, ErrorMessage = "Last Name must be at least 3 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? LastName { get; init; }
 
     [Required]
+    [MinLength(5, ErrorMessage = "Address must be at least 5 characters")]
     public string? Address1 { get; init; }
 
     public string? Address2 { get; init; }
 
     [Required]
+    [MinLength(2, ErrorMessage = "City must be at least 2 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? City { get; init; }
 
+    [MinLength(4, ErrorMessage = "Postcode too short")]
+    [MaxLength(10, ErrorMessage = "Postcode too long")]
     public string? Postcode { get; init; }
 
     [Required]
-    public long? CountryId { get; init; }
+    public long? CountryId { get; set; }
 
     [Required]
+    [MinLength(2, ErrorMessage = "State must be at least 2 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? State { get; init; }
 
     [Required]
@@ -97,6 +109,7 @@ public record UpdateCardRequest
     public string? CardNo { get; init; }
 
     [Required]
+    [RegularExpression(@"^(0[1-9]|1[0-2])\/\d{4}$", ErrorMessage = "Expiry must be in MM/YYYY format")]
     public string? ExpDate { get; init; }
 
     [Required]
@@ -108,28 +121,39 @@ public record UpdateCardRequest
     public string? AsRegistered { get; init; }
 
     [Required]
+    [MinLength(3, ErrorMessage = "First Name must be at least 3 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? FirstName { get; init; }
 
-    [Required]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? Middlename { get; init; }
 
     [Required]
+    [MinLength(3, ErrorMessage = "Last Name must be at least 3 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? LastName { get; init; }
 
     [Required]
+    [MinLength(5, ErrorMessage = "Address must be at least 5 characters")]
     public string? Address1 { get; init; }
 
     public string? Address2 { get; init; }
 
     [Required]
+    [MinLength(2, ErrorMessage = "City must be at least 2 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? City { get; init; }
 
+    [MinLength(4, ErrorMessage = "Postcode too short")]
+    [MaxLength(10, ErrorMessage = "Postcode too long")]
     public string? Postcode { get; init; }
 
     [Required]
-    public long? CountryId { get; init; }
+    public long? CountryId { get; set; }
 
     [Required]
+    [MinLength(2, ErrorMessage = "State must be at least 2 characters")]
+    [RegularExpression(@"^[a-zA-Z\s'-]*$", ErrorMessage = "Only letters allowed")]
     public string? State { get; init; }
 
     [Required]

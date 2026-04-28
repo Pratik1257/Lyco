@@ -31,6 +31,7 @@ builder.Services.AddScoped<ICardDetailRepository, CardDetailRepository>();
 builder.Services.AddScoped<ICardDetailService, CardDetailService>();
 builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IInvoicePdfService, InvoicePdfService>();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>

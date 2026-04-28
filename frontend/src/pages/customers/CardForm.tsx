@@ -106,6 +106,22 @@ export default function CardForm() {
     }
   });
 
+  // Helper: Luhn Algorithm for card number validation
+  const validateLuhn = (number: string) => {
+    let sum = 0;
+    let shouldDouble = false;
+    // Loop through values in reverse order
+    for (let i = number.length - 1; i >= 0; i--) {
+      let digit = parseInt(number.charAt(i));
+      if (shouldDouble) {
+        if ((digit *= 2) > 9) digit -= 9;
+      }
+      sum += digit;
+      shouldDouble = !shouldDouble;
+    }
+    return (sum % 10) === 0;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     let { name, value } = e.target;
 
@@ -114,10 +130,16 @@ export default function CardForm() {
       value = value.replace(/\D/g, ''); // Strip non-digits
     }
 
-    // Capitalize first letter for name fields
-    if (['firstName', 'middlename', 'lastName', 'state', 'city'].includes(name) && value.length > 0) {
-      value = value.charAt(0).toUpperCase() + value.slice(1);
+    // Proactive character blocking for name and location fields
+    if (['firstName', 'lastName', 'city', 'state'].includes(name)) {
+      value = value.replace(/[^a-zA-Z\s'-]/g, '');
     }
+
+    // Postcode restriction (Digits and hyphens only)
+    if (name === 'postcode') {
+      value = value.replace(/[^0-9-]/g, '');
+    }
+
 
     setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
@@ -127,15 +149,31 @@ export default function CardForm() {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
+    const nameRegex = /^[a-zA-Z\s'-]*$/;
+
     if (!formData.userId) errors.userId = 'Please associate an account';
 
     if (!formData.cardNo) {
       errors.cardNo = 'Card number is required';
     } else if (formData.cardNo.length < 13 || formData.cardNo.length > 19) {
       errors.cardNo = 'Card number must be 13-19 digits';
+    } else if (!validateLuhn(formData.cardNo)) {
+      errors.cardNo = 'Invalid card number';
     }
 
-    if (!expMonth || !expYear) errors.expDate = 'Expiry is required';
+    if (!expMonth || !expYear) {
+      errors.expDate = 'Expiry is required';
+    } else {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const selectedYear = parseInt(expYear);
+      const selectedMonth = parseInt(expMonth);
+
+      if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
+        errors.expDate = 'Expiry cannot be in the past';
+      }
+    }
 
     if (!formData.cvv) {
       errors.cvv = 'CVV is required';
@@ -143,13 +181,63 @@ export default function CardForm() {
       errors.cvv = 'CVV must be 3-4 digits';
     }
 
-    if (!formData.firstName) errors.firstName = 'First name is required';
-    // Middle name is optional
-    if (!formData.lastName) errors.lastName = 'Last name is required';
-    if (!formData.address1) errors.address1 = 'Billing address is required';
-    if (!formData.city) errors.city = 'City is required';
-    if (!formData.state) errors.state = 'State / Territory is required';
-    if (!formData.countryId) errors.countryId = 'Country is required';
+    if (!formData.firstName) {
+      errors.firstName = 'First name is required';
+    } else if (formData.firstName.length < 3) {
+      errors.firstName = 'First name must be at least 3 characters';
+    } else if (!nameRegex.test(formData.firstName)) {
+      errors.firstName = 'Only letters allowed';
+    }
+
+    if (!formData.lastName) {
+      errors.lastName = 'Last name is required';
+    } else if (formData.lastName.length < 3) {
+      errors.lastName = 'Last name must be at least 3 characters';
+    } else if (!nameRegex.test(formData.lastName)) {
+      errors.lastName = 'Only letters allowed';
+    }
+
+    if (!formData.address1) {
+      errors.address1 = 'Billing address is required';
+    } else if (formData.address1.length < 5) {
+      errors.address1 = 'Address must be at least 5 characters';
+    }
+
+    if (!formData.city) {
+      errors.city = 'City is required';
+    } else if (formData.city.length < 2) {
+      errors.city = 'City must be at least 2 characters';
+    } else if (!nameRegex.test(formData.city)) {
+      errors.city = 'Only letters allowed';
+    }
+
+    if (!formData.state) {
+      errors.state = 'State / Territory is required';
+    } else if (formData.state.length < 2) {
+      errors.state = 'State / Territory must be at least 2 characters';
+    } else if (!nameRegex.test(formData.state)) {
+      errors.state = 'Only letters allowed';
+    }
+
+    if (!formData.countryId) {
+      errors.countryId = 'Country is required';
+    }
+
+    // Postcode Validation
+    if (formData.postcode) {
+      const isUS = countries.find(c => c.countryId === formData.countryId)?.countryName.toLowerCase().includes('united states') ||
+        countries.find(c => c.countryId === formData.countryId)?.countryName === 'USA';
+
+      if (isUS) {
+        const zipRegex = /^\d{5}(-\d{4})?$/;
+        if (!zipRegex.test(formData.postcode)) {
+          errors.postcode = 'Invalid ZIP code';
+        }
+      } else {
+        if (formData.postcode.length < 4) errors.postcode = 'Postcode must be at least 4 characters';
+        if (formData.postcode.length > 10) errors.postcode = 'Postcode cannot exceed 10 characters';
+      }
+    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -179,16 +267,17 @@ export default function CardForm() {
 
   const isFormComplete = !!(
     formData.userId &&
-    formData.cardNo &&
+    formData.cardNo && formData.cardNo.trim().length > 0 &&
     expMonth &&
     expYear &&
-    formData.cvv &&
-    formData.firstName &&
-    formData.lastName &&
-    formData.address1 &&
-    formData.city &&
-    formData.state &&
-    formData.countryId
+    formData.cvv && formData.cvv.trim().length > 0 &&
+    formData.firstName && formData.firstName.trim().length > 0 &&
+    formData.lastName && formData.lastName.trim().length > 0 &&
+    formData.address1 && formData.address1.trim().length > 0 &&
+    formData.city && formData.city.trim().length > 0 &&
+    formData.state && formData.state.trim().length > 0 &&
+    formData.countryId &&
+    formData.postcode && formData.postcode.trim().length > 0
   );
 
   const premiumInput = "w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all font-medium text-slate-800 placeholder:text-slate-400";
@@ -197,8 +286,10 @@ export default function CardForm() {
   const renderError = (name: string) => {
     if (!fieldErrors[name]) return null;
     return (
-      <div className="flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">{fieldErrors[name]}</span>
+      <div className="flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+        <span className="text-[11px] font-medium text-red-500 leading-none">
+          {fieldErrors[name]}
+        </span>
       </div>
     );
   };
@@ -241,17 +332,42 @@ export default function CardForm() {
                       value={formData.userId || ''}
                       onChange={(val) => {
                         const userId = val ? Number(val) : null;
-                        if (!isEdit && userId) {
-                          const user = users.find(u => u.id === userId);
-                          if (user?.cardId) {
-                            toast.loading('Redirecting to existing card details...', { duration: 2000 });
-                            navigate(`/customers/card-details?id=${user.cardId}`);
-                            return;
-                          }
+                        if (!userId) {
+                          // User cleared the selection — reset everything
+                          setFormData(p => ({ ...p, userId: null }));
+                          return;
                         }
-                        setFormData(p => ({ ...p, userId }));
+                        const user = users.find(u => u.id === userId);
+                        // If this user has an existing card (and it's not the one we're currently editing), navigate to it
+                        if (user?.cardId && user.cardId !== Number(cardId)) {
+                          toast.loading('Redirecting to existing card details...', { duration: 2000 });
+                          navigate(`/customers/card-details?id=${user.cardId}`);
+                          return;
+                        }
+                        // Reset the full form and pre-fill names from user profile
+                        setFormData({
+                          userId,
+                          cardType: 'Visa',
+                          cardNo: '',
+                          expDate: '',
+                          cvv: '',
+                          asRegistered: 'Y',
+                          firstName: user?.firstname || '',
+                          middlename: '',
+                          lastName: user?.lastname || '',
+                          address1: '',
+                          address2: '',
+                          city: '',
+                          state: '',
+                          postcode: '',
+                          countryId: null,
+                          currency: 'USD',
+                          comments: ''
+                        });
+                        setExpMonth('');
+                        setExpYear('');
                       }}
-                      options={users.map(u => ({
+                      options={(Array.isArray(users) ? users : []).map(u => ({
                         value: u.id,
                         label: u.username
                       }))}
@@ -370,7 +486,7 @@ export default function CardForm() {
                     <CustomSelect
                       value={formData.countryId || ''}
                       onChange={(val) => setFormData(p => ({ ...p, countryId: val ? Number(val) : null }))}
-                      options={countries.map(c => ({ value: c.countryId, label: c.countryName }))}
+                      options={(Array.isArray(countries) ? countries : []).map(c => ({ value: c.countryId, label: c.countryName }))}
                       placeholder="Select Country"
                       menuPlacement="top"
                       error={fieldErrors.countryId}
@@ -378,15 +494,16 @@ export default function CardForm() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">ZIP / Postcode</label>
-                    <input type="text" name="postcode" placeholder="Postal Code" value={formData.postcode || ''} onChange={handleInputChange} className={premiumInput} />
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">ZIP / Postcode <span className="text-red-500">*</span></label>
+                    <input type="text" name="postcode" placeholder="Postal Code" value={formData.postcode || ''} onChange={handleInputChange} className={`${premiumInput} ${fieldErrors.postcode ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} />
+                    {renderError('postcode')}
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Currency Association</label>
                     <CustomSelect
                       value={formData.currency || 'USD'}
                       onChange={(val) => setFormData(p => ({ ...p, currency: val as string }))}
-                      options={currencies.map(c => ({ value: c.code, label: `${c.symbol} ${c.code}` }))}
+                      options={(Array.isArray(currencies) ? currencies : []).map(c => ({ value: c.code, label: `${c.symbol} ${c.code}` }))}
                       menuPlacement="top"
                     />
                   </div>

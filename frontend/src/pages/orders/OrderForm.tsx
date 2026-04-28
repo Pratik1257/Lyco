@@ -274,8 +274,35 @@ export default function OrderForm() {
       errors.amount = 'Please enter a valid positive number';
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
+    // Email Validation with Typo Detection
+    const validateEmail = (email: string, fieldName: string, label: string) => {
+      if (!email) return true;
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email) || email.includes(',.') || email.includes('.,')) {
+        errors[fieldName] = `Please enter a valid ${label.toLowerCase()}`;
+        return false;
+      }
+      if (email.length > 150) {
+        errors[fieldName] = `${label} cannot exceed 150 characters`;
+        return false;
+      }
+      const domainMap: Record<string, string> = {
+        'gmal.com': 'gmail.com',
+        'gmil.com': 'gmail.com',
+        'hotmal.com': 'hotmail.com',
+        'yaho.com': 'yahoo.com',
+        'outlok.com': 'outlook.com'
+      };
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (domainMap[domain]) {
+        errors[fieldName] = `Typo detected? Did you mean @${domainMap[domain]}?`;
+        return false;
+      }
+      return true;
+    };
+
+    if (formData.email) {
+      validateEmail(formData.email, 'email', 'Email');
     }
 
     // Size & Dimensions Validation
@@ -348,6 +375,7 @@ export default function OrderForm() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <form
             onSubmit={handleSubmit}
+            noValidate
             className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
           >
 
@@ -370,7 +398,7 @@ export default function OrderForm() {
                       setFormData(p => ({ ...p, userId: val ? Number(val) : null }));
                       setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
                     }}
-                    options={users.map(u => ({
+                    options={(Array.isArray(users) ? users : []).map(u => ({
                       value: u.id,
                       label: `${u.username}${u.firstname || u.lastname ? ` (${[u.firstname, u.lastname].filter(Boolean).join(' ')})` : ''}`
                     }))}
@@ -414,7 +442,7 @@ export default function OrderForm() {
                       setFormData(p => ({ ...p, serviceId: val ? Number(val) : null }));
                       setFieldErrors(p => { const n = { ...p }; delete n.serviceId; return n; });
                     }}
-                    options={services.map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
+                    options={(Array.isArray(services) ? services : []).map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
                     placeholder="Choose Service"
                     error={fieldErrors.serviceId}
                   />
@@ -482,7 +510,8 @@ export default function OrderForm() {
                         placeholder="4.5x2.1"
                         value={formData.size}
                         onChange={(e) => {
-                          setFormData(p => ({ ...p, size: e.target.value }));
+                          const val = e.target.value.replace(/[^0-9.x*]/gi, '');
+                          setFormData(p => ({ ...p, size: val }));
                           if (fieldErrors.size) setFieldErrors(p => { const n = { ...p }; delete n.size; return n; });
                         }}
                         onBlur={() => {
@@ -518,7 +547,7 @@ export default function OrderForm() {
                   <div className="relative group">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
                     <input
-                      type="email"
+                      type="text"
                       placeholder="name@domain.com"
                       value={formData.email}
                       onChange={(e) => {
