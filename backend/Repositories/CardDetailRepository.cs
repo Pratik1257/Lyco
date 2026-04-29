@@ -40,6 +40,7 @@ public class CardDetailRepository : ICardDetailRepository
     {
         var query = _context.CardDetails
             .Include(c => c.User)
+            .Where(c => c.User != null && c.User.IsActive == "Y")
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))

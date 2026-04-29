@@ -115,7 +115,8 @@ public class PriceService : IPriceService
             p.Service?.ServiceName ?? "Unknown",
             p.Currency ?? "",
             decimal.TryParse(p.Price, out var price) ? price : 0m,
-            !serviceOrderMap.GetValueOrDefault(p.ServiceId ?? 0, false)
+            !serviceOrderMap.GetValueOrDefault(p.ServiceId ?? 0, false),
+            $"{p.User?.Firstname} {p.User?.Lastname}".Trim()
         ));
 
         return new PagedResult<UserwisePriceDto>(dtos, total, page, pageSize, Math.Max(1, totalPages));
@@ -138,7 +139,9 @@ public class PriceService : IPriceService
             entity.ServiceId ?? 0,
             entity.Service?.ServiceName ?? "Unknown",
             entity.Currency ?? "",
-            decimal.TryParse(entity.Price, out var p) ? p : 0m
+            decimal.TryParse(entity.Price, out var p) ? p : 0m,
+            true, // CanDelete for new
+            $"{entity.User?.Firstname} {entity.User?.Lastname}".Trim()
         );
         return (dto, null);
     }
@@ -189,7 +192,8 @@ public class PriceService : IPriceService
             u.Lastname, 
             u.Currency,
             u.CardDetails.FirstOrDefault()?.CardId,
-            u.UniqueNo
+            u.UniqueNo,
+            $"{u.Firstname} {u.Lastname}".Trim()
         ));
     }
 

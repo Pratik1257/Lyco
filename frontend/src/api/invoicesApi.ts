@@ -8,6 +8,7 @@ export interface Invoice {
   po: string;
   invoiceType: string;       // "Individual" | "Combined"
   username: string;
+  fullname: string;
   companyName: string;
   customerId: string;
   orderNos: string;          // "113-61" or "71 to 75"

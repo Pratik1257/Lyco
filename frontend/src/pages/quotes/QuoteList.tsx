@@ -81,16 +81,16 @@ export default function QuoteList() {
   return (
     <div className="relative animate-in fade-in duration-500 space-y-4">
       {/* Main Unified Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
         {/* Header & Filter Section */}
-        <div className="p-4 sm:px-6 space-y-4 border-b border-slate-100 bg-slate-50/30">
+        <div className="p-4 sm:px-6 space-y-4 border-b border-slate-100 bg-slate-50/30 rounded-t-2xl">
           {/* Top Row: Search & Actions */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1 max-w-md relative group">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Search Quote #, User, Email, PO..."
+                placeholder="Search Quote #, Full Name, User, Email, PO..."
                 className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -142,7 +142,7 @@ export default function QuoteList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-2 px-6 whitespace-nowrap">Username</TableHead>
+                <TableHead className="py-2 px-6 whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Quote #</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Quote Date</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Email</TableHead>
@@ -169,7 +169,7 @@ export default function QuoteList() {
                     key={quote.quoteId}
                     className="group hover:bg-slate-50/50 transition-colors"
                   >
-                    <TableCell className="px-6 text-slate-900 text-sm font-medium whitespace-nowrap">{quote.username}</TableCell>
+                    <TableCell className="px-6 text-slate-900 text-sm font-medium whitespace-nowrap">{quote.fullname}</TableCell>
                     <TableCell className="px-4 font-bold text-cyan-600 text-sm whitespace-nowrap">
                       {quote.quoteNo || '--'}
                     </TableCell>
@@ -241,7 +241,7 @@ export default function QuoteList() {
         </div>
 
         {/* Pagination */}
-        <div className="p-6 bg-slate-50/30 border-t border-slate-50">
+        <div className="p-6 bg-slate-50/30 border-t border-slate-50 rounded-b-2xl">
           <Pagination
             totalCount={totalCount}
             indexOfFirstItem={(currentPage - 1) * itemsPerPage}

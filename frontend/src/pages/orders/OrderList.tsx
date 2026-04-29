@@ -6,6 +6,8 @@ import {
   Search, ShoppingBag, Eye, Edit2, Trash2,
   Download, Plus, Clock, CheckCircle2, AlertCircle
 } from 'lucide-react';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 import { ordersApi } from '../../api/ordersApi';
 import { servicesApi } from '../../api/servicesApi';
@@ -82,7 +84,7 @@ export default function OrderList() {
 
   const formatPrice = (amount: string | null, currency: string | null) => {
     if (!amount) return '--';
-    const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+    const symbol = currency === 'GBP' ? '£' : (currency === 'EUR' || currency === 'EURO') ? '€' : currency === 'AUD' ? 'A$' : currency === 'INR' ? '₹' : '$';
     return `${symbol}${amount}`;
   };
 
@@ -104,9 +106,8 @@ export default function OrderList() {
   };
 
   const handleExport = async () => {
-    const loadingToast = toast.loading('Preparing export...');
+    const loadingToast = toast.loading('Preparing professional Excel export...');
     try {
-      // Fetch all filtered orders (using a large pageSize to get all matching results)
       const allData = await ordersApi.getOrders(1, 1000, searchQuery, statusFilter, serviceFilter, undefined, startDate, endDate);
       const items = allData.items;
 
@@ -116,41 +117,105 @@ export default function OrderList() {
         return;
       }
 
-      // Create CSV header
-      const headers = ['Order #', 'Date', 'Username', 'Email', 'PO No.', 'Service', 'Price', 'Status', 'Completed Date'];
-      const csvRows = [headers.join(',')];
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Orders Summary');
 
-      // Add data rows
-      items.forEach(order => {
-        const row = [
-          `"${order.orderNo || ''}"`,
-          `"${order.orderDate ? (new Date(order.orderDate).getMonth() + 1) + '/' + new Date(order.orderDate).getDate() + '/' + new Date(order.orderDate).getFullYear() : ''}"`,
-          `"${order.username || ''}"`,
-          `"${order.email || ''}"`,
-          `"${order.workTitle || ''}"`,
-          `"${order.serviceName || ''}"`,
-          `"${order.amount || '0'}"`,
-          `"${order.orderStatus || ''}"`,
-          `"${order.completedDate ? (new Date(order.completedDate).getMonth() + 1) + '/' + new Date(order.completedDate).getDate() + '/' + new Date(order.completedDate).getFullYear() : ''}"`
-        ];
-        csvRows.push(row.join(','));
+      // 1. Define Columns
+      worksheet.columns = [
+        { header: 'Order #', key: 'orderNo', width: 15 },
+        { header: 'Ordered On', key: 'orderedOn', width: 15 },
+        { header: 'Username', key: 'username', width: 25 },
+        { header: 'Email', key: 'email', width: 35 },
+        { header: 'PO No.', key: 'poNo', width: 30 },
+        { header: 'Service', key: 'service', width: 20 },
+        { header: 'Price', key: 'price', width: 12 },
+        { header: 'Order Status', key: 'orderStatus', width: 15 },
+        { header: 'Payment Status', key: 'paymentStatus', width: 18 },
+        { header: 'Completed Date', key: 'completedDate', width: 18 }
+      ];
+
+      // 2. Style Header Row (Gray Background, Centered, Bold)
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = 20; // Reduced height to match legacy
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9D9D9' } // Light Gray matching screenshot
+        };
+        cell.font = {
+          bold: true,
+          name: 'Calibri',
+          size: 11,
+          color: { argb: 'FF000000' }
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
       });
 
-      // Download CSV with BOM for Excel compatibility
-      const csvString = csvRows.join('\n');
-      const blob = new Blob(['\ufeff' + csvString], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `Orders_Export_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // 3. Add Empty Row for spacing (matches legacy Row 2)
+      worksheet.addRow({});
+      worksheet.getRow(2).height = 10;
+
+      // 4. Add Data Rows
+      items.forEach((order) => {
+        const rowData = {
+          orderNo: order.orderNo || '',
+          orderedOn: order.orderDate ? formatDate(order.orderDate) : '',
+          username: order.username || '',
+          email: order.email || '',
+          poNo: order.workTitle || '',
+          service: order.serviceName || '',
+          price: order.amount ? parseFloat(order.amount) : 0, // Store as actual number
+          orderStatus: order.orderStatus || '',
+          paymentStatus: order.paymentStatus || 'Pending',
+          completedDate: order.completedDate ? formatDate(order.completedDate) : '--'
+        };
+
+        const row = worksheet.addRow(rowData);
+        
+        // Style Data Cells
+        row.eachCell((cell, colNumber) => {
+          const colKey = worksheet.columns[colNumber - 1].key;
+
+          // Center all columns as requested
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: 'center'
+          };
+
+          cell.font = { name: 'Calibri', size: 11 };
+
+          // Format Price as Currency (removes green triangle)
+          if (colKey === 'price') {
+            const symbol = order.currency === 'GBP' ? '£' : '$';
+            cell.numFmt = `"${symbol}"#,##0.00`;
+          }
+
+          // Thin borders for data
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFEDEDED' } },
+            left: { style: 'thin', color: { argb: 'FFEDEDED' } },
+            bottom: { style: 'thin', color: { argb: 'FFEDEDED' } },
+            right: { style: 'thin', color: { argb: 'FFEDEDED' } }
+          };
+        });
+      });
+
+      // 5. Generate and Save File
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `Orders_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
 
       toast.dismiss(loadingToast);
       toast.success(`Exported ${items.length} orders successfully`);
     } catch (error) {
+      console.error('Export error:', error);
       toast.dismiss(loadingToast);
       toast.error('Failed to export orders');
     }
@@ -160,16 +225,16 @@ export default function OrderList() {
   return (
     <div className="relative animate-in fade-in duration-500 space-y-4">
       {/* Main Unified Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
         {/* Header & Filter Section */}
-        <div className="p-4 sm:px-6 space-y-4 border-b border-slate-100 bg-slate-50/30">
+        <div className="p-4 sm:px-6 space-y-4 border-b border-slate-100 bg-slate-50/30 rounded-t-2xl">
         {/* Top Row: Search & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex-1 max-w-md relative group">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
             <input
               type="text"
-              placeholder="Search Order #, User, Email, PO..."
+              placeholder="Search Order #, Full Name, User, Email, PO..."
               className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -239,7 +304,7 @@ export default function OrderList() {
               <TableRow className="bg-slate-50/50">
                 <TableHead className="py-2 px-6 whitespace-nowrap">Order #</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Ordered On</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Username</TableHead>
+                <TableHead className="py-2 px-4 whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Email</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">PO No.</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Service</TableHead>
@@ -278,7 +343,7 @@ export default function OrderList() {
                       {order.orderNo || '--'}
                     </TableCell>
                     <TableCell className="px-4 text-slate-600 text-sm font-medium whitespace-nowrap">{formatDate(order.orderDate)}</TableCell>
-                    <TableCell className="px-4 text-slate-900 text-sm font-medium whitespace-nowrap">{order.username}</TableCell>
+                    <TableCell className="px-4 text-slate-900 text-sm font-medium whitespace-nowrap">{order.fullname}</TableCell>
                     <TableCell className="px-4 text-slate-500 text-xs whitespace-nowrap">{order.email || '--'}</TableCell>
                     <TableCell className="px-4 text-slate-600 text-xs font-medium whitespace-nowrap">{order.workTitle || '--'}</TableCell>
                     <TableCell className="px-4 whitespace-nowrap">
@@ -340,8 +405,13 @@ export default function OrderList() {
                           variant="ghost-red"
                           size="icon"
                           className="w-7 h-7 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title={order.orderStatus === 'In Process' ? "Cannot delete orders in process" : "Delete Order"}
-                          disabled={order.orderStatus === 'In Process'}
+                          title={
+                            order.orderStatus === 'In Process' ? "Cannot delete orders in process" : 
+                            order.orderStatus === 'Completed' ? "Cannot delete completed orders" :
+                            order.orderStatus === 'Invoiced' ? "Cannot delete invoiced orders" :
+                            "Delete Order"
+                          }
+                          disabled={order.orderStatus === 'In Process' || order.orderStatus === 'Completed' || order.orderStatus === 'Invoiced'}
                           onClick={() => {
                             setOrderToDelete(order);
                             setIsDeleteModalOpen(true);
@@ -372,7 +442,7 @@ export default function OrderList() {
         </div>
 
         {/* Pagination */}
-        <div className="p-6 bg-slate-50/30 border-t border-slate-50">
+        <div className="p-6 bg-slate-50/30 border-t border-slate-50 rounded-b-2xl">
           <Pagination
             totalCount={totalCount}
             indexOfFirstItem={(currentPage - 1) * itemsPerPage}

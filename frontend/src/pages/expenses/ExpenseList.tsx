@@ -348,9 +348,9 @@ export default function ExpenseList() {
       {isFormOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={closeForm} />
-          <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 border border-white/20">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
             {/* Modal Header */}
-            <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8">
+            <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8 rounded-t-2xl">
               <div className="absolute top-0 right-0 p-4">
                 <button onClick={closeForm} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors">
                   <X size={18} />

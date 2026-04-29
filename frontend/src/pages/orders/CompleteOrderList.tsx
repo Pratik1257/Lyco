@@ -98,7 +98,7 @@ export default function CompleteOrderList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-3 px-6 whitespace-nowrap">Username</TableHead>
+                <TableHead className="py-3 px-6 whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="py-3 px-4 whitespace-nowrap">Order #</TableHead>
                 <TableHead className="py-3 px-4 whitespace-nowrap">Order Date</TableHead>
                 <TableHead className="py-3 px-4 whitespace-nowrap">PO No.</TableHead>
@@ -112,7 +112,7 @@ export default function CompleteOrderList() {
                 orders.map((order) => (
                   <TableRow key={order.orderId} className="group hover:bg-gray-50/50 transition-colors">
                     <TableCell className="text-sm font-medium text-gray-800 px-6 whitespace-nowrap">
-                      {order.username}
+                      {order.fullname}
                     </TableCell>
                     <TableCell
                       className="text-sm font-bold text-cyan-600 px-4 whitespace-nowrap cursor-pointer hover:text-cyan-700 transition-colors"

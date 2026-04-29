@@ -33,38 +33,40 @@ public class QuotesController : ControllerBase
             .AsQueryable();
 
         // Joins with UserRegistration via UniqueNo
-        var joinedQuery = from q in query
-                         join u in _context.UserRegistrations on q.UniqueNo equals u.UniqueNo into users
-                         from user in users.DefaultIfEmpty()
-                         select new
-                         {
-                             q.QuoteId,
-                             q.QuoteNo,
-                             q.QuoteDate,
-                             q.WorkTitle, // PO No.
-                             q.Amount,
-                             q.Currency,
-                             q.Email,
-                             q.ServiceId,
-                             Username = user != null ? user.Username : "--",
-                             ServiceName = q.Service != null ? q.Service.ServiceName : "Others",
-                             q.Instructions,
-                             q.Size,
-                             q.Sizetype,
-                             q.FileFormat,
-                             q.UniqueNo
-                         };
-
         // Filters
-        if (!string.IsNullOrEmpty(search))
+        var filteredQuery = from q in query
+                           join u in _context.UserRegistrations on q.UniqueNo equals u.UniqueNo into users
+                           from user in users.DefaultIfEmpty()
+                           where string.IsNullOrEmpty(search) || 
+                                 (q.QuoteNo != null && q.QuoteNo.Contains(search)) ||
+                                 (q.Email != null && q.Email.Contains(search)) ||
+                                 (q.WorkTitle != null && q.WorkTitle.Contains(search)) ||
+                                 (user != null && user.Username != null && user.Username.Contains(search)) ||
+                                 (user != null && user.Firstname != null && user.Firstname.Contains(search)) ||
+                                 (user != null && user.Lastname != null && user.Lastname.Contains(search)) ||
+                                 (user != null && (user.Firstname + " " + user.Lastname).Contains(search))
+                           select new { q, user };
+
+        // Project
+        var joinedQuery = filteredQuery.Select(x => new
         {
-            joinedQuery = joinedQuery.Where(q => 
-                (q.QuoteNo != null && q.QuoteNo.Contains(search)) ||
-                (q.Username != null && q.Username.Contains(search)) ||
-                (q.Email != null && q.Email.Contains(search)) ||
-                (q.WorkTitle != null && q.WorkTitle.Contains(search))
-            );
-        }
+            x.q.QuoteId,
+            x.q.QuoteNo,
+            x.q.QuoteDate,
+            x.q.WorkTitle, // PO No.
+            x.q.Amount,
+            x.q.Currency,
+            x.q.Email,
+            x.q.ServiceId,
+            Username = x.user != null ? x.user.Username : "--",
+            Fullname = x.user != null ? (x.user.Firstname + " " + x.user.Lastname).Trim() : "--",
+            ServiceName = x.q.Service != null ? x.q.Service.ServiceName : "Others",
+            x.q.Instructions,
+            x.q.Size,
+            x.q.Sizetype,
+            x.q.FileFormat,
+            x.q.UniqueNo
+        });
 
         if (serviceId.HasValue)
         {
@@ -135,6 +137,7 @@ public class QuotesController : ControllerBase
             quote.QuoteType,
             quote.ImageUrl,
             Username = user?.Username ?? "--",
+            Fullname = user != null ? $"{user.Firstname} {user.Lastname}".Trim() : "--",
             CompanyName = user?.Companyname ?? "--",
             ServiceName = quote.Service?.ServiceName ?? "Others",
             Files = files

@@ -23,7 +23,8 @@ public record UserRegistrationDto(
     string? UserType,
     DateTime? CreatedDate,
     bool HasValidCard = false,
-    long? UniqueNo = null
+    long? UniqueNo = null,
+    string? Fullname = null
 );
 
 public record CreateUserRequest

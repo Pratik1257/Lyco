@@ -32,6 +32,12 @@ public class UserService : IUserService
 
     public async Task<(UserRegistrationDto? Dto, string? Error)> CreateAsync(CreateUserRequest req)
     {
+        if (!await _repo.IsUsernameUniqueAsync(req.Username))
+            return (null, "Username is already taken.");
+
+        if (!string.IsNullOrWhiteSpace(req.PrimaryEmail) && !await _repo.IsEmailUniqueAsync(req.PrimaryEmail))
+            return (null, "Email is already registered to another user.");
+
         // Example basic validation, can be extended
         var user = new UserRegistration
         {
@@ -53,6 +59,7 @@ public class UserService : IUserService
             AccountEmail = req.AccountEmail,
             IsActive = req.IsActive,
             UserType = req.UserType,
+            IsSecondary = "N",
             UniqueNo = await _repo.GetNextUniqueNoAsync(),
             CreatedDate = DateTime.UtcNow
         };
@@ -65,6 +72,12 @@ public class UserService : IUserService
     {
         var user = await _repo.GetByIdAsync(id);
         if (user == null) return (null, "User not found");
+
+        if (!await _repo.IsUsernameUniqueAsync(req.Username, id))
+            return (null, "Username is already taken by another user.");
+
+        if (!string.IsNullOrWhiteSpace(req.PrimaryEmail) && !await _repo.IsEmailUniqueAsync(req.PrimaryEmail, id))
+            return (null, "Email is already registered to another user.");
 
         user.Username = req.Username;
         user.Firstname = req.Firstname;
@@ -89,11 +102,20 @@ public class UserService : IUserService
         return (MapToDto(user), null);
     }
 
-    public async Task<bool> DeleteAsync(long id)
+    public async Task<UserRegistrationDto?> ToggleActiveAsync(long id)
     {
-        if (!await _repo.ExistsAsync(id)) return false;
-        await _repo.DeleteAsync(id);
-        return true;
+        var user = await _repo.GetByIdAsync(id);
+        if (user == null) return null;
+
+        user.IsActive = user.IsActive == "Y" ? "N" : "Y";
+        await _repo.UpdateAsync(user);
+
+        return MapToDto(user);
+    }
+
+    public async Task<(bool Success, string? Error)> DeleteAsync(long id)
+    {
+        return await _repo.DeleteAsync(id);
     }
 
     // Handles both "MM/YYYY" and ISO "YYYY-MM-DD" formats stored in the DB
@@ -148,7 +170,8 @@ public class UserService : IUserService
             user.UserType,
             user.CreatedDate,
             hasValidCard,        // ← new computed field from card expiry
-            user.UniqueNo
+            user.UniqueNo,
+            $"{user.Firstname} {user.Lastname}".Trim()
         );
     }
 }

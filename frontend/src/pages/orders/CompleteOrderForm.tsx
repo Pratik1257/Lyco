@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ChevronLeft, AlertCircle, PenTool, 
-  Upload, X, File as FileIcon, Info, Link 
+  Upload, X, File as FileIcon, Info, Link, Hash
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ordersApi } from '../../api/ordersApi';
@@ -23,7 +23,8 @@ export default function CompleteOrderForm() {
     poNo: '',
     note: '',
     orderNo: '',
-    externalLink: ''
+    externalLink: '',
+    stitches: ''
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
@@ -45,6 +46,20 @@ export default function CompleteOrderForm() {
   const userOrders = useMemo(() => {
     return ordersData?.items || [];
   }, [ordersData]);
+  
+  const selectedOrder = useMemo(() => {
+    return userOrders.find(o => o.orderId === formData.orderId);
+  }, [userOrders, formData.orderId]);
+
+  const isDigitizing = selectedOrder?.serviceName === 'Digitizing';
+  const calculatedAmount = useMemo(() => {
+    if (!isDigitizing || !formData.stitches || isNaN(Number(formData.stitches)) || !selectedOrder?.amount) {
+      return selectedOrder?.amount || '0';
+    }
+    const rate = Number(selectedOrder.amount);
+    const count = Number(formData.stitches);
+    return ((count / 1000) * rate).toFixed(2);
+  }, [isDigitizing, formData.stitches, selectedOrder]);
 
   // Mutation
   const mutation = useMutation({
@@ -68,6 +83,10 @@ export default function CompleteOrderForm() {
       formDataToSend.append('orderStatus', 'Completed');
       formDataToSend.append('note', formData.note); 
       
+      if (isDigitizing && formData.stitches) {
+        formDataToSend.append('stitches', formData.stitches);
+      }
+
       if (formData.externalLink) {
         formDataToSend.append('externalLink', formData.externalLink);
       }
@@ -156,7 +175,13 @@ export default function CompleteOrderForm() {
                   <CustomSelect
                     value={formData.userId || ''}
                     onChange={handleUserChange}
-                    options={users.map(u => ({ value: u.userId, label: u.username || '--' }))}
+                    options={users.map(u => {
+                      const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                      return {
+                        value: u.userId,
+                        label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
+                      };
+                    })}
                     placeholder="Choose Username"
                     error={fieldErrors.userId}
                   />
@@ -189,6 +214,37 @@ export default function CompleteOrderForm() {
                     />
                   </div>
                 </div>
+
+                {/* Digitizing Specific: Stitches */}
+                {isDigitizing && (
+                  <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-1">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Stitches # <span className="text-red-500">*</span></label>
+                      <div className="relative group">
+                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                        <input
+                          type="text"
+                          placeholder="e.g. 5000"
+                          value={formData.stitches}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*$/.test(val)) setFormData(p => ({ ...p, stitches: val }));
+                          }}
+                          className={`${premiumInput} pl-10`}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Final Amount</label>
+                      <div className="h-10 px-4 bg-white border border-slate-200 rounded-xl flex items-center gap-2 shadow-sm">
+                        <span className="text-sm font-bold text-cyan-600">{selectedOrder?.currency === 'GBP' ? '£' : selectedOrder?.currency === 'EURO' ? '€' : '$'}</span>
+                        <span className="text-sm font-extrabold text-slate-700">{calculatedAmount}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter ml-auto">Auto-calculated</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Note Section */}
                 <div className="space-y-1 lg:col-span-12">
@@ -336,34 +392,34 @@ export default function CompleteOrderForm() {
             </div>
 
             {/* Actions */}
-            <div className="bg-slate-50/80 p-5 sm:p-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
+            <div className="bg-slate-50/80 p-5 sm:p-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 sm:gap-0">
               <button
                 type="button"
                 onClick={() => navigate('/orders/complete')}
-                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors order-2 sm:order-1"
               >
                 <ChevronLeft size={16} /> Cancel
               </button>
               
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData({ userId: null, orderId: null, poNo: '', note: '', orderNo: '', externalLink: '' });
-                    setSelectedFiles([]);
-                    setFieldErrors({});
-                  }}
-                  className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-cyan-600 transition-colors"
-                >
-                  Reset
-                </button>
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto order-1 sm:order-2">
                 <Button
                   type="submit"
                   isLoading={mutation.isPending}
-                  className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-4 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Complete Order
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({ userId: null, orderId: null, poNo: '', note: '', orderNo: '', externalLink: '', stitches: '' });
+                    setSelectedFiles([]);
+                    setFieldErrors({});
+                  }}
+                  className="w-full sm:w-auto px-6 py-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-cyan-600 transition-colors"
+                >
+                  Reset
+                </button>
               </div>
             </div>
           </form>

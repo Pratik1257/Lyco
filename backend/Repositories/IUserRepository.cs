@@ -8,7 +8,9 @@ public interface IUserRepository
     Task<UserRegistration?> GetByIdAsync(long id);
     Task<UserRegistration> CreateAsync(UserRegistration user);
     Task UpdateAsync(UserRegistration user);
-    Task DeleteAsync(long id);
+    Task<(bool Success, string? Error)> DeleteAsync(long id);
     Task<bool> ExistsAsync(long id);
     Task<long> GetNextUniqueNoAsync();
+    Task<bool> IsEmailUniqueAsync(string email, long? excludeUserId = null);
+    Task<bool> IsUsernameUniqueAsync(string username, long? excludeUserId = null);
 }

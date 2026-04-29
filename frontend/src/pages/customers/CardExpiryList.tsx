@@ -20,7 +20,7 @@ export default function CardExpiryList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('inactive');
 
   // UI State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -220,7 +220,7 @@ export default function CardExpiryList() {
             <TableHeader>
               <TableRow>
                 {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
-                <TableHead className="whitespace-nowrap">Username</TableHead>
+                <TableHead className="whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="whitespace-nowrap">Company Name</TableHead>
                 <TableHead className="whitespace-nowrap">Email</TableHead>
                 <TableHead className="whitespace-nowrap">Telephone</TableHead>
@@ -237,7 +237,7 @@ export default function CardExpiryList() {
                 cards.map((card) => (
                   <TableRow key={card.cardId} className="group hover:bg-gray-50/50">
                     {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{card.userId || '--'}</TableCell> */}
-                    <TableCell className="py-1.5 px-6 text-sm font-medium text-gray-800 whitespace-nowrap">{card.username || '--'}</TableCell>
+                    <TableCell className="py-1.5 px-6 text-sm font-medium text-gray-800 whitespace-nowrap">{card.clientFullName || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.companyName || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.email || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.telephone || '--'}</TableCell>
@@ -318,9 +318,9 @@ export default function CardExpiryList() {
             onClick={closeViewModal}
           />
 
-          <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-white/20">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header with Gradient */}
-            <div className="relative h-24 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8">
+            <div className="relative h-24 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8 rounded-t-2xl">
               <div className="absolute top-0 right-0 p-4">
                 <button
                   onClick={closeViewModal}
@@ -435,8 +435,8 @@ export default function CardExpiryList() {
                     <User size={14} className="text-cyan-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Username</p>
-                    <p className="text-sm font-bold text-gray-900 truncate">{cardToView.username || '--'}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Full Name</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">{cardToView.clientFullName || '--'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">ID</p>
@@ -497,7 +497,7 @@ export default function CardExpiryList() {
         title="Delete Card"
         message={
           <>
-            Are you sure you want to delete card for <span className="font-bold text-gray-900">"{cardToDelete?.username}"</span>? This action cannot be undone.
+            Are you sure you want to delete card for <span className="font-bold text-gray-900">"{cardToDelete?.clientFullName}"</span>? This action cannot be undone.
           </>
         }
         onConfirm={confirmDelete}

@@ -174,7 +174,13 @@ export default function CreateInvoice() {
                     <CustomSelect
                       value={selectedUserId || ''}
                       onChange={handleUserChange}
-                      options={users.map(u => ({ value: u.userId, label: u.username }))}
+                      options={users.map(u => {
+                        const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                        return {
+                          value: u.userId,
+                          label: fullName ? `${fullName} (${u.username})` : u.username
+                        };
+                      })}
                       placeholder="Select Username"
                     />
                   </div>
@@ -212,7 +218,14 @@ export default function CreateInvoice() {
               {/* Section 2 — Order Selection Matrix */}
               <section>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className={sectionLabel('text-blue-800/50')}><CheckSquare size={12} /> Order Selection Matrix</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className={sectionLabel('text-blue-800/50')}><CheckSquare size={12} /> Order Selection Matrix</h4>
+                    {orders.length > 0 && (
+                      <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wide -mt-2.5">
+                        {orders.length} orders
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={selectedOrderIds.length === orders.length ? handleUnselectAll : handleSelectAll}
@@ -222,53 +235,89 @@ export default function CreateInvoice() {
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-3 overflow-x-auto pb-4 custom-scrollbar">
-                  {selectedUserId ? (
-                    orders.length > 0 ? (
-                      orders.map(order => (
-                        <label
-                          key={order.orderId}
-                          className={`relative flex items-start gap-3 p-4 min-w-[260px] rounded-2xl border transition-all cursor-pointer group ${selectedOrderIds.includes(order.orderId)
-                            ? 'bg-white border-cyan-500 ring-4 ring-cyan-500/5'
-                            : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
-                            }`}
-                        >
-                          <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedOrderIds.includes(order.orderId)
-                            ? 'bg-cyan-500 border-cyan-500 text-white'
-                            : 'bg-white border-slate-300'
-                            }`}>
-                            <input
-                              type="checkbox"
-                              checked={selectedOrderIds.includes(order.orderId)}
-                              onChange={() => toggleOrder(order.orderId)}
-                              className="hidden"
-                            />
-                            {selectedOrderIds.includes(order.orderId) && <CheckCircle2 size={12} />}
-                          </div>
+                {selectedUserId ? (
+                  orders.length > 0 ? (
+                    <>
+                      {/* Mini-card grid in fixed-height scroll container */}
+                      <div className="max-h-[320px] overflow-y-auto custom-scrollbar rounded-xl">
+                        <div className="flex flex-wrap gap-3 pr-1 pb-1">
+                          {orders.map(order => {
+                            const isSelected = selectedOrderIds.includes(order.orderId);
+                            return (
+                              <label
+                                key={order.orderId}
+                                className={`relative flex flex-col flex-grow flex-shrink-0 basis-[calc(50%-12px)] sm:basis-[calc(33.33%-12px)] md:basis-[calc(25%-12px)] lg:basis-[calc(16.66%-12px)] min-w-[120px] max-w-[400px] gap-1.5 p-3 rounded-2xl border-2 transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-cyan-50 border-cyan-400 shadow-sm shadow-cyan-100'
+                                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-md'
+                                }`}
+                              >
+                                {/* Hidden checkbox */}
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleOrder(order.orderId)}
+                                  className="hidden"
+                                />
 
-                          <div className="flex-1 space-y-0.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-slate-900">{order.orderNo}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                              <span>{order.po}</span>
-                              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                              <span>{order.date}</span>
-                            </div>
-                          </div>
-                        </label>
-                      ))
-                    ) : (
-                      <div className="w-full py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No completed orders found</p>
+                                {/* Checkbox indicator */}
+                                <div className={`absolute top-2 right-2 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                  isSelected ? 'bg-cyan-500 border-cyan-500' : 'border-slate-300 bg-white'
+                                }`}>
+                                  {isSelected && <CheckCircle2 size={8} className="text-white" />}
+                                </div>
+
+                                {/* Order No */}
+                                <span className={`text-sm font-black leading-tight truncate pr-4 ${isSelected ? 'text-cyan-700' : 'text-slate-800'}`}>
+                                  {order.orderNo}
+                                </span>
+
+                                {/* PO Title */}
+                                <span className="text-xs text-slate-500 font-medium truncate leading-tight">
+                                  {order.po?.replace('PO: ', '') || '—'}
+                                </span>
+
+                                {/* Date */}
+                                <span className="text-[10px] text-slate-400 font-semibold">
+                                  {order.date}
+                                </span>
+
+                                {/* Amount */}
+                                <span className={`text-xs font-black mt-0.5 ${isSelected ? 'text-cyan-600' : 'text-slate-700'}`}>
+                                  ${Number(order.amount || 0).toFixed(2)}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )
+
+                      {/* Selection summary footer */}
+                      {selectedOrderIds.length > 0 && (
+                        <div className="mt-2 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2 flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-cyan-700">
+                            {selectedOrderIds.length} of {orders.length} order{orders.length > 1 ? 's' : ''} selected
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleUnselectAll}
+                            className="text-[10px] font-black text-cyan-400 hover:text-cyan-600 uppercase tracking-widest transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="w-full py-8 text-center bg-slate-50/30 rounded-2xl border border-dashed border-slate-100">
-                      <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">Please select a username first</p>
+                    <div className="w-full py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No completed orders found</p>
                     </div>
-                  )}
-                </div>
+                  )
+                ) : (
+                  <div className="w-full py-8 text-center bg-slate-50/30 rounded-2xl border border-dashed border-slate-100">
+                    <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">Please select a username first</p>
+                  </div>
+                )}
               </section>
 
               <div className="h-px bg-slate-100" />

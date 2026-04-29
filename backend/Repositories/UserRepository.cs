@@ -88,14 +88,26 @@ public class UserRepository : IUserRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(long id)
+    public async Task<(bool Success, string? Error)> DeleteAsync(long id)
     {
         var user = await _context.UserRegistrations.FindAsync(id);
         if (user != null)
         {
+            var hasOrders = await _context.OrderDetails.AnyAsync(o => o.UniqueNo == user.UniqueNo);
+            if (hasOrders)
+            {
+                return (false, "Cannot remove this user. There are orders under this user.");
+            }
+
+            // Remove associated UserPriceMst records to avoid foreign key conflicts
+            var userPrices = await _context.UserPriceMsts.Where(up => up.UserId == user.UserId).ToListAsync();
+            _context.UserPriceMsts.RemoveRange(userPrices);
+
             _context.UserRegistrations.Remove(user);
             await _context.SaveChangesAsync();
+            return (true, null);
         }
+        return (false, "User not found.");
     }
 
     public Task<bool> ExistsAsync(long id) =>
@@ -103,7 +115,33 @@ public class UserRepository : IUserRepository
 
     public async Task<long> GetNextUniqueNoAsync()
     {
-        var max = await _context.UserRegistrations.MaxAsync(u => (long?)u.UniqueNo) ?? 99;
-        return Math.Max(100, max + 1);
+        var max = await _context.UserRegistrations.MaxAsync(u => (long?)u.UniqueNo) ?? 100;
+        return max + 1;
+    }
+
+    public async Task<bool> IsEmailUniqueAsync(string email, long? excludeUserId = null)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return true; // Handled by other validations
+        
+        var query = _context.UserRegistrations.Where(u => u.PrimaryEmail == email);
+        if (excludeUserId.HasValue)
+        {
+            query = query.Where(u => u.UserId != excludeUserId.Value);
+        }
+        
+        return !await query.AnyAsync();
+    }
+
+    public async Task<bool> IsUsernameUniqueAsync(string username, long? excludeUserId = null)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return true; // Handled by other validations
+        
+        var query = _context.UserRegistrations.Where(u => u.Username == username);
+        if (excludeUserId.HasValue)
+        {
+            query = query.Where(u => u.UserId != excludeUserId.Value);
+        }
+        
+        return !await query.AnyAsync();
     }
 }

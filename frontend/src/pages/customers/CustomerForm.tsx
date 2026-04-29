@@ -93,29 +93,33 @@ export default function CustomerForm() {
       navigate('/customers/status');
     },
     onError: (err: any) => {
+      let errorMessage = 'An unexpected validation error occurred.';
+      
       if (err.response?.status === 400 && err.response?.data) {
         const data = err.response.data;
-        // Handle ASP.NET Core ModelState errors
         if (data.errors) {
           const modelErrors: Record<string, string> = {};
           Object.keys(data.errors).forEach(key => {
-            // Convert 'Firstname' to 'firstname' for state mapping if needed, 
-            // but DTO keys often match exactly if serialized as camelCase
             const fieldName = key.charAt(0).toLowerCase() + key.slice(1);
             modelErrors[fieldName] = data.errors[key][0];
           });
           setFieldErrors(modelErrors);
-          setFormError('Identity verification failed. Please review the highlighted fields.');
-        } else if (data.message) {
-          setFormError(data.message);
+          errorMessage = 'Identity verification failed. Please review the highlighted fields.';
+        } else if (data.message || data.Message) {
+          errorMessage = data.message || data.Message;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.error) {
+          errorMessage = data.error;
         } else {
-          setFormError('An unexpected validation error occurred.');
+          errorMessage = JSON.stringify(data);
         }
       } else {
-        const msg = err.response?.data?.error || err.message;
-        setFormError(`Configuration Error: ${msg}`);
+        errorMessage = err.response?.data?.error || err.message || 'Configuration Error';
       }
-      toast.error('Validation failed');
+      
+      setFormError(errorMessage);
+      toast.error(errorMessage);
     }
   });
 
@@ -580,7 +584,16 @@ export default function CustomerForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <div className="space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Username <span className="text-red-500">*</span></label>
-                    <input type="text" name="username" maxLength={50} placeholder="Enter Username" value={formData.username || ''} onChange={handleInputChange} className={`${premiumInput} ${fieldErrors.username ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} />
+                    <input 
+                      type="text" 
+                      name="username" 
+                      maxLength={50} 
+                      placeholder="Enter Username" 
+                      value={formData.username || ''} 
+                      onChange={handleInputChange} 
+                      disabled={isEdit}
+                      className={`${premiumInput} ${isEdit ? 'bg-slate-50 text-slate-500 cursor-not-allowed select-none' : ''} ${fieldErrors.username ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} 
+                    />
                     {renderError('username')}
                   </div>
                   <div className="space-y-1">

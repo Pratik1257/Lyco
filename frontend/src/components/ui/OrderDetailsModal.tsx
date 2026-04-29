@@ -100,8 +100,8 @@ export function OrderDetailsModal({ isOpen, onClose, orderId, initialOrderData }
                     <User size={16} className="text-slate-400" />
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold block mb-0.5">Username</span>
-                    <span className="text-[13px] font-bold text-slate-700">{activeOrder.username}</span>
+                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold block mb-0.5">Full Name</span>
+                    <span className="text-[13px] font-bold text-slate-700">{activeOrder.fullname || activeOrder.username}</span>
                   </div>
                 </div>
 

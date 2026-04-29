@@ -369,7 +369,7 @@ export default function CardForm() {
                       }}
                       options={(Array.isArray(users) ? users : []).map(u => ({
                         value: u.id,
-                        label: u.username
+                        label: u.firstname && u.lastname ? `${u.firstname} ${u.lastname} (${u.username})` : u.username
                       }))}
                       placeholder="Select Username"
                       error={fieldErrors.userId}

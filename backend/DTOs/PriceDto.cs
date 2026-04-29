@@ -55,7 +55,8 @@ public record UserwisePriceDto(
     string ServiceName,
     string Currency,
     decimal Price,
-    bool CanDelete = true
+    bool CanDelete = true,
+    string? Fullname = null
 );
 
 public record CreateUserwisePriceRequest
@@ -98,4 +99,4 @@ public record UpdateUserwisePriceRequest
 
 // ── User DTO (for dropdown) ───────────────────────────────────────────────────
 
-public record UserDto(long Id, string Username, string? Firstname, string? Lastname, string? Currency, long? CardId = null, long? UniqueNo = null);
+public record UserDto(long Id, string Username, string? Firstname, string? Lastname, string? Currency, long? CardId = null, long? UniqueNo = null, string? Fullname = null);

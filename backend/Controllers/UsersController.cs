@@ -65,11 +65,23 @@ public class UsersController : ControllerBase
         return Ok(dto);
     }
 
+    [HttpPatch("{id}/toggle-active")]
+    public async Task<IActionResult> ToggleActive(long id)
+    {
+        var result = await _userService.ToggleActiveAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(long id)
     {
-        var deleted = await _userService.DeleteAsync(id);
-        if (!deleted) return NotFound();
+        var (success, error) = await _userService.DeleteAsync(id);
+        if (!success)
+        {
+            if (error == "User not found.") return NotFound();
+            return BadRequest(new { error });
+        }
 
         return NoContent();
     }

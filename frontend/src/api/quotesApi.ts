@@ -9,6 +9,7 @@ export interface Quote {
   currency: string | null;
   email: string | null;
   username: string;
+  fullname: string;
   serviceName: string;
   serviceId: number | null;
   instructions: string | null;

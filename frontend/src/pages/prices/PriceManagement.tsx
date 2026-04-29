@@ -494,7 +494,7 @@ export default function PriceManagement() {
             <TableHeader>
               <TableRow>
                 {activeTab === 'general' && <TableHead className="w-10 pl-6"></TableHead>}
-                {activeTab === 'userwise' && <TableHead className="pl-6">Username</TableHead>}
+                {activeTab === 'userwise' && <TableHead className="pl-6">Full Name</TableHead>}
                 <TableHead>Service</TableHead>
                 <TableHead>{activeTab === 'general' ? 'Currencies' : 'Currency'}</TableHead>
                 {activeTab === 'userwise' && <TableHead>Price</TableHead>}
@@ -506,8 +506,8 @@ export default function PriceManagement() {
                 items.length > 0 ? (
                   items.map((price: any) => (
                     <TableRow key={price.id} className="hover:bg-gray-50/50 cursor-pointer transition-colors">
-                      <TableCell className="pl-6 text-sm font-medium text-gray-700">
-                        {price.username}
+                       <TableCell className="pl-6 text-sm font-medium text-gray-700">
+                        {price.fullname}
                       </TableCell>
                       <TableCell className="text-sm font-bold text-gray-800">{price.serviceName}</TableCell>
                       <TableCell>
@@ -667,30 +667,33 @@ export default function PriceManagement() {
             onClick={closeModal}
           />
 
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-visible animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-slate-900 px-8 py-6 text-white flex items-center justify-between rounded-t-2xl">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8 rounded-t-2xl">
+              <div className="absolute top-0 right-0 p-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 text-cyan-400">
-                  <Plus size={24} />
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                  <Plus size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-white font-bold text-lg leading-tight">
                     {editingId || Object.keys(formCurrencyIds).length > 0
                       ? `Edit ${activeTab === 'general' ? 'General' : 'Userwise'} Price`
                       : `New ${activeTab === 'general' ? 'General' : 'Userwise'} Price`}
                   </h3>
-                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-wider mt-0.5">
                     {editingId ? 'Update pricing record' : 'Create new pricing record'}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                <X size={20} />
-              </button>
             </div>
 
             <form onSubmit={handleSavePrice}>
@@ -699,17 +702,20 @@ export default function PriceManagement() {
                   {activeTab === 'userwise' && (
                     <div className="space-y-1">
                       <CustomSelect
-                        label="Username"
+                        label="Full Name"
                         required
                         value={formUserId}
                         onChange={(v: string) => {
                           setFormUserId(v ? Number(v) : '');
                           setFieldErrors((e: Record<string, string>) => { const { user, ...rest } = e; return rest; });
                         }}
-                        options={usersList.map((u: any) => ({
-                          value: u.id,
-                          label: `${u.username}${u.firstname || u.lastname ? ` (${[u.firstname, u.lastname].filter(Boolean).join(' ')})` : ''}`
-                        }))}
+                        options={usersList.map((u: any) => {
+                          const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                          return {
+                            value: u.id,
+                            label: fullName ? `${fullName} (${u.username})` : u.username
+                          };
+                        })}
                         placeholder="Choose User"
                       />
                       {fieldErrors.user && <p className="text-red-500 text-xs font-medium ml-1">{fieldErrors.user}</p>}

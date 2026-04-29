@@ -29,6 +29,21 @@ const quillFormats = [
   'bold', 'italic', 'underline', 'list'
 ];
 
+const premiumInput = "w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all shadow-sm group-hover:border-slate-300";
+
+const getCurrencySymbol = (currency: string | null) => {
+  if (!currency) return '$';
+  const c = currency.toUpperCase();
+  switch (c) {
+    case 'GBP': return '£';
+    case 'EURO':
+    case 'EUR': return '€';
+    case 'AUD': return 'A$';
+    case 'INR': return '₹';
+    default: return '$';
+  }
+};
+
 export default function OrderForm() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -391,18 +406,27 @@ export default function OrderForm() {
 
                 {/* --- Row 1 (3 items - 4 cols each) --- */}
                 <div className="space-y-1 lg:col-span-4">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Username <span className="text-red-500">*</span></label>
+                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Full Name <span className="text-red-500">*</span></label>
                   <CustomSelect
                     value={formData.userId || ''}
                     onChange={(val) => {
-                      setFormData(p => ({ ...p, userId: val ? Number(val) : null }));
+                      const uId = val ? Number(val) : null;
+                      const selectedUser = users.find(u => u.id === uId);
+                      setFormData(p => ({ 
+                        ...p, 
+                        userId: uId,
+                        currency: selectedUser?.currency || p.currency || 'USD'
+                      }));
                       setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
                     }}
-                    options={(Array.isArray(users) ? users : []).map(u => ({
-                      value: u.id,
-                      label: `${u.username}${u.firstname || u.lastname ? ` (${[u.firstname, u.lastname].filter(Boolean).join(' ')})` : ''}`
-                    }))}
-                    placeholder="Choose Username"
+                    options={(Array.isArray(users) ? users : []).map(u => {
+                      const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                      return {
+                        value: u.id,
+                        label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
+                      };
+                    })}
+                    placeholder="Choose Full Name"
                     error={fieldErrors.userId}
                     isDisabled={isEditMode}
                   />
@@ -451,7 +475,11 @@ export default function OrderForm() {
                 <div className="space-y-1 lg:col-span-2">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate</label>
                   <div className="relative group">
-                    <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                    <div className="absolute left-3.5 inset-y-0 flex items-center justify-center w-4">
+                      <span className="text-[13.5px] font-bold text-slate-400 group-focus-within:text-cyan-600 transition-colors mt-[0.5px]">
+                        {getCurrencySymbol(formData.currency)}
+                      </span>
+                    </div>
                     <input
                       type="text"
                       placeholder="0.00"

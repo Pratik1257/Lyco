@@ -72,7 +72,7 @@ export default function InvoiceList() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Search Invoice #, Username..."
+                placeholder="Search Invoice #, Full Name, User, Company..."
                 className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -116,7 +116,7 @@ export default function InvoiceList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-2 px-6 whitespace-nowrap">Username</TableHead>
+                <TableHead className="py-2 px-6 whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Invoice #</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Invoice Date</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Customer ID</TableHead>
@@ -132,7 +132,7 @@ export default function InvoiceList() {
                 invoices.map((invoice: Invoice) => (
                   <TableRow key={invoice.invoiceId} className="group hover:bg-slate-50/50 transition-colors">
                     <TableCell className="px-6 text-sm font-bold text-slate-900 whitespace-nowrap">
-                      {invoice.username}
+                      {invoice.fullname}
                     </TableCell>
                     <TableCell className="px-4 font-bold text-cyan-600 hover:text-cyan-700 cursor-pointer text-sm whitespace-nowrap transition-colors">
                       {invoice.invoiceNo}

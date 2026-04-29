@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, Edit2, AlertCircle, Trash2, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { customersApi, type Customer } from '../../api/customersApi';
 
@@ -42,6 +42,18 @@ export default function CustomerList() {
       const msg = err.response?.data?.error || err.message;
       closeDeleteModal();
       toast.error(`Failed to delete customer: ${msg}`);
+    }
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (id: number) => customersApi.toggleActive(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success(`Customer ${data.isActive === 'Y' ? 'activated' : 'deactivated'} successfully.`);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || err.message;
+      toast.error(`Failed to toggle status: ${msg}`);
     }
   });
 
@@ -114,15 +126,20 @@ export default function CustomerList() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Toolbar */}
         <div className="py-2.5 px-4 sm:px-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <SearchBar
-            containerClassName="w-full sm:flex-1 max-w-md"
-            placeholder="Search by name or company..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+            <SearchBar
+              containerClassName="w-full max-w-md"
+              placeholder="Search by name or company..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <p className="text-[11px] text-slate-400 font-medium italic hidden lg:block">
+              Tip: Click on a customer's status to activate/deactivate them.
+            </p>
+          </div>
 
           <Button
             variant="primary"
@@ -139,13 +156,13 @@ export default function CustomerList() {
             <TableHeader>
               <TableRow>
                 {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
-                <TableHead className="whitespace-nowrap">Username</TableHead>
+                <TableHead className="whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="whitespace-nowrap">Company Name</TableHead>
                 <TableHead className="whitespace-nowrap">Email</TableHead>
                 <TableHead className="whitespace-nowrap">Telephone</TableHead>
                 <TableHead className="whitespace-nowrap">City</TableHead>
                 <TableHead className="whitespace-nowrap">State</TableHead>
-                {/* <TableHead className="whitespace-nowrap">Status</TableHead> */}
+                <TableHead className="whitespace-nowrap">Status</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -156,13 +173,42 @@ export default function CustomerList() {
                 customers.map((customer) => (
                   <TableRow key={customer.userId} className="group hover:bg-gray-50/50">
                     {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{customer.userId}</TableCell> */}
-                    <TableCell className="text-sm font-medium text-gray-800 whitespace-nowrap">{customer.username || '--'}</TableCell>
+                    <TableCell className="text-sm font-medium text-gray-800 whitespace-nowrap">{customer.fullname || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.companyname || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.primaryEmail || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.telephone || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.city || '--'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.state || '--'}</TableCell>
-                    {/* <TableCell className="whitespace-nowrap">{getStatusBadge(customer.hasValidCard)}</TableCell> */}
+                    <TableCell className="whitespace-nowrap">
+                      <div className="relative group/status inline-block">
+                        <button
+                          onClick={() => toggleMutation.mutate(customer.userId)}
+                          disabled={toggleMutation.isPending && toggleMutation.variables === customer.userId}
+                          className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all active:scale-95 disabled:opacity-50 ${
+                            customer.isActive === 'Y'
+                              ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                              : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
+                          }`}
+                        >
+                          {toggleMutation.isPending && toggleMutation.variables === customer.userId ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : customer.isActive === 'Y' ? (
+                            <CheckCircle2 size={14} />
+                          ) : (
+                            <XCircle size={14} />
+                          )}
+                          <span className="text-[11px] font-black uppercase tracking-wider">
+                            {customer.isActive === 'Y' ? 'Active' : 'Inactive'}
+                          </span>
+                        </button>
+
+                        {/* Fancy Status Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-slate-900 text-white text-[10px] text-center font-bold rounded-lg shadow-xl opacity-0 invisible group-hover/status:opacity-100 group-hover/status:visible transition-all duration-200 translate-y-1 group-hover/status:translate-y-0 z-50 pointer-events-none">
+                          Click to {customer.isActive === 'Y' ? 'Deactivate' : 'Activate'}
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <Button
@@ -219,7 +265,7 @@ export default function CustomerList() {
         title="Delete Customer"
         message={
           <>
-            Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? customerToDelete.username : ''}"</span>? This action cannot be undone.
+            Are you sure you want to delete <span className="font-bold text-gray-900">"{customerToDelete ? customerToDelete.fullname : ''}"</span>? This action cannot be undone.
           </>
         }
         onConfirm={confirmDelete}

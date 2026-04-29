@@ -2,6 +2,8 @@ import { useState } from 'react';
 import {
   Search, Download, Eye, Clock, AlertCircle
 } from 'lucide-react';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import toast from 'react-hot-toast';
 import { Button } from '../../components/ui/Button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
@@ -19,6 +21,7 @@ export default function PendingInvoiceList() {
       orderNo: 'ORD-1022',
       orderedOn: '2024-04-20',
       username: 'j.smith',
+      fullname: 'Jane Smith',
       email: 'jane.smith@example.com',
       poNo: 'PO-8821',
       service: 'Logo Digitizing',
@@ -32,6 +35,7 @@ export default function PendingInvoiceList() {
       orderNo: 'ORD-5521',
       orderedOn: '2024-04-21',
       username: 'admin.lyco',
+      fullname: 'Admin Lyco',
       email: 'admin@lyco.com',
       poNo: 'LYCO_Logo_Update',
       service: 'Vector Conversion',
@@ -45,6 +49,7 @@ export default function PendingInvoiceList() {
       orderNo: 'ORD-9932',
       orderedOn: '2024-04-22',
       username: 'global.tech',
+      fullname: 'Global Tech',
       email: 'billing@globaltech.com',
       poNo: 'GLOBAL_Q2_ASSETS',
       service: 'Custom Embroidery',
@@ -56,8 +61,102 @@ export default function PendingInvoiceList() {
   ];
 
 
-  const handleExport = () => {
-    toast.success('Exporting pending invoices...');
+  const handleExport = async () => {
+    const loadingToast = toast.loading('Preparing professional Excel export...');
+    try {
+      if (invoices.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.error('No invoices to export');
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Pending Invoices');
+
+      // 1. Define Columns
+      worksheet.columns = [
+        { header: 'Order #', key: 'orderNo', width: 15 },
+        { header: 'Ordered On', key: 'orderedOn', width: 15 },
+        { header: 'Full Name', key: 'fullname', width: 25 },
+        { header: 'Email', key: 'email', width: 35 },
+        { header: 'PO No.', key: 'poNo', width: 30 },
+        { header: 'Service', key: 'service', width: 20 },
+        { header: 'Price', key: 'price', width: 12 },
+        { header: 'Completed Date', key: 'completedDate', width: 18 },
+        { header: 'Status', key: 'status', width: 15 }
+      ];
+
+      // 2. Style Header Row
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = 20;
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9D9D9' }
+        };
+        cell.font = { bold: true, name: 'Calibri', size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+
+      // 3. Add Empty Spacer Row
+      worksheet.addRow({});
+      worksheet.getRow(2).height = 10;
+
+      // 4. Add Data
+      invoices.forEach(inv => {
+        const row = worksheet.addRow({
+          orderNo: inv.orderNo,
+          orderedOn: inv.orderedOn,
+          fullname: inv.fullname,
+          email: inv.email,
+          poNo: inv.poNo,
+          service: inv.service,
+          price: parseFloat(inv.price), // Number
+          completedDate: inv.completedDate,
+          status: inv.status
+        });
+
+        row.eachCell((cell, colNumber) => {
+          const colKey = worksheet.columns[colNumber - 1].key;
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: 'center'
+          };
+          cell.font = { name: 'Calibri', size: 11 };
+
+          // Format Price
+          if (colKey === 'price') {
+            const symbol = inv.currency === 'GBP' ? '£' : '$';
+            cell.numFmt = `"${symbol}"#,##0.00`;
+          }
+
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFEDEDED' } },
+            left: { style: 'thin', color: { argb: 'FFEDEDED' } },
+            bottom: { style: 'thin', color: { argb: 'FFEDEDED' } },
+            right: { style: 'thin', color: { argb: 'FFEDEDED' } }
+          };
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `Pending_Invoices_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      toast.dismiss(loadingToast);
+      toast.success('Exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.dismiss(loadingToast);
+      toast.error('Export failed');
+    }
   };
 
   return (
@@ -113,7 +212,7 @@ export default function PendingInvoiceList() {
               <TableRow className="bg-slate-50/50">
                 <TableHead className="py-2 px-6 whitespace-nowrap">Order #</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Ordered On</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Username</TableHead>
+                <TableHead className="py-2 px-4 whitespace-nowrap">Full Name</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Email</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">PO No.</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Service</TableHead>
@@ -133,7 +232,7 @@ export default function PendingInvoiceList() {
                       {invoice.orderNo}
                     </TableCell>
                     <TableCell className="px-4 text-slate-500 text-xs font-medium whitespace-nowrap">{invoice.orderedOn}</TableCell>
-                    <TableCell className="px-4 text-slate-900 text-sm font-bold whitespace-nowrap">{invoice.username}</TableCell>
+                    <TableCell className="px-4 text-slate-900 text-sm font-bold whitespace-nowrap">{invoice.fullname}</TableCell>
                     <TableCell className="px-4 text-slate-500 text-xs whitespace-nowrap">{invoice.email}</TableCell>
                     <TableCell className="px-4 text-slate-600 text-xs font-bold whitespace-nowrap">{invoice.poNo}</TableCell>
                     <TableCell className="px-4 whitespace-nowrap">

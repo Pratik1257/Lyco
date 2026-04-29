@@ -45,6 +45,9 @@ public class InvoicesController : ControllerBase
             query = query.Where(i =>
                 (i.InvoiceNo != null && i.InvoiceNo.Contains(search)) ||
                 (i.User != null && i.User.Username != null && i.User.Username.Contains(search)) ||
+                (i.User != null && i.User.Firstname != null && i.User.Firstname.Contains(search)) ||
+                (i.User != null && i.User.Lastname != null && i.User.Lastname.Contains(search)) ||
+                (i.User != null && (i.User.Firstname + " " + i.User.Lastname).Contains(search)) ||
                 (i.User != null && i.User.Companyname != null && i.User.Companyname.Contains(search))
             );
         }
@@ -81,6 +84,7 @@ public class InvoicesController : ControllerBase
                 InvoiceType = orders.Count > 1 ? "Combined" : "Individual",
                 i.InvoiceUrl,
                 Username = i.User?.Username ?? "--",
+                Fullname = i.User != null ? $"{i.User.Firstname} {i.User.Lastname}".Trim() : "--",
                 CompanyName = i.User?.Companyname ?? "--",
                 CustomerId = i.User?.UniqueNo?.ToString() ?? "--",
                 OrderNos = orderNoDisplay,

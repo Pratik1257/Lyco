@@ -266,25 +266,27 @@ export default function ServiceList() {
 
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="bg-slate-900 px-8 py-6 text-white flex items-center justify-between rounded-t-2xl">
+            <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8 rounded-t-2xl">
+              <div className="absolute top-0 right-0 p-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 text-cyan-400">
-                  <Layers size={24} />
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                  <Layers size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">{editingServiceId ? 'Edit Service' : 'New Service'}</h3>
-                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">
+                  <h3 className="text-white font-bold text-lg leading-tight">{editingServiceId ? 'Edit Service' : 'New Service'}</h3>
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-wider mt-0.5">
                     {editingServiceId ? 'Update service details' : 'Configure new service'}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                <X size={20} />
-              </button>
             </div>
 
             <form onSubmit={handleSaveService}>

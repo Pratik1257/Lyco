@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   X, Upload, File as FileIcon, Info, Link, 
-  CheckCircle2, AlertCircle, ShoppingBag, User 
+  CheckCircle2, AlertCircle, ShoppingBag, User, Hash
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ordersApi, type Order } from '../../api/ordersApi';
@@ -21,8 +21,20 @@ export default function CompleteOrderModal({ isOpen, onClose, order }: CompleteO
   // Form State
   const [note, setNote] = useState('');
   const [externalLink, setExternalLink] = useState('');
+  const [stitches, setStitches] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Derived calculation for Digitizing
+  const isDigitizing = order?.serviceName === 'Digitizing';
+  const calculatedAmount = useMemo(() => {
+    if (!isDigitizing || !stitches || isNaN(Number(stitches)) || !order?.amount) {
+      return order?.amount || '0';
+    }
+    const rate = Number(order.amount);
+    const count = Number(stitches);
+    return ((count / 1000) * rate).toFixed(2);
+  }, [isDigitizing, stitches, order?.amount]);
 
   // Mutation
   const mutation = useMutation({
@@ -48,6 +60,10 @@ export default function CompleteOrderModal({ isOpen, onClose, order }: CompleteO
       formDataToSend.append('orderStatus', 'Completed');
       formDataToSend.append('note', note); 
       
+      if (isDigitizing && stitches) {
+        formDataToSend.append('stitches', stitches);
+      }
+
       if (externalLink) {
         formDataToSend.append('externalLink', externalLink);
       }
@@ -77,6 +93,7 @@ export default function CompleteOrderModal({ isOpen, onClose, order }: CompleteO
   const handleClose = () => {
     setNote('');
     setExternalLink('');
+    setStitches('');
     setSelectedFiles([]);
     setFormError(null);
     onClose();
@@ -141,6 +158,37 @@ export default function CompleteOrderModal({ isOpen, onClose, order }: CompleteO
               </div>
             </div>
           </div>
+
+          {/* Digitizing Specific: Stitches */}
+          {isDigitizing && (
+            <div className="grid grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+              <div className="space-y-1">
+                <label className="block text-[13px] font-semibold text-slate-900 ml-1">Stitches # <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                  <input
+                    type="text"
+                    placeholder="e.g. 5000"
+                    value={stitches}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) setStitches(val);
+                    }}
+                    className={`${premiumInput} h-11 pl-10`}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[13px] font-semibold text-slate-900 ml-1">Final Amount</label>
+                <div className="h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-2">
+                  <span className="text-sm font-bold text-cyan-600">{order.currency === 'GBP' ? '£' : order.currency === 'EURO' ? '€' : '$'}</span>
+                  <span className="text-sm font-extrabold text-slate-700">{calculatedAmount}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter ml-auto">Auto-calculated</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Note */}
           <div className="space-y-1">

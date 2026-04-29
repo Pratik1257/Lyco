@@ -23,6 +23,7 @@ export interface Customer {
   createdDate: string;
   hasValidCard: boolean; // computed from card expiry dates — not from DB
   uniqueNo?: number;
+  fullname?: string;
 }
 
 export interface Country {
@@ -72,5 +73,10 @@ export const customersApi = {
 
   deleteCustomer: async (id: number) => {
     await apiClient.delete(`/Users/${id}`);
+  },
+  
+  toggleActive: async (id: number) => {
+    const response = await apiClient.patch<Customer>(`/Users/${id}/toggle-active`);
+    return response.data;
   }
 };

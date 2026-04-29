@@ -37,47 +37,48 @@ public class OrdersController : ControllerBase
             .Include(o => o.Service)
             .AsQueryable();
 
-        // Joins with UserRegistration via UniqueNo if possible
-        // Note: Not every order might have a matching user if data is legacy
-        var joinedQuery = from o in query
-                         join u in _context.UserRegistrations on o.UniqueNo equals u.UniqueNo into users
-                         from user in users.DefaultIfEmpty()
-                         select new
-                         {
-                             o.OrderId,
-                             o.OrderNo,
-                             o.OrderDate,
-                             o.WorkTitle, // PO No.
-                             o.Amount,
-                             o.Currency,
-                             o.OrderStatus,
-                             o.CompletedDate,
-                             o.Email, // Email from OrderDetail
-                             Username = user != null ? user.Username : "--",
-                             ServiceName = o.Service != null ? o.Service.ServiceName : "Others",
-                             o.ServiceId,
-                             o.Size,
-                             o.Sizetype,
-                             o.Instructions,
-                             o.Note,
-                             FileFormat = o.FileFormat,
-                             UniqueNo = o.UniqueNo,
-                             ExternalLink = _context.OrderFileMsts
-                                .Where(f => f.OrderNo == o.OrderNo && f.FileName == "External Asset Link")
-                                .Select(f => f.FileUrl)
-                                .FirstOrDefault()
-                         };
-
         // Filters
-        if (!string.IsNullOrEmpty(search))
+        var filteredQuery = from o in query
+                           join u in _context.UserRegistrations on o.UniqueNo equals u.UniqueNo into users
+                           from user in users.DefaultIfEmpty()
+                           where string.IsNullOrEmpty(search) || 
+                                 (o.OrderNo != null && o.OrderNo.Contains(search)) ||
+                                 (o.Email != null && o.Email.Contains(search)) ||
+                                 (o.WorkTitle != null && o.WorkTitle.Contains(search)) ||
+                                 (user != null && user.Username != null && user.Username.Contains(search)) ||
+                                 (user != null && user.Firstname != null && user.Firstname.Contains(search)) ||
+                                 (user != null && user.Lastname != null && user.Lastname.Contains(search)) ||
+                                 (user != null && (user.Firstname + " " + user.Lastname).Contains(search))
+                           select new { o, user };
+
+        // Project
+        var joinedQuery = filteredQuery.Select(x => new
         {
-            joinedQuery = joinedQuery.Where(o => 
-                (o.OrderNo != null && o.OrderNo.Contains(search)) ||
-                (o.Username != null && o.Username.Contains(search)) ||
-                (o.Email != null && o.Email.Contains(search)) ||
-                (o.WorkTitle != null && o.WorkTitle.Contains(search))
-            );
-        }
+            x.o.OrderId,
+            x.o.OrderNo,
+            x.o.OrderDate,
+            x.o.WorkTitle, // PO No.
+            x.o.Amount,
+            x.o.Currency,
+            x.o.OrderStatus,
+            x.o.CompletedDate,
+            x.o.Email, // Email from OrderDetail
+            Username = x.user != null ? x.user.Username : "--",
+            Fullname = x.user != null ? (x.user.Firstname + " " + x.user.Lastname).Trim() : "--",
+            ServiceName = x.o.Service != null ? x.o.Service.ServiceName : "Others",
+            x.o.ServiceId,
+            x.o.Size,
+            x.o.Sizetype,
+            x.o.Instructions,
+            x.o.Note,
+            FileFormat = x.o.FileFormat,
+            UniqueNo = x.o.UniqueNo,
+            PaymentStatus = x.o.PaymentStatus,
+            ExternalLink = _context.OrderFileMsts
+               .Where(f => f.OrderNo == x.o.OrderNo && f.FileName == "External Asset Link")
+               .Select(f => f.FileUrl)
+               .FirstOrDefault()
+        });
 
         if (!string.IsNullOrEmpty(status) && status != "all")
         {
@@ -174,6 +175,7 @@ public class OrdersController : ControllerBase
             ExternalLink = externalLink,
             Files = orderFiles,
             Username = user?.Username ?? "--",
+            Fullname = user != null ? $"{user.Firstname} {user.Lastname}".Trim() : "--",
             CompanyName = user?.Companyname ?? "--",
             ServiceName = order.Service?.ServiceName ?? "Others"
         });
@@ -285,7 +287,7 @@ public class OrdersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateOrder(long id, [FromForm] OrderCreateDto dto, List<IFormFile> files)
     {
-        var order = await _context.OrderDetails.FindAsync(id);
+        var order = await _context.OrderDetails.Include(o => o.Service).FirstOrDefaultAsync(o => o.OrderId == id);
         if (order == null) return NotFound();
 
         order.ServiceId = dto.ServiceId;
@@ -312,6 +314,18 @@ public class OrdersController : ControllerBase
             if (dto.OrderStatus == "Completed")
             {
                 order.CompletedDate = DateTime.Now;
+                order.OrderState = "Completed";
+
+                // Digitizing Price Recalculation (Legacy Logic)
+                if (order.Service?.ServiceName == "Digitizing" && !string.IsNullOrEmpty(dto.Stitches))
+                {
+                    if (decimal.TryParse(dto.Stitches, out var stitchCount) && decimal.TryParse(dto.Amount, out var rate))
+                    {
+                        order.Stitches = dto.Stitches;
+                        var finalAmount = (stitchCount / 1000m) * rate;
+                        order.Amount = finalAmount.ToString("F2");
+                    }
+                }
             }
             else
             {

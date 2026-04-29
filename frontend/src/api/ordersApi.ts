@@ -11,6 +11,7 @@ export interface Order {
   completedDate: string | null;
   email: string | null;
   username: string;
+  fullname: string;
   serviceName: string;
   serviceId: number | null;
   instructions: string | null;
@@ -20,6 +21,7 @@ export interface Order {
   sizetype: string | null;
   uniqueNo: number | null;
   fileFormat: string | null;
+  paymentStatus: string | null;
 }
 
 export interface OrdersResponse {

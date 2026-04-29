@@ -8,5 +8,6 @@ public interface IUserService
     Task<UserRegistrationDto?> GetByIdAsync(long id);
     Task<(UserRegistrationDto? Dto, string? Error)> CreateAsync(CreateUserRequest req);
     Task<(UserRegistrationDto? Dto, string? Error)> UpdateAsync(long id, UpdateUserRequest req);
-    Task<bool> DeleteAsync(long id);
+    Task<UserRegistrationDto?> ToggleActiveAsync(long id);
+    Task<(bool Success, string? Error)> DeleteAsync(long id);
 }

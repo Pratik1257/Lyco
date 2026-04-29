@@ -13,9 +13,8 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Extract the error message from the backend if available
-    const errorMessage = error.response?.data?.error || error.message || 'An unexpected error occurred';
-    return Promise.reject(new Error(errorMessage));
+    // Preserve the original Axios error so components can access error.response.data
+    return Promise.reject(error);
   }
 );
 

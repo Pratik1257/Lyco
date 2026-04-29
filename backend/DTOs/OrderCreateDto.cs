@@ -36,5 +36,6 @@ public class OrderCreateDto
     public string? OrderStatus { get; set; }
     public string? ExternalLink { get; set; }
     public string? Note { get; set; }
+    public string? Stitches { get; set; }
     public List<long>? FilesToDelete { get; set; }
 }
