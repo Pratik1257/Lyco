@@ -27,6 +27,8 @@ export default function CompleteOrderForm() {
     stitches: ''
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<any[]>([]);
+  const [filesToDelete, setFilesToDelete] = useState<number[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -39,7 +41,7 @@ export default function CompleteOrderForm() {
 
   const { data: ordersData, isLoading: isLoadingOrders } = useQuery({
     queryKey: ['user-orders', formData.userId],
-    queryFn: () => ordersApi.getOrders(1, 100, '', 'In Process', undefined, undefined, undefined),
+    queryFn: () => ordersApi.getOrders(1, 100, '', 'In Process', undefined, formData.userId || undefined),
     enabled: !!formData.userId
   });
   // Filter orders manually if API doesn't support UniqueNo yet (or as extra safety)
@@ -94,6 +96,10 @@ export default function CompleteOrderForm() {
       selectedFiles.forEach(file => {
         formDataToSend.append('files', file);
       });
+      
+      filesToDelete.forEach(id => {
+        formDataToSend.append('FilesToDelete', id.toString());
+      });
 
       return ordersApi.updateOrder(Number(formData.orderId), formDataToSend);
     },
@@ -131,14 +137,26 @@ export default function CompleteOrderForm() {
   };
 
   const handleOrderChange = (val: string) => {
-    const orderId = val ? Number(val) : null;
-    const selectedOrder = userOrders.find(o => o.orderId === orderId);
+    const currentOrderId = val ? Number(val) : null;
+    const foundOrder = userOrders.find(o => o.orderId === currentOrderId);
+    
     setFormData(p => ({ 
       ...p, 
-      orderId, 
-      poNo: selectedOrder?.workTitle || '',
-      orderNo: selectedOrder?.orderNo || ''
+      orderId: currentOrderId, 
+      poNo: foundOrder?.workTitle || '',
+      orderNo: foundOrder?.orderNo || ''
     }));
+
+    if (currentOrderId && !isNaN(currentOrderId)) {
+      ordersApi.getOrderById(currentOrderId).then(order => {
+        setExistingFiles(order.files || []);
+      }).catch(err => {
+        console.error('Failed to fetch order files:', err);
+      });
+    } else {
+      setExistingFiles([]);
+    }
+
     setFieldErrors(p => { const n = { ...p }; delete n.orderId; return n; });
   };
 
@@ -178,7 +196,7 @@ export default function CompleteOrderForm() {
                     options={users.map(u => {
                       const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
                       return {
-                        value: u.userId,
+                        value: u.uniqueNo || u.userId,
                         label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
                       };
                     })}
@@ -362,11 +380,38 @@ export default function CompleteOrderForm() {
                     </div>
                   </div>
 
-                  {/* File List */}
-                  {selectedFiles.length > 0 && (
+                  {/* Files List (Combined Existing and New) */}
+                  {(existingFiles.length > 0 || selectedFiles.length > 0) && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+                      {/* Existing Files */}
+                      {existingFiles.map((file, idx) => (
+                        <div key={`existing-${idx}`} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl shadow-sm">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
+                              <FileIcon size={14} className="text-slate-500" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[11px] font-bold text-slate-700 truncate">{file.fileName}</span>
+                              <span className="text-[9px] text-slate-400 font-medium uppercase tracking-wider">Existing</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilesToDelete(prev => [...prev, file.orderFileId]);
+                              setExistingFiles(prev => prev.filter(f => f.orderFileId !== file.orderFileId));
+                            }}
+                            className="w-7 h-7 rounded-full bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors shadow-sm"
+                            title="Remove"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* New Selection */}
                       {selectedFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-1">
+                        <div key={`new-${idx}`} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-1">
                           <div className="flex items-center gap-3 overflow-hidden">
                             <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
                               <FileIcon size={14} className="text-cyan-600" />

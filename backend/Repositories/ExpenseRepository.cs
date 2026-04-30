@@ -10,8 +10,8 @@ public class ExpenseRepository : IExpenseRepository
 
     public ExpenseRepository(LycoDbContext db) => _db = db;
 
-    public async Task<(IEnumerable<ExpenseMst> Items, int TotalCount)> GetPagedAsync(
-        string? search, long? serviceId, int page, int pageSize)
+    public async Task<(IEnumerable<ExpenseMst> Items, int TotalCount, decimal TotalAmount)> GetPagedAsync(
+        string? search, long? serviceId, DateTime? startDate, DateTime? endDate, int page, int pageSize)
     {
         var query = _db.ExpenseMsts
             .Include(e => e.Service)
@@ -21,6 +21,18 @@ public class ExpenseRepository : IExpenseRepository
         if (serviceId.HasValue && serviceId.Value > 0)
         {
             query = query.Where(e => e.ServiceId == serviceId.Value);
+        }
+
+        // Filter by date range
+        if (startDate.HasValue)
+        {
+            query = query.Where(e => e.ExpenseDate >= startDate.Value);
+        }
+        if (endDate.HasValue)
+        {
+            // Set to end of day
+            var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
+            query = query.Where(e => e.ExpenseDate <= endOfDay);
         }
 
         // Search across title and service name
@@ -35,6 +47,7 @@ public class ExpenseRepository : IExpenseRepository
         }
 
         var totalCount = await query.CountAsync();
+        var totalAmount = await query.SumAsync(e => e.Amount ?? 0);
 
         var items = await query
             .OrderByDescending(e => e.ExpenseDate)
@@ -43,7 +56,7 @@ public class ExpenseRepository : IExpenseRepository
             .Take(pageSize)
             .ToListAsync();
 
-        return (items, totalCount);
+        return (items, totalCount, totalAmount);
     }
 
     public async Task<ExpenseMst?> GetByIdAsync(long id)

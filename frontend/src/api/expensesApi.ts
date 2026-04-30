@@ -15,6 +15,7 @@ export interface Expense {
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
+  filteredTotalAmount: number;
   page: number;
   pageSize: number;
   totalPages: number;
@@ -43,10 +44,14 @@ export const expensesApi = {
     page: number,
     pageSize: number,
     search: string = '',
-    serviceId?: number
+    serviceId?: number,
+    startDate?: string,
+    endDate?: string
   ) => {
     const params: Record<string, any> = { page, pageSize, search };
     if (serviceId) params.serviceId = serviceId;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
     const response = await apiClient.get<PagedResult<Expense>>('/Expenses', { params });
     return response.data;
   },

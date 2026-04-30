@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertCircle, ShieldCheck,
+  AlertCircle,
   MapPin, User, CreditCard as CardIcon,
   Info, Sparkles, CheckCircle2, ChevronLeft
 } from 'lucide-react';
@@ -76,7 +76,9 @@ export default function CardForm() {
     if (existingCard) {
       setFormData(existingCard);
       if (existingCard.expDate) {
-        const [m, y] = existingCard.expDate.split('/');
+        // Support both slash (new) and comma (legacy) formats
+        const separator = existingCard.expDate.includes(',') ? ',' : '/';
+        const [m, y] = existingCard.expDate.split(separator);
         setExpMonth(m || '');
         setExpYear(y || '');
       }
@@ -85,7 +87,7 @@ export default function CardForm() {
 
   useEffect(() => {
     if (expMonth && expYear) {
-      setFormData(prev => ({ ...prev, expDate: `${expMonth}/${expYear}` }));
+      setFormData(prev => ({ ...prev, expDate: `${expMonth},${expYear}` }));
     } else {
       setFormData(prev => ({ ...prev, expDate: '' }));
     }
@@ -171,7 +173,9 @@ export default function CardForm() {
       const selectedMonth = parseInt(expMonth);
 
       if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
-        errors.expDate = 'Expiry cannot be in the past';
+        // We allow saving expired cards in edit mode if needed, but we should warn.
+        // For strict parity with legacy, we let validation fail.
+        errors.expDate = 'Expiry date is invalid. Please choose a valid future date.';
       }
     }
 
@@ -255,7 +259,17 @@ export default function CardForm() {
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ value: (i + 1).toString().padStart(2, '0'), label: (i + 1).toString().padStart(2, '0') })), []);
   const currentYear = new Date().getFullYear();
-  const years = useMemo(() => Array.from({ length: 20 }, (_, i) => ({ value: (currentYear + i).toString(), label: (currentYear + i).toString() })), [currentYear]);
+  const years = useMemo(() => Array.from({ length: 30 }, (_, i) => {
+    const y = (currentYear - 5 + i).toString();
+    return { value: y, label: y };
+  }), [currentYear]);
+
+  const isExpired = useMemo(() => {
+    if (!expMonth || !expYear) return false;
+    const now = new Date();
+    const expiry = new Date(Number(expYear), Number(expMonth), 0); // Last day of month
+    return expiry < now;
+  }, [expMonth, expYear]);
 
   const cardTypes = [
     { value: 'Visa', label: 'Visa' },
@@ -315,6 +329,13 @@ export default function CardForm() {
             className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
           >
             <div className="p-6 sm:p-7 space-y-5">
+
+              {isExpired && isEdit && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-pulse">
+                  <AlertCircle size={20} />
+                  ⚠️ Your card is expired. Please provide valid details.
+                </div>
+              )}
 
               {formError && (
                 <div className="text-red-600 text-sm font-bold flex items-center gap-3 bg-red-50 p-4 rounded-2xl border border-red-100/50 animate-in zoom-in-95">

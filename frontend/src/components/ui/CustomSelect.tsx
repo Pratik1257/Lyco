@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, memo } from 'react';
+import { useState, useMemo, useRef, memo } from 'react';
 import Select, { components } from 'react-select';
 import type { MenuProps, StylesConfig, Props as SelectProps } from 'react-select';
 import { Search } from 'lucide-react';
@@ -13,6 +13,8 @@ interface CustomProps {
   setSearchText: (val: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   menuAlign?: 'left' | 'right';
+  setMenuIsOpen: (val: boolean) => void;
+  menuIsOpen: boolean;
 }
 
 // Extend react-select's props to include customProps
@@ -155,6 +157,34 @@ const CustomMenu = (props: MenuProps<Option, false>) => {
   );
 };
 
+// Custom Control to handle reliable toggling
+const CustomControl = (props: any) => {
+  const { setMenuIsOpen, menuIsOpen } = props.selectProps.customProps;
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (menuIsOpen) {
+      e.preventDefault();
+      e.stopPropagation();
+      setMenuIsOpen(false);
+    } else {
+      // Let react-select handle opening
+      if (props.innerProps.onMouseDown) {
+        props.innerProps.onMouseDown(e);
+      }
+    }
+  };
+
+  return (
+    <components.Control
+      {...props}
+      innerProps={{
+        ...props.innerProps,
+        onMouseDown: handleMouseDown
+      }}
+    />
+  );
+};
+
 export default function CustomSelect({
   label,
   options,
@@ -171,13 +201,7 @@ export default function CustomSelect({
   const [searchText, setSearchText] = useState('');
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Focus search when menu opens
-  useEffect(() => {
-    if (menuIsOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 10);
-    }
-  }, [menuIsOpen]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = useMemo(
     () => options.find((opt) => opt.value === value) || null,
@@ -195,11 +219,11 @@ export default function CustomSelect({
   const customStyles: StylesConfig<Option, false> = {
     control: (base, state) => ({
       ...base,
-      backgroundColor: state.selectProps.menuIsOpen ? '#ffffff' : '#f9fafb',
-      borderColor: error ? '#ef4444' : (state.selectProps.menuIsOpen ? '#06b6d4' : '#e5e7eb'),
+      backgroundColor: state.isFocused || state.selectProps.menuIsOpen ? '#ffffff' : '#f9fafb',
+      borderColor: error ? '#ef4444' : (state.isFocused || state.selectProps.menuIsOpen ? '#06b6d4' : '#e5e7eb'),
       boxShadow: error 
         ? '0 0 0 4px rgba(239, 68, 68, 0.1)' 
-        : (state.selectProps.menuIsOpen ? '0 0 0 4px rgba(6, 182, 212, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'),
+        : (state.isFocused || state.selectProps.menuIsOpen ? '0 0 0 4px rgba(6, 182, 212, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'),
       borderRadius: '0.5rem',
       padding: '0px',
       minHeight: '40px',
@@ -210,11 +234,11 @@ export default function CustomSelect({
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       borderWidth: '1.5px',
       '&:hover': {
-        borderColor: error ? '#ef4444' : (state.selectProps.menuIsOpen ? '#06b6d4' : '#d1d5db'),
-        transform: state.selectProps.menuIsOpen ? 'none' : 'translateY(-1px)',
+        borderColor: error ? '#ef4444' : (state.isFocused || state.selectProps.menuIsOpen ? '#06b6d4' : '#d1d5db'),
+        transform: (state.isFocused || state.selectProps.menuIsOpen) ? 'none' : 'translateY(-1px)',
         boxShadow: error
           ? '0 0 0 4px rgba(239, 68, 68, 0.1)'
-          : state.selectProps.menuIsOpen
+          : (state.isFocused || state.selectProps.menuIsOpen)
             ? '0 0 0 4px rgba(6, 182, 212, 0.1)'
             : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
       }
@@ -264,6 +288,7 @@ export default function CustomSelect({
       },
       '&::-webkit-scrollbar-thumb:hover': {
         background: '#d1d5db',
+        borderRadius: '10px',
       },
     }),
     menuPortal: (base) => ({
@@ -309,7 +334,7 @@ export default function CustomSelect({
   const ExtendedSelect = Select as unknown as React.ComponentType<ExtendedSelectProps>;
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" ref={containerRef}>
       {label && (
         <label className="block text-[13px] font-semibold text-slate-900 ml-1">
           {label} {required && <span className="text-red-500">*</span>}
@@ -330,26 +355,27 @@ export default function CustomSelect({
           isDisabled={isDisabled}
           menuIsOpen={menuIsOpen}
           maxMenuHeight={maxMenuHeight}
+          filterOption={null}
           onMenuOpen={() => {
-            setMenuIsOpen((prev) => {
-              if (prev) {
-                return false;
-              }
-              setSearchText('');
-              return true;
-            });
+            setMenuIsOpen(true);
+            setSearchText('');
+            setTimeout(() => searchInputRef.current?.focus(), 50);
           }}
           onMenuClose={() => {
-            // When Menu attempts to close, verify if focus actually just moved to our search bar.
-            // If the search bar now has focus, we block the close command!
+            // Slight delay to check where focus went
             setTimeout(() => {
               if (document.activeElement !== searchInputRef.current) {
                 setMenuIsOpen(false);
               }
-            }, 0);
+            }, 150);
           }}
-          customProps={{ searchText, setSearchText, searchInputRef, menuAlign }}
-          components={{ Menu: CustomMenu, Option: CustomOption, SingleValue: CustomSingleValue }}
+          customProps={{ searchText, setSearchText, searchInputRef, menuAlign, setMenuIsOpen, menuIsOpen }}
+          components={{ 
+            Menu: CustomMenu, 
+            Option: CustomOption, 
+            SingleValue: CustomSingleValue,
+            Control: CustomControl
+          }}
           menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
           menuPosition="fixed"
           menuPlacement={menuPlacement}

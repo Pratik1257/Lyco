@@ -19,11 +19,69 @@ public class ExpensesController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] string? search = "",
         [FromQuery] long? serviceId = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var result = await _service.GetPagedAsync(search, serviceId, page, pageSize);
+        var result = await _service.GetPagedAsync(search, serviceId, startDate, endDate, page, pageSize);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Export expenses to XLSX — searchable and filterable by service and date.
+    /// </summary>
+    [HttpGet("export")]
+    public async Task<IActionResult> Export(
+        [FromQuery] string? search = "",
+        [FromQuery] long? serviceId = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
+    {
+        var result = (dynamic)await _service.GetPagedAsync(search, serviceId, startDate, endDate, 1, 1000000);
+        var items = (IEnumerable<ExpenseResponseDto>)result.items;
+
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Expenses");
+
+        // Headers
+        worksheet.Cell(1, 1).Value = "ID";
+        worksheet.Cell(1, 2).Value = "Date";
+        worksheet.Cell(1, 3).Value = "Service";
+        worksheet.Cell(1, 4).Value = "Title";
+        worksheet.Cell(1, 5).Value = "Amount";
+        worksheet.Cell(1, 6).Value = "Currency";
+        worksheet.Cell(1, 7).Value = "Notes";
+
+        // Styling headers
+        var headerRange = worksheet.Range(1, 1, 1, 7);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightCyan;
+        headerRange.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+        int row = 2;
+        foreach (var item in items)
+        {
+            worksheet.Cell(row, 1).Value = item.ExpenseId;
+            worksheet.Cell(row, 2).Value = item.ExpenseDate;
+            worksheet.Cell(row, 3).Value = item.ServiceName;
+            worksheet.Cell(row, 4).Value = item.Title;
+            worksheet.Cell(row, 5).Value = item.Amount;
+            worksheet.Cell(row, 6).Value = item.Currency;
+            worksheet.Cell(row, 7).Value = item.Notes;
+            row++;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        using var stream = new System.IO.MemoryStream();
+        workbook.SaveAs(stream);
+        var content = stream.ToArray();
+
+        return File(
+            content, 
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+            $"Expenses_{DateTime.Now:MMddyyyy}.xlsx");
     }
 
     /// <summary>

@@ -12,7 +12,7 @@ export interface Invoice {
   companyName: string;
   customerId: string;
   orderNos: string;          // "113-61" or "71 to 75"
-  status: string;            // "Paid" | "Unpaid"
+  status: string;            // "Completed" | "Pending"
   pdfUrl: string;
 }
 
@@ -35,13 +35,17 @@ export const invoicesApi = {
     page: number = 1,
     pageSize: number = 10,
     search: string = '',
-    status: string = ''
+    status: string = '',
+    startDate: string = '',
+    endDate: string = ''
   ): Promise<InvoicesResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('pageSize', pageSize.toString());
     if (search) params.append('search', search);
     if (status && status !== 'all') params.append('status', status);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
     const res = await apiClient.get<InvoicesResponse>(`/Invoices?${params.toString()}`);
     return res.data;
   },
@@ -55,7 +59,7 @@ export const invoicesApi = {
     return res.data;
   },
 
-  updateInvoiceStatus: async (invoiceId: number, status: 'Paid' | 'Unpaid'): Promise<void> => {
+  updateInvoiceStatus: async (invoiceId: number, status: 'Completed' | 'Pending'): Promise<void> => {
     await apiClient.put(`/Invoices/${invoiceId}/status`, { status });
   },
 

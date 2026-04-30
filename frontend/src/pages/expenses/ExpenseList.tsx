@@ -35,6 +35,41 @@ export default function ExpenseList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [filterServiceId, setFilterServiceId] = useState<number | undefined>(undefined);
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  // ── Date Range Logic ────────────────────────────────────────────────────────
+  const handleDateRangeChange = (val: string) => {
+    setDateRangeFilter(val);
+    const now = new Date();
+    let start = '';
+    let end = '';
+
+    if (val === 'this-week') {
+      const day = now.getDay();
+      const diffToMon = now.getDate() - day + (day === 0 ? -6 : 1);
+      const diffToSun = diffToMon + 6;
+      
+      start = new Date(new Date().setDate(diffToMon)).toISOString().split('T')[0];
+      end = new Date(new Date().setDate(diffToSun)).toISOString().split('T')[0];
+    } else if (val === 'this-month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    } else if (val === 'this-year') {
+      start = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+      end = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+    } else if (val === 'all') {
+      start = '';
+      end = '';
+    }
+    
+    if (val !== 'custom') {
+      setStartDate(start);
+      setEndDate(end);
+    }
+    setCurrentPage(1);
+  };
 
   // ── Modal State ─────────────────────────────────────────────────────────────
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -49,8 +84,8 @@ export default function ExpenseList() {
 
   // ── Data Queries ────────────────────────────────────────────────────────────
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['expenses', currentPage, itemsPerPage, searchQuery, filterServiceId],
-    queryFn: () => expensesApi.getExpenses(currentPage, itemsPerPage, searchQuery, filterServiceId),
+    queryKey: ['expenses', currentPage, itemsPerPage, searchQuery, filterServiceId, startDate, endDate],
+    queryFn: () => expensesApi.getExpenses(currentPage, itemsPerPage, searchQuery, filterServiceId, startDate, endDate),
   });
 
   const { data: servicesData } = useQuery({
@@ -66,13 +101,11 @@ export default function ExpenseList() {
   const servicesList = servicesData?.items ?? [];
   const expenses = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
+  const filteredTotalAmount = data?.filteredTotalAmount ?? 0;
   const totalPages = data?.totalPages ?? 1;
   const safeCurrentPage = data?.page ?? 1;
   const indexOfFirstItem = (safeCurrentPage - 1) * itemsPerPage;
   const indexOfLastItem = indexOfFirstItem + expenses.length;
-
-  // ── Summary ─────────────────────────────────────────────────────────────────
-  const totalAmount = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
@@ -106,6 +139,17 @@ export default function ExpenseList() {
   });
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  const handleExport = () => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.append('search', searchQuery);
+    if (filterServiceId) params.append('serviceId', filterServiceId.toString());
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    window.open(`http://localhost:5193/api/Expenses/export?${params.toString()}`, '_blank');
+    toast.success('Exporting expenses...');
+  };
+
   const openCreate = () => {
     setEditingId(null);
     setFormData({ ...emptyForm });
@@ -224,29 +268,42 @@ export default function ExpenseList() {
             <DollarSign size={20} />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Page Total</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Filtered Total</p>
             <p className="text-2xl font-black text-gray-900">
-              {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {filteredTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
       </div>
 
       {/* Main Table Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
         {/* Toolbar */}
-        <div className="py-2.5 px-6 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
-            <SearchBar
-              containerClassName="flex-1 max-w-xs"
-              placeholder="Search expenses..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-            <div className="w-52">
+        <div className="py-2.5 px-6 border-b border-gray-100 bg-gray-50/30 flex flex-col space-y-3 rounded-t-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-[300px]">
+              <SearchBar
+                containerClassName="flex-1 max-w-xs"
+                placeholder="Search expenses..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={handleExport} className="h-10 text-xs font-bold border-gray-200">
+                <FileText size={16} /> Export
+              </Button>
+              <Button variant="primary" onClick={openCreate} className="h-10 text-xs font-bold bg-gradient-to-r from-cyan-600 to-blue-700">
+                <Plus size={18} /> Add Expense
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="w-48">
               <CustomSelect
                 value={filterServiceId || ''}
                 onChange={(val) => {
@@ -260,11 +317,58 @@ export default function ExpenseList() {
                 placeholder="Filter by Service"
               />
             </div>
+
+            <div className="w-48">
+              <CustomSelect
+                value={dateRangeFilter}
+                onChange={(val) => handleDateRangeChange(val as string)}
+                options={[
+                  { value: 'all', label: 'All Dates' },
+                  { value: 'this-week', label: 'This Week' },
+                  { value: 'this-month', label: 'This Month' },
+                  { value: 'this-year', label: 'This Year' },
+                  { value: 'custom', label: 'Custom Range' },
+                ]}
+                placeholder="Select Range"
+              />
+            </div>
+
+            {dateRangeFilter === 'custom' && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
+                <div className="w-40">
+                  <DatePicker 
+                    value={startDate} 
+                    onChange={(val) => { setStartDate(val); setCurrentPage(1); }} 
+                    placeholder="From Date" 
+                  />
+                </div>
+                <div className="w-40">
+                  <DatePicker 
+                    value={endDate} 
+                    onChange={(val) => { setEndDate(val); setCurrentPage(1); }} 
+                    placeholder="To Date" 
+                    align="right"
+                  />
+                </div>
+              </div>
+            )}
+
+            {(dateRangeFilter !== 'all' || filterServiceId || searchQuery) && (
+              <button 
+                onClick={() => {
+                  setDateRangeFilter('all');
+                  setStartDate('');
+                  setEndDate('');
+                  setFilterServiceId(undefined);
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className="text-[10px] font-black uppercase text-cyan-600 hover:text-cyan-700 tracking-widest ml-2"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
-          <Button variant="primary" onClick={openCreate}>
-            <Plus size={18} />
-            Add Expense
-          </Button>
         </div>
 
         {/* Table */}
@@ -341,6 +445,7 @@ export default function ExpenseList() {
             setItemsPerPage(val);
             setCurrentPage(1);
           }}
+          className="rounded-b-2xl"
         />
       </div>
 
@@ -348,7 +453,7 @@ export default function ExpenseList() {
       {isFormOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={closeForm} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 overflow-visible">
             {/* Modal Header */}
             <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8 rounded-t-2xl">
               <div className="absolute top-0 right-0 p-4">

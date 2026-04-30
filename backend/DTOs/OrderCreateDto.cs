@@ -13,13 +13,11 @@ public class OrderCreateDto
     public long ServiceId { get; set; }
 
     [Required(ErrorMessage = "PO / Artwork Name is required")]
-    [MinLength(2, ErrorMessage = "PO / Artwork Name must be at least 2 characters")]
     [MaxLength(500)]
     public string? WorkTitle { get; set; }
 
     public string? Instructions { get; set; }
 
-    [MinLength(2, ErrorMessage = "File Format must be at least 2 characters")]
     public string? FileFormat { get; set; }
 
     public string? Size { get; set; }
@@ -30,6 +28,7 @@ public class OrderCreateDto
 
     public string? Currency { get; set; }
 
+    [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email address format")]
     public string? Email { get; set; }
 

@@ -12,6 +12,7 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   onItemsPerPageChange: (items: number) => void;
   itemsPerPageOptions?: number[];
+  className?: string;
 }
 
 export function Pagination({
@@ -24,12 +25,13 @@ export function Pagination({
   isLoading = false,
   onPageChange,
   onItemsPerPageChange,
-  itemsPerPageOptions = [10, 20, 50]
+  itemsPerPageOptions = [10, 20, 50],
+  className = ""
 }: PaginationProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
-    <div className="py-2.5 px-6 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-4">
+    <div className={`py-2.5 px-6 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-4 ${className}`}>
       <div className="flex items-center gap-4">
         <div className="text-xs text-gray-500">
           Showing <span className="font-semibold text-gray-700">{totalCount === 0 ? 0 : indexOfFirstItem + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(indexOfLastItem, totalCount)}</span> of <span className="font-semibold text-gray-700">{totalCount}</span> results

@@ -37,14 +37,15 @@ public class QuotesController : ControllerBase
         var filteredQuery = from q in query
                            join u in _context.UserRegistrations on q.UniqueNo equals u.UniqueNo into users
                            from user in users.DefaultIfEmpty()
-                           where string.IsNullOrEmpty(search) || 
+                           where q.QuoteType == "Quote" &&
+                                 (string.IsNullOrEmpty(search) || 
                                  (q.QuoteNo != null && q.QuoteNo.Contains(search)) ||
                                  (q.Email != null && q.Email.Contains(search)) ||
                                  (q.WorkTitle != null && q.WorkTitle.Contains(search)) ||
                                  (user != null && user.Username != null && user.Username.Contains(search)) ||
                                  (user != null && user.Firstname != null && user.Firstname.Contains(search)) ||
                                  (user != null && user.Lastname != null && user.Lastname.Contains(search)) ||
-                                 (user != null && (user.Firstname + " " + user.Lastname).Contains(search))
+                                 (user != null && (user.Firstname + " " + user.Lastname).Contains(search)))
                            select new { q, user };
 
         // Project
@@ -315,11 +316,12 @@ public class QuotesController : ControllerBase
         foreach (var file in quoteFiles)
         {
             file.OrderNo = orderNo;
+            file.FileStatus = "Order";
             file.LastModifieddate = DateTime.Now;
         }
 
-        // Remove the quote
-        _context.Quotes.Remove(quote);
+        // Preserve quote record but mark as Order
+        quote.QuoteType = "Order";
 
         await _context.SaveChangesAsync();
 
@@ -332,9 +334,38 @@ public class QuotesController : ControllerBase
         var quote = await _context.Quotes.FindAsync(id);
         if (quote == null) return NotFound();
 
+        // 1. Find all associated files for this quote
+        if (!string.IsNullOrEmpty(quote.QuoteNo))
+        {
+            var filesToRemove = await _context.OrderFileMsts
+                .Where(f => f.OrderNo == quote.QuoteNo)
+                .ToListAsync();
+
+            if (filesToRemove.Any())
+            {
+                // 2. Delete physical files from disk to prevent storage leaks
+                foreach (var file in filesToRemove)
+                {
+                    if (!string.IsNullOrEmpty(file.FileUrl) && !file.FileUrl.StartsWith("http"))
+                    {
+                        var fullPath = Path.Combine(_env.ContentRootPath, "wwwroot", file.FileUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(fullPath))
+                        {
+                            try { System.IO.File.Delete(fullPath); } catch { }
+                        }
+                    }
+                }
+                
+                // 3. Remove file records from the database
+                _context.OrderFileMsts.RemoveRange(filesToRemove);
+            }
+        }
+
+        // 4. Remove the quote itself
         _context.Quotes.Remove(quote);
         await _context.SaveChangesAsync();
-        return Ok(new { message = "Quote deleted successfully" });
+        
+        return Ok(new { message = "Quote and associated files deleted successfully" });
     }
 
     private async Task SaveFilesAsync(string quoteNo, List<IFormFile> files)

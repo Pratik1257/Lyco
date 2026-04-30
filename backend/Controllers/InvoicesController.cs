@@ -33,7 +33,9 @@ public class InvoicesController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] string? search = null,
-        [FromQuery] string? status = null)
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
     {
         var query = _context.InvoiceMsts
             .Include(i => i.User)
@@ -50,6 +52,16 @@ public class InvoicesController : ControllerBase
                 (i.User != null && (i.User.Firstname + " " + i.User.Lastname).Contains(search)) ||
                 (i.User != null && i.User.Companyname != null && i.User.Companyname.Contains(search))
             );
+        }
+
+        if (startDate.HasValue)
+        {
+            query = query.Where(i => i.InvoiceDate >= startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(i => i.InvoiceDate <= endDate.Value);
         }
 
         var totalCount = await query.CountAsync();
@@ -69,8 +81,8 @@ public class InvoicesController : ControllerBase
         var items = rawItems.Select(i =>
         {
             var orders = linkedOrders.Where(o => o.InvoiceId == i.InvoiceId).ToList();
-            var derivedStatus = orders.Count > 0 && orders.All(o => o.PaymentStatus == "Paid")
-                ? "Paid" : "Unpaid";
+            var derivedStatus = orders.Count > 0 && orders.All(o => o.PaymentStatus == "Completed")
+                ? "Completed" : "Pending";
             var orderNos = orders.Select(o => o.OrderNo ?? "").Where(n => n != "").ToList();
             var orderNoDisplay = BuildOrderNoDisplay(orderNos);
 
@@ -82,7 +94,7 @@ public class InvoicesController : ControllerBase
                 i.Amount,
                 i.Po,
                 InvoiceType = orders.Count > 1 ? "Combined" : "Individual",
-                i.InvoiceUrl,
+                PdfUrl = i.InvoiceUrl,
                 Username = i.User?.Username ?? "--",
                 Fullname = i.User != null ? $"{i.User.Firstname} {i.User.Lastname}".Trim() : "--",
                 CompanyName = i.User?.Companyname ?? "--",
@@ -165,8 +177,7 @@ public class InvoicesController : ControllerBase
                 });
 
                 // Update order
-                order.OrderStatus = "Invoiced";
-                order.PaymentStatus = "Unpaid";
+                order.PaymentStatus = "Pending";
                 order.InvoiceId = invoice.InvoiceId;
                 order.InvoiceNo = invoice.InvoiceNo;
 
@@ -218,8 +229,7 @@ public class InvoicesController : ControllerBase
                     OrderDate = order.OrderDate
                 });
 
-                order.OrderStatus = "Invoiced";
-                order.PaymentStatus = "Unpaid";
+                order.PaymentStatus = "Pending";
                 order.InvoiceId = invoice.InvoiceId;
                 order.InvoiceNo = invoice.InvoiceNo;
             }
@@ -249,8 +259,8 @@ public class InvoicesController : ControllerBase
     [HttpPut("{id}/status")]
     public async Task<IActionResult> UpdateStatus(long id, [FromBody] UpdateInvoiceStatusDto dto)
     {
-        if (dto.Status != "Paid" && dto.Status != "Unpaid")
-            return BadRequest(new { message = "Status must be 'Paid' or 'Unpaid'" });
+        if (dto.Status != "Completed" && dto.Status != "Pending")
+            return BadRequest(new { message = "Status must be 'Completed' or 'Pending'" });
 
         var orders = await _context.OrderDetails
             .Where(o => o.InvoiceId == id)
@@ -334,7 +344,7 @@ public class InvoicesController : ControllerBase
                 nextNumber = lastNumber + 1;
         }
 
-        return $"SMIN{nextNumber:D5}";
+        return $"SMIN{nextNumber}";
     }
 
     private static string BuildOrderNoDisplay(List<string> orderNos)
@@ -355,5 +365,5 @@ public class InvoicesController : ControllerBase
 
 public class UpdateInvoiceStatusDto
 {
-    public string Status { get; set; } = "Unpaid";
+    public string Status { get; set; } = "Pending";
 }

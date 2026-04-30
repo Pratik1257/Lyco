@@ -22,6 +22,8 @@ export interface Order {
   uniqueNo: number | null;
   fileFormat: string | null;
   paymentStatus: string | null;
+  invoiceId?: number | null;
+  invoiceNo?: string | null;
 }
 
 export interface OrdersResponse {

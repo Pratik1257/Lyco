@@ -38,11 +38,10 @@ public class UserService : IUserService
         if (!string.IsNullOrWhiteSpace(req.PrimaryEmail) && !await _repo.IsEmailUniqueAsync(req.PrimaryEmail))
             return (null, "Email is already registered to another user.");
 
-        // Example basic validation, can be extended
         var user = new UserRegistration
         {
             Username = req.Username,
-            Password = req.Password, // Ensure hashing in a real scenario
+            Password = BCrypt.Net.BCrypt.HashPassword(req.Password),
             Firstname = req.Firstname,
             Lastname = req.Lastname,
             Companyname = req.Companyname,

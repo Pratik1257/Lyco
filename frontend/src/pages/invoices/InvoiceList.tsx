@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Search, Download, Plus, Eye,
   CheckCircle2, Clock, Receipt, RefreshCw
@@ -15,32 +15,22 @@ import { invoicesApi, type Invoice } from '../../api/invoicesApi';
 
 export default function InvoiceList() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Fetch real invoices from API
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter],
-    queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter)
+    queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate],
+    queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate)
   });
 
   const invoices = data?.items || [];
   const totalCount = data?.totalCount || 0;
   const totalPages = data?.totalPages || 1;
-
-  // Status toggle mutation
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: 'Paid' | 'Unpaid' }) =>
-      invoicesApi.updateInvoiceStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast.success('Status updated');
-    },
-    onError: () => toast.error('Failed to update status')
-  });
 
   const getStatusStyle = (status: string) => {
     if (status === 'Paid') return 'bg-green-50 text-green-700 border-green-100';
@@ -66,43 +56,61 @@ export default function InvoiceList() {
     <div className="relative animate-in fade-in duration-500 space-y-4">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {/* Header & Filter */}
-        <div className="p-4 sm:px-6 space-y-4 border-b border-slate-100 bg-slate-50/30">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1 max-w-md relative group">
+        <div className="p-4 sm:px-6 border-b border-slate-100 bg-slate-50/30">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+            {/* Search Bar */}
+            <div className="flex-1 min-w-[200px] max-w-md xl:max-w-[290px] relative group">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Search Invoice #, Full Name, User, Company..."
+                placeholder="Search by Name, Invoice no."
                 className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleExport}
-                className="h-11 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold flex items-center gap-2 shadow-none">
-                <Download size={16} /> Export
-              </Button>
-              <Button variant="primary" onClick={() => navigate('/invoices/create')}
-                className="bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 h-11 px-5 rounded-xl text-xs">
-                <Plus size={16} /> Create Invoice
-              </Button>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <CustomSelect
-              value={statusFilter}
-              onChange={(val) => { setStatusFilter(val as string); setCurrentPage(1); }}
-              options={[
-                { value: 'all', label: 'All Status' },
-                { value: 'paid', label: 'Paid' },
-                { value: 'unpaid', label: 'Unpaid' },
-              ]}
-              placeholder="Status"
-            />
-            <DatePicker value="" onChange={() => {}} placeholder="From Date" />
-            <DatePicker value="" onChange={() => {}} placeholder="To Date" align="right" />
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 flex-1 xl:justify-end">
+              <div className="w-full sm:w-32">
+                <CustomSelect
+                  value={statusFilter}
+                  onChange={(val) => { setStatusFilter(val as string); setCurrentPage(1); }}
+                  options={[
+                    { value: 'all', label: 'All Status' },
+                    { value: 'paid', label: 'Paid' },
+                    { value: 'unpaid', label: 'Unpaid' },
+                  ]}
+                  placeholder="Status"
+                />
+              </div>
+              <div className="w-full sm:w-40">
+                <DatePicker
+                  value={startDate}
+                  onChange={(val) => { setStartDate(val); setCurrentPage(1); }}
+                  placeholder="From Date"
+                />
+              </div>
+              <div className="w-full sm:w-40">
+                <DatePicker
+                  value={endDate}
+                  onChange={(val) => { setEndDate(val); setCurrentPage(1); }}
+                  placeholder="To Date"
+                  align="right"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button variant="secondary" onClick={handleExport}
+                  className="h-11 flex-1 sm:flex-none px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-2 shadow-none whitespace-nowrap">
+                  <Download size={16} /> Export
+                </Button>
+                <Button variant="primary" onClick={() => navigate('/invoices/create')}
+                  className="h-11 flex-1 sm:flex-none bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 px-5 rounded-xl text-xs whitespace-nowrap">
+                  <Plus size={16} /> Create
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -134,8 +142,28 @@ export default function InvoiceList() {
                     <TableCell className="px-6 text-sm font-bold text-slate-900 whitespace-nowrap">
                       {invoice.fullname}
                     </TableCell>
-                    <TableCell className="px-4 font-bold text-cyan-600 hover:text-cyan-700 cursor-pointer text-sm whitespace-nowrap transition-colors">
-                      {invoice.invoiceNo}
+                    <TableCell
+                      className="px-4 font-bold text-cyan-600 text-sm whitespace-nowrap transition-colors"
+                    >
+                      {invoice.pdfUrl ? (
+                        <a
+                          href={`http://localhost:5193${invoice.pdfUrl}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:text-cyan-700 hover:underline cursor-pointer"
+                          title="View Invoice PDF"
+                        >
+                          {invoice.invoiceNo}
+                        </a>
+                      ) : (
+                        <span
+                          className="text-slate-400 cursor-help"
+                          onClick={() => toast.error('PDF not available for this invoice')}
+                          title="PDF not available"
+                        >
+                          {invoice.invoiceNo}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 text-slate-500 text-xs font-medium whitespace-nowrap">
                       {invoice.invoiceDate
@@ -157,17 +185,12 @@ export default function InvoiceList() {
                       USD {invoice.amount}
                     </TableCell>
                     <TableCell className="px-4 whitespace-nowrap">
-                      <button
-                        onClick={() => statusMutation.mutate({
-                          id: invoice.invoiceId,
-                          status: invoice.status === 'Paid' ? 'Unpaid' : 'Paid'
-                        })}
-                        title="Click to toggle status"
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold transition-all hover:opacity-75 cursor-pointer ${getStatusStyle(invoice.status)}`}
+                      <div
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${getStatusStyle(invoice.status)}`}
                       >
                         {getStatusIcon(invoice.status)}
                         {invoice.status || 'Unpaid'}
-                      </button>
+                      </div>
                     </TableCell>
                     <TableCell className="px-6 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">

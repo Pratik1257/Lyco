@@ -130,7 +130,6 @@ export default function OrderList() {
         { header: 'Service', key: 'service', width: 20 },
         { header: 'Price', key: 'price', width: 12 },
         { header: 'Order Status', key: 'orderStatus', width: 15 },
-        { header: 'Payment Status', key: 'paymentStatus', width: 18 },
         { header: 'Completed Date', key: 'completedDate', width: 18 }
       ];
 
@@ -173,7 +172,6 @@ export default function OrderList() {
           service: order.serviceName || '',
           price: order.amount ? parseFloat(order.amount) : 0, // Store as actual number
           orderStatus: order.orderStatus || '',
-          paymentStatus: order.paymentStatus || 'Pending',
           completedDate: order.completedDate ? formatDate(order.completedDate) : '--'
         };
 
@@ -387,7 +385,7 @@ export default function OrderList() {
                         >
                           <Edit2 size={14} />
                         </Button>
-                        {order.orderStatus !== 'Completed' && order.orderStatus !== 'Cancelled' && (
+                        {order.orderStatus !== 'Completed' && order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Invoiced' && (
                           <Button
                             variant="ghost-green"
                             size="icon"
@@ -406,12 +404,11 @@ export default function OrderList() {
                           size="icon"
                           className="w-7 h-7 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
                           title={
-                            order.orderStatus === 'In Process' ? "Cannot delete orders in process" : 
                             order.orderStatus === 'Completed' ? "Cannot delete completed orders" :
                             order.orderStatus === 'Invoiced' ? "Cannot delete invoiced orders" :
                             "Delete Order"
                           }
-                          disabled={order.orderStatus === 'In Process' || order.orderStatus === 'Completed' || order.orderStatus === 'Invoiced'}
+                          disabled={order.orderStatus === 'Completed' || order.orderStatus === 'Invoiced'}
                           onClick={() => {
                             setOrderToDelete(order);
                             setIsDeleteModalOpen(true);

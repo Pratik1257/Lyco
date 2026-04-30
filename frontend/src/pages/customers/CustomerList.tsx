@@ -123,9 +123,9 @@ export default function CustomerList() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
         {/* Toolbar */}
-        <div className="py-2.5 px-4 sm:px-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="py-2.5 px-4 sm:px-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-t-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
             <SearchBar
               containerClassName="w-full max-w-md"
@@ -256,6 +256,7 @@ export default function CustomerList() {
             setItemsPerPage(val);
             setCurrentPage(1);
           }}
+          className="rounded-b-2xl"
         />
       </div>
 

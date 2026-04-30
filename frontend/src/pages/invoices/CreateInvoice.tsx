@@ -18,9 +18,10 @@ export default function CreateInvoice() {
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUniqueNo, setSelectedUniqueNo] = useState<number | null>(null);
-  const [customerDetails, setCustomerDetails] = useState<any>(null);
+  const [customerDetails, setCustomerDetails] = useState<{ companyName: string; email: string } | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState<string | null>(null);
 
   // Fetch users for dropdown
   const { data: usersData } = useQuery({
@@ -30,7 +31,7 @@ export default function CreateInvoice() {
   const users = usersData?.items || [];
 
   // Fetch COMPLETED orders for selected user using uniqueNo
-  const { data: ordersData, refetch: refetchOrders } = useQuery({
+  const { data: ordersData } = useQuery({
     queryKey: ['user-orders-completed', selectedUniqueNo],
     queryFn: () => ordersApi.getOrders(1, 100, '', 'Completed', undefined, selectedUniqueNo ?? undefined),
     enabled: !!selectedUniqueNo
@@ -63,8 +64,11 @@ export default function CreateInvoice() {
     }
   };
 
+  // Filter for orders that haven't been invoiced yet
+  const uninvoicedOrders = orders.filter(o => !o.invoiceId && !o.invoiceNo);
+
   const handleSelectAll = () => {
-    setSelectedOrderIds(orders.map(o => o.orderId));
+    setSelectedOrderIds(uninvoicedOrders.map(o => o.orderId));
   };
 
   const handleUnselectAll = () => {
@@ -86,6 +90,7 @@ export default function CreateInvoice() {
 
   const calculatePendingTotal = () => {
     return orders
+      .filter(o => o.paymentStatus === 'Pending' || o.paymentStatus === 'Unpaid')
       .reduce((sum, o) => sum + Number(o.amount || 0), 0)
       .toFixed(2);
   };
@@ -102,6 +107,7 @@ export default function CreateInvoice() {
 
     try {
       setIsSubmitting(true);
+      setSubmittingAction(type);
       const res = await invoicesApi.createInvoice({
         userId: selectedUserId,
         orderIds: selectedOrderIds,
@@ -115,10 +121,18 @@ export default function CreateInvoice() {
           : `Combined invoice ${invoices[0]?.invoiceNo} created!`
       );
 
-      // Open each PDF in a new tab
-      invoices.forEach(inv => {
+      // Download each PDF sequentially to prevent browser blocking
+      invoices.forEach((inv, index) => {
         if (inv.pdfUrl) {
-          window.open(`http://localhost:5193${inv.pdfUrl}`, '_blank');
+          setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = `http://localhost:5193${inv.pdfUrl}`;
+            link.target = '_blank';
+            link.download = `${inv.invoiceNo}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }, index * 500);
         }
       });
 
@@ -127,6 +141,7 @@ export default function CreateInvoice() {
       toast.error(error.response?.data?.message || 'Failed to create invoice');
     } finally {
       setIsSubmitting(false);
+      setSubmittingAction(null);
     }
   };
 
@@ -203,10 +218,10 @@ export default function CreateInvoice() {
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                       <input
                         type="text"
-                        readOnly
                         value={customerDetails?.email || ''}
-                        placeholder=""
-                        className={`${premiumInput} pl-10 bg-slate-50 cursor-not-allowed`}
+                        onChange={(e) => setCustomerDetails(prev => prev ? { ...prev, email: e.target.value } : { companyName: '', email: e.target.value })}
+                        placeholder="client@example.com"
+                        className={`${premiumInput} pl-10 bg-white`}
                       />
                     </div>
                   </div>
@@ -220,28 +235,28 @@ export default function CreateInvoice() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <h4 className={sectionLabel('text-blue-800/50')}><CheckSquare size={12} /> Order Selection Matrix</h4>
-                    {orders.length > 0 && (
+                    {uninvoicedOrders.length > 0 && (
                       <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wide -mt-2.5">
-                        {orders.length} orders
+                        {uninvoicedOrders.length} orders
                       </span>
                     )}
                   </div>
                   <button
                     type="button"
-                    onClick={selectedOrderIds.length === orders.length ? handleUnselectAll : handleSelectAll}
+                    onClick={selectedOrderIds.length === uninvoicedOrders.length && uninvoicedOrders.length > 0 ? handleUnselectAll : handleSelectAll}
                     className="text-[10px] font-black uppercase text-cyan-600 hover:text-cyan-700 tracking-widest transition-colors"
                   >
-                    {selectedOrderIds.length === orders.length ? 'Unselect All' : 'Select All'}
+                    {selectedOrderIds.length === uninvoicedOrders.length && uninvoicedOrders.length > 0 ? 'Unselect All' : 'Select All'}
                   </button>
                 </div>
 
                 {selectedUserId ? (
-                  orders.length > 0 ? (
+                  uninvoicedOrders.length > 0 ? (
                     <>
                       {/* Mini-card grid in fixed-height scroll container */}
                       <div className="max-h-[320px] overflow-y-auto custom-scrollbar rounded-xl">
                         <div className="flex flex-wrap gap-3 pr-1 pb-1">
-                          {orders.map(order => {
+                          {uninvoicedOrders.map(order => {
                             const isSelected = selectedOrderIds.includes(order.orderId);
                             return (
                               <label
@@ -296,7 +311,7 @@ export default function CreateInvoice() {
                       {selectedOrderIds.length > 0 && (
                         <div className="mt-2 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2 flex items-center justify-between">
                           <span className="text-[11px] font-bold text-cyan-700">
-                            {selectedOrderIds.length} of {orders.length} order{orders.length > 1 ? 's' : ''} selected
+                            {selectedOrderIds.length} of {uninvoicedOrders.length} order{uninvoicedOrders.length > 1 ? 's' : ''} selected
                           </span>
                           <button
                             type="button"
@@ -309,13 +324,15 @@ export default function CreateInvoice() {
                       )}
                     </>
                   ) : (
-                    <div className="w-full py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No completed orders found</p>
+                    <div className="w-full py-6 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">No completed orders found</p>
                     </div>
                   )
                 ) : (
-                  <div className="w-full py-8 text-center bg-slate-50/30 rounded-2xl border border-dashed border-slate-100">
-                    <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">Please select a username first</p>
+                  <div className="w-full py-8 text-center bg-slate-50/30 rounded-3xl border-2 border-dashed border-slate-100 flex items-center justify-center">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4">
+                      Please select a username first to view and choose order(s).
+                    </p>
                   </div>
                 )}
               </section>
@@ -357,7 +374,7 @@ export default function CreateInvoice() {
                     className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
                   >
                     <Receipt size={16} />
-                    {isSubmitting ? 'Generating...' : 'Individual Invoice'}
+                    {submittingAction === 'Individual' ? 'Generating...' : 'Individual Invoice'}
                   </Button>
 
                   <Button
@@ -367,7 +384,7 @@ export default function CreateInvoice() {
                     className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-600/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
                   >
                     <Receipt size={16} className="rotate-90" />
-                    {isSubmitting ? 'Generating...' : 'Combined Invoice'}
+                    {submittingAction === 'Combined' ? 'Generating...' : 'Combined Invoice'}
                   </Button>
 
                   <Button
@@ -377,7 +394,7 @@ export default function CreateInvoice() {
                     className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-rose-500 hover:bg-rose-600 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-rose-500/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
                   >
                     <Mail size={16} />
-                    {isSubmitting ? 'Generating...' : 'Send Paypal Link'}
+                    {submittingAction === 'Paypal' ? 'Generating...' : 'Send Paypal Link'}
                   </Button>
 
                   <Button

@@ -456,9 +456,9 @@ export default function PriceManagement() {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
         {/* Compact Pro Header */}
-        <div className="py-3 px-4 sm:px-6 border-b border-gray-100 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="py-3 px-4 sm:px-6 border-b border-gray-100 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-t-2xl">
           <div className="w-full sm:w-auto sm:flex-1 max-w-md relative group">
             <SearchBar
               containerClassName="w-full"
@@ -657,6 +657,7 @@ export default function PriceManagement() {
             setItemsPerPage(val);
             setCurrentPage(1);
           }}
+          className="rounded-b-2xl"
         />
       </div>
 
@@ -667,7 +668,7 @@ export default function PriceManagement() {
             onClick={closeModal}
           />
 
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-visible animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="relative h-20 bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center px-8 rounded-t-2xl">
               <div className="absolute top-0 right-0 p-4">

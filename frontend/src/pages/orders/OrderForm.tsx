@@ -316,7 +316,9 @@ export default function OrderForm() {
       return true;
     };
 
-    if (formData.email) {
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else {
       validateEmail(formData.email, 'email', 'Email');
     }
 
@@ -571,7 +573,7 @@ export default function OrderForm() {
                 </div>
 
                 <div className="space-y-1 lg:col-span-6">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Email</label>
+                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Email <span className="text-red-500">*</span></label>
                   <div className="relative group">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
                     <input

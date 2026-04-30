@@ -74,6 +74,8 @@ public class OrdersController : ControllerBase
             FileFormat = x.o.FileFormat,
             UniqueNo = x.o.UniqueNo,
             PaymentStatus = x.o.PaymentStatus,
+            InvoiceId = x.o.InvoiceId,
+            InvoiceNo = x.o.InvoiceNo,
             ExternalLink = _context.OrderFileMsts
                .Where(f => f.OrderNo == x.o.OrderNo && f.FileName == "External Asset Link")
                .Select(f => f.FileUrl)
@@ -255,7 +257,9 @@ public class OrdersController : ControllerBase
             Currency = dto.Currency,
             Email = dto.Email,
             OrderStatus = "In Process",
-            Orderuq = Guid.NewGuid().ToString()
+            PaymentStatus = "Pending",
+            OrderState = "New",
+            Orderuq = orderNo.Contains('-') ? orderNo.Split('-').Last() : orderNo
         };
 
         // Manual Validation: Check if User and Service exist
@@ -268,17 +272,21 @@ public class OrdersController : ControllerBase
         // Validate Amount is numeric
         if (!decimal.TryParse(dto.Amount, out _)) return BadRequest(new { message = "Rate must be a valid number" });
 
+        // Fetch username for audit trail
+        var customer = await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == dto.UniqueNo);
+        var modifiedBy = customer?.Username ?? "Admin";
+
         _context.OrderDetails.Add(order);
         await _context.SaveChangesAsync();
 
         if (files != null && files.Count > 0)
         {
-            await SaveFilesAsync(order.OrderNo ?? "", files);
+            await SaveFilesAsync(order.OrderNo ?? "", files, modifiedBy);
         }
 
         if (!string.IsNullOrEmpty(dto.ExternalLink))
         {
-            await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink);
+            await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink, modifiedBy);
         }
 
         return Ok(order);
@@ -313,7 +321,7 @@ public class OrdersController : ControllerBase
             order.OrderStatus = dto.OrderStatus;
             if (dto.OrderStatus == "Completed")
             {
-                order.CompletedDate = DateTime.Now;
+                order.CompletedDate = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "Eastern Standard Time");
                 order.OrderState = "Completed";
 
                 // Digitizing Price Recalculation (Legacy Logic)
@@ -333,19 +341,24 @@ public class OrdersController : ControllerBase
             }
         }
 
+        // Fetch username for audit trail
+        var customerUpdate = await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == dto.UniqueNo);
+        var modifiedByUpdate = customerUpdate?.Username ?? "Admin";
+
         await _context.SaveChangesAsync();
 
         // Save new attachments
         if (files != null && files.Count > 0)
         {
-            await SaveFilesAsync(order.OrderNo ?? "", files);
+            var fileStatus = dto.OrderStatus == "Completed" ? "Completed" : "Active";
+            await SaveFilesAsync(order.OrderNo ?? "", files, modifiedByUpdate, fileStatus);
         }
 
         // Handle file deletions
         if (dto.FilesToDelete != null && dto.FilesToDelete.Count > 0)
         {
             var filesToRemove = await _context.OrderFileMsts
-                .Where(f => f.OrderNo == order.OrderNo && dto.FilesToDelete.Contains(f.OrderFileId))
+                .Where(f => dto.FilesToDelete.Contains(f.OrderFileId))
                 .ToListAsync();
 
             if (filesToRemove.Any())
@@ -366,13 +379,13 @@ public class OrdersController : ControllerBase
 
         if (!string.IsNullOrEmpty(dto.ExternalLink))
         {
-            await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink);
+            await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink, modifiedByUpdate);
         }
 
         return Ok(order);
     }
 
-    private async Task SaveFilesAsync(string orderNo, List<IFormFile> files)
+    private async Task SaveFilesAsync(string orderNo, List<IFormFile> files, string modifiedBy, string fileStatus = "Active")
     {
         var uploadsPath = Path.Combine(_env.ContentRootPath, "wwwroot", "uploads", "orders");
         if (!Directory.Exists(uploadsPath))
@@ -397,9 +410,9 @@ public class OrdersController : ControllerBase
                     OrderNo = orderNo,
                     FileName = file.FileName,
                     FileUrl = $"/uploads/orders/{fileName}",
-                    FileStatus = "Active",
+                    FileStatus = fileStatus,
                     LastModifieddate = DateTime.Now,
-                    LastModifiedBy = "Admin", // Should come from auth
+                    LastModifiedBy = modifiedBy,
                     LastModifiedUserType = "Admin"
                 };
 
@@ -410,7 +423,7 @@ public class OrdersController : ControllerBase
         await _context.SaveChangesAsync();
     }
 
-    private async Task SaveExternalLinkAsync(string orderNo, string externalLink)
+    private async Task SaveExternalLinkAsync(string orderNo, string externalLink, string modifiedBy)
     {
         // Check if an external link already exists for this order
         var existingLink = await _context.OrderFileMsts
@@ -430,7 +443,7 @@ public class OrdersController : ControllerBase
                 FileUrl = externalLink,
                 FileStatus = "Active",
                 LastModifieddate = DateTime.Now,
-                LastModifiedBy = "Admin",
+                LastModifiedBy = modifiedBy,
                 LastModifiedUserType = "Admin"
             };
             await _context.OrderFileMsts.AddAsync(orderFile);
@@ -445,8 +458,40 @@ public class OrdersController : ControllerBase
         var order = await _context.OrderDetails.FindAsync(id);
         if (order == null) return NotFound();
 
+        if (order.PaymentStatus == "Completed")
+            return BadRequest(new { message = "Cannot delete a paid order" });
+
+        // 1. Find all associated files for this order
+        if (!string.IsNullOrEmpty(order.OrderNo))
+        {
+            var filesToRemove = await _context.OrderFileMsts
+                .Where(f => f.OrderNo == order.OrderNo)
+                .ToListAsync();
+
+            if (filesToRemove.Any())
+            {
+                // 2. Delete physical files from disk to prevent storage leaks
+                foreach (var file in filesToRemove)
+                {
+                    if (!string.IsNullOrEmpty(file.FileUrl) && !file.FileUrl.StartsWith("http"))
+                    {
+                        var fullPath = Path.Combine(_env.ContentRootPath, "wwwroot", file.FileUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(fullPath))
+                        {
+                            try { System.IO.File.Delete(fullPath); } catch { }
+                        }
+                    }
+                }
+                
+                // 3. Remove file records from the database
+                _context.OrderFileMsts.RemoveRange(filesToRemove);
+            }
+        }
+
+        // 4. Remove the order itself
         _context.OrderDetails.Remove(order);
         await _context.SaveChangesAsync();
-        return Ok(new { message = "Order deleted successfully" });
+        
+        return Ok(new { message = "Order and associated files deleted successfully" });
     }
 }

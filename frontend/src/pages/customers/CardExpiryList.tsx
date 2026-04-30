@@ -177,9 +177,9 @@ export default function CardExpiryList() {
       {/* Page Header */}
 
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
         {/* Toolbar */}
-        <div className="py-2.5 px-4 sm:px-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="py-2.5 px-4 sm:px-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-t-2xl">
           <SearchBar
             containerClassName="w-full sm:flex-1 max-w-md"
             placeholder="Search by name or company..."
@@ -307,6 +307,7 @@ export default function CardExpiryList() {
             setItemsPerPage(val);
             setCurrentPage(1);
           }}
+          className="rounded-b-2xl"
         />
       </div>
 

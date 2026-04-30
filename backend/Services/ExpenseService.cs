@@ -10,9 +10,9 @@ public class ExpenseService : IExpenseService
 
     public ExpenseService(IExpenseRepository repo) => _repo = repo;
 
-    public async Task<object> GetPagedAsync(string? search, long? serviceId, int page, int pageSize)
+    public async Task<object> GetPagedAsync(string? search, long? serviceId, DateTime? startDate, DateTime? endDate, int page, int pageSize)
     {
-        var (items, totalCount) = await _repo.GetPagedAsync(search, serviceId, page, pageSize);
+        var (items, totalCount, totalAmount) = await _repo.GetPagedAsync(search, serviceId, startDate, endDate, page, pageSize);
 
         var dtos = items.Select(e => MapToDto(e)).ToList();
 
@@ -20,6 +20,7 @@ public class ExpenseService : IExpenseService
         {
             items = dtos,
             totalCount,
+            filteredTotalAmount = totalAmount,
             page,
             pageSize,
             totalPages = (int)Math.Ceiling((double)totalCount / pageSize)

@@ -103,6 +103,7 @@ public class PriceRepository : IPriceRepository
         var query = _db.UserPriceMsts
             .Include(p => p.Service)
             .Include(p => p.User)
+            .Where(p => p.User != null && p.User.IsActive == "Y")
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -196,7 +197,7 @@ public class PriceRepository : IPriceRepository
     public async Task<IEnumerable<UserRegistration>> GetAllUsersAsync() =>
         await _db.UserRegistrations
             .Include(u => u.CardDetails)
-            .Where(u => u.Username != null && u.Username != "")
+            .Where(u => u.Username != null && u.Username != "" && u.IsActive == "Y")
             .OrderBy(u => u.Username)
             .ToListAsync();
 
