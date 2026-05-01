@@ -11,6 +11,7 @@ export interface Invoice {
   fullname: string;
   companyName: string;
   customerId: string;
+  currency: string;
   orderNos: string;          // "113-61" or "71 to 75"
   status: string;            // "Completed" | "Pending"
   pdfUrl: string;

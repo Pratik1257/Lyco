@@ -55,7 +55,8 @@ public class PriceRepository : IPriceRepository
     public async Task<decimal?> GetGeneralPriceValueAsync(long serviceId, string currency)
     {
         var priceStr = await _db.PriceMsts
-            .Where(p => p.ServiceId == serviceId && p.Currency == currency)
+            // BUG-P1 fix: only return visible prices (Show = 'Y')
+            .Where(p => p.ServiceId == serviceId && p.Currency == currency && p.Show == "Y")
             .Select(p => p.Price)
             .FirstOrDefaultAsync();
 

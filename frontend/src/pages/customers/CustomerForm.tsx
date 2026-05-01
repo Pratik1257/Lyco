@@ -207,9 +207,7 @@ export default function CustomerForm() {
       return true;
     };
 
-    const nameRegex = /^[a-zA-Z\s'-]*$/;
     const alphaNumRegex = /^[a-zA-Z0-9][a-zA-Z0-9._]*$/;
-    const companyRegex = /^[a-zA-Z0-9\s&.,'-]*$/;
 
     if (req('username', 'Username')) {
       if (!alphaNumRegex.test(formData.username!)) {

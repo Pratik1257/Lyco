@@ -56,12 +56,27 @@ public class InvoicesController : ControllerBase
 
         if (startDate.HasValue)
         {
-            query = query.Where(i => i.InvoiceDate >= startDate.Value);
+            var start = startDate.Value.Date;
+            query = query.Where(i => i.InvoiceDate >= start);
         }
 
         if (endDate.HasValue)
         {
-            query = query.Where(i => i.InvoiceDate <= endDate.Value);
+            // Use strict less than next day to include all records on the selected end date
+            var nextDay = endDate.Value.Date.AddDays(1);
+            query = query.Where(i => i.InvoiceDate < nextDay);
+        }
+
+        if (!string.IsNullOrEmpty(status) && status != "all")
+        {
+            if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(i => i.OrderDetails.Any() && i.OrderDetails.All(o => o.PaymentStatus == "Completed"));
+            }
+            else if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(i => i.OrderDetails.Any(o => o.PaymentStatus != "Completed"));
+            }
         }
 
         var totalCount = await query.CountAsync();
@@ -99,16 +114,11 @@ public class InvoicesController : ControllerBase
                 Fullname = i.User != null ? $"{i.User.Firstname} {i.User.Lastname}".Trim() : "--",
                 CompanyName = i.User?.Companyname ?? "--",
                 CustomerId = i.User?.UniqueNo?.ToString() ?? "--",
+                Currency = i.User?.Currency ?? "USD",
                 OrderNos = orderNoDisplay,
                 Status = derivedStatus
             };
         }).ToList();
-
-        // Filter by derived status if requested
-        if (!string.IsNullOrEmpty(status) && status != "all")
-        {
-            items = items.Where(i => i.Status.Equals(status, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
 
         return Ok(new
         {

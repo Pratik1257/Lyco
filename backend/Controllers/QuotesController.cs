@@ -288,6 +288,10 @@ public class QuotesController : ControllerBase
             return BadRequest(new { message = "An order with this number already exists. It may have been converted already." });
         }
 
+        // BUG-Q3 fix: use sequence portion of OrderNo, not a GUID
+        var orderParts = orderNo.Split('-');
+        var orderuq = orderParts.Length >= 1 ? orderParts.Last() : orderNo;
+
         var order = new OrderDetail
         {
             OrderNo = orderNo,
@@ -303,7 +307,9 @@ public class QuotesController : ControllerBase
             Currency = quote.Currency,
             Email = quote.Email,
             OrderStatus = "In Process",
-            Orderuq = Guid.NewGuid().ToString()
+            OrderState = "New",           // BUG-Q2 fix
+            PaymentStatus = "Pending",    // BUG-Q1 fix
+            Orderuq = orderuq             // BUG-Q3 fix
         };
 
         _context.OrderDetails.Add(order);

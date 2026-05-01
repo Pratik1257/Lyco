@@ -21,7 +21,6 @@ export default function InvoiceList() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
   // Fetch real invoices from API
   const { data, isLoading } = useQuery({
     queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate],
@@ -33,12 +32,12 @@ export default function InvoiceList() {
   const totalPages = data?.totalPages || 1;
 
   const getStatusStyle = (status: string) => {
-    if (status === 'Paid') return 'bg-green-50 text-green-700 border-green-100';
+    if (status === 'Completed') return 'bg-green-50 text-green-700 border-green-100';
     return 'bg-amber-50 text-amber-700 border-amber-100';
   };
 
   const getStatusIcon = (status: string) => {
-    if (status === 'Paid') return <CheckCircle2 size={12} />;
+    if (status === 'Completed') return <CheckCircle2 size={12} />;
     return <Clock size={12} />;
   };
 
@@ -78,8 +77,8 @@ export default function InvoiceList() {
                   onChange={(val) => { setStatusFilter(val as string); setCurrentPage(1); }}
                   options={[
                     { value: 'all', label: 'All Status' },
-                    { value: 'paid', label: 'Paid' },
-                    { value: 'unpaid', label: 'Unpaid' },
+                    { value: 'Completed', label: 'Completed' },
+                    { value: 'Pending', label: 'Pending' },
                   ]}
                   placeholder="Status"
                 />
@@ -182,7 +181,7 @@ export default function InvoiceList() {
                       </div>
                     </TableCell>
                     <TableCell className="px-4 font-bold text-slate-900 text-sm whitespace-nowrap">
-                      USD {invoice.amount}
+                      {invoice.currency || 'USD'} {invoice.amount}
                     </TableCell>
                     <TableCell className="px-4 whitespace-nowrap">
                       <div

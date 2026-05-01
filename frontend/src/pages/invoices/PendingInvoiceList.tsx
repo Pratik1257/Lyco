@@ -11,12 +11,14 @@ import { Pagination } from '../../components/ui/Pagination';
 import { useQuery } from '@tanstack/react-query';
 import { invoicesApi } from '../../api/invoicesApi';
 import DatePicker from '../../components/ui/DatePicker';
+import CustomSelect from '../../components/ui/CustomSelect';
 
 export default function PendingInvoiceList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [headerCurrency, setHeaderCurrency] = useState('USD');
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading, isError, error } = useQuery({
@@ -28,14 +30,19 @@ export default function PendingInvoiceList() {
   const invoices = data?.items || [];
   const totalCount = data?.totalCount || 0;
   
-  // Calculate total outstanding
-  const totalOutstanding = invoices.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
-
+  // Calculate total outstanding for the selected currency only
+  const totalOutstanding = invoices
+    .filter(inv => (inv.currency || 'USD') === headerCurrency)
+    .reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
 
   const handleExport = async () => {
     const loadingToast = toast.loading('Preparing professional Excel export...');
     try {
-      if (invoices.length === 0) {
+      // Fetch all pending invoices matching current filters (bypassing current pagination)
+      const allData = await invoicesApi.getInvoices(1, 1000, searchQuery, 'Pending', startDate, endDate);
+      const allInvoices = allData?.items || [];
+
+      if (allInvoices.length === 0) {
         toast.dismiss(loadingToast);
         toast.error('No invoices to export');
         return;
@@ -80,7 +87,7 @@ export default function PendingInvoiceList() {
       worksheet.getRow(2).height = 10;
 
       // 4. Add Data
-      invoices.forEach(inv => {
+      allInvoices.forEach(inv => {
         const row = worksheet.addRow({
           invoiceNo: inv.invoiceNo,
           invoiceDate: new Date(inv.invoiceDate).toLocaleDateString(),
@@ -138,8 +145,20 @@ export default function PendingInvoiceList() {
         <div className="flex items-center gap-3 py-3 px-5 bg-white/10 backdrop-blur-md border border-white/10 rounded-xl">
            <AlertCircle size={20} className="text-amber-400" />
            <div className="flex flex-col">
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Outstanding (Page)</span>
-             <span className="text-lg font-black text-white">${totalOutstanding.toFixed(2)}</span>
+             <div className="flex items-center gap-2 mb-1">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Outstanding (Page)</span>
+               <select
+                 value={headerCurrency}
+                 onChange={(e) => setHeaderCurrency(e.target.value)}
+                 className="bg-transparent text-[10px] text-cyan-400 font-bold outline-none cursor-pointer border-b border-cyan-400/30 pb-0.5"
+               >
+                 <option value="USD" className="text-slate-900">USD</option>
+                 <option value="GBP" className="text-slate-900">GBP</option>
+                 <option value="EURO" className="text-slate-900">EURO</option>
+                 <option value="AUD" className="text-slate-900">AUD</option>
+               </select>
+             </div>
+             <span className="text-lg font-black text-white">{headerCurrency} {totalOutstanding.toFixed(2)}</span>
            </div>
         </div>
       </div>
@@ -247,7 +266,7 @@ export default function PendingInvoiceList() {
                       {invoice.po || '--'}
                     </TableCell>
                     <TableCell className="px-4 font-bold text-slate-900 text-sm whitespace-nowrap">
-                      ${parseFloat(invoice.amount).toFixed(2)}
+                      {invoice.currency || 'USD'} {parseFloat(invoice.amount).toFixed(2)}
                     </TableCell>
                     <TableCell className="px-6 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">

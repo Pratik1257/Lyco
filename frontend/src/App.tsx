@@ -7,6 +7,8 @@ import Dashboard from './pages/dashboard/Dashboard';
 import ServiceList from './pages/services/ServiceList';
 import PriceManagement from './pages/prices/PriceManagement';
 import ChangePasswordForm from './pages/auth/ChangePasswordForm';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
 import CustomerList from './pages/customers/CustomerList';
 import CustomerForm from './pages/customers/CustomerForm';
 import CustomerFormModal from './components/customers/CustomerFormModal';
@@ -103,6 +105,8 @@ export default function App() {
               <Route path="change-password" element={<ChangePasswordForm />} />
               <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
             </Route>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>

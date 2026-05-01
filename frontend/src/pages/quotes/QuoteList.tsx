@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Eye, Trash2, Download, Plus, FileText, Pencil,
-  Calendar, Clock, AlertCircle, Quote as QuoteIcon 
+  Search, Eye, Trash2, Plus, FileText, Pencil
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Lyco.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2e170ca39a43d8f97bdb1af53ee52d8277a84692")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+470f7973d7782ff45eccd0c26a7470630dc925ee")]
 [assembly: System.Reflection.AssemblyProductAttribute("Lyco.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Lyco.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

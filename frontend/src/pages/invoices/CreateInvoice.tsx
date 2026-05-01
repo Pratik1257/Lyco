@@ -18,7 +18,7 @@ export default function CreateInvoice() {
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUniqueNo, setSelectedUniqueNo] = useState<number | null>(null);
-  const [customerDetails, setCustomerDetails] = useState<{ companyName: string; email: string } | null>(null);
+  const [customerDetails, setCustomerDetails] = useState<{ companyName: string; email: string; currency: string } | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingAction, setSubmittingAction] = useState<string | null>(null);
@@ -54,7 +54,9 @@ export default function CreateInvoice() {
         setSelectedUniqueNo(user.uniqueNo || null);
         setCustomerDetails({
           companyName: user.companyname || '',
-          email: user.primaryEmail || ''
+          // BUG-CI1 fix: use AccountEmail if set, fall back to PrimaryEmail
+          email: (user as any).accountEmail || user.primaryEmail || '',
+          currency: user.currency || 'USD'
         });
       }
     } else {
@@ -89,11 +91,24 @@ export default function CreateInvoice() {
   };
 
   const calculatePendingTotal = () => {
+    // BUG-CI2 fix: only check 'Pending' (standardized PaymentStatus value)
     return orders
-      .filter(o => o.paymentStatus === 'Pending' || o.paymentStatus === 'Unpaid')
+      .filter(o => o.paymentStatus === 'Pending')
       .reduce((sum, o) => sum + Number(o.amount || 0), 0)
       .toFixed(2);
   };
+
+  const getCurrencySymbol = (currency: string) => {
+    switch (currency) {
+      case 'GBP': return '£';
+      case 'EURO': return '€';
+      case 'AUD': return 'A$';
+      default: return '$';
+    }
+  };
+
+  const currencyCode = customerDetails?.currency || 'USD';
+  const currencySymbol = getCurrencySymbol(currencyCode);
 
   const handleSubmit = async (type: string) => {
     if (!selectedUserId) {
@@ -219,7 +234,7 @@ export default function CreateInvoice() {
                       <input
                         type="text"
                         value={customerDetails?.email || ''}
-                        onChange={(e) => setCustomerDetails(prev => prev ? { ...prev, email: e.target.value } : { companyName: '', email: e.target.value })}
+                        onChange={(e) => setCustomerDetails(prev => prev ? { ...prev, email: e.target.value } : { companyName: '', email: e.target.value, currency: 'USD' })}
                         placeholder="client@example.com"
                         className={`${premiumInput} pl-10 bg-white`}
                       />
@@ -299,7 +314,7 @@ export default function CreateInvoice() {
 
                                 {/* Amount */}
                                 <span className={`text-xs font-black mt-0.5 ${isSelected ? 'text-cyan-600' : 'text-slate-700'}`}>
-                                  ${Number(order.amount || 0).toFixed(2)}
+                                  {currencySymbol}{Number(order.amount || 0).toFixed(2)}
                                 </span>
                               </label>
                             );
@@ -346,7 +361,7 @@ export default function CreateInvoice() {
                   <div className="p-6 bg-cyan-50/30 border border-cyan-100/50 rounded-3xl shadow-sm flex items-center justify-between group hover:bg-cyan-50/50 transition-all">
                     <div>
                       <p className="text-[10px] font-black uppercase text-cyan-700/60 tracking-widest mb-1">Total Invoice Amount</p>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{calculateTotal()} <span className="text-xs text-slate-400 font-bold uppercase ml-1">USD</span></h3>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{calculateTotal()} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{currencyCode}</span></h3>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-cyan-100/50 flex items-center justify-center text-cyan-600 shadow-inner group-hover:scale-110 transition-transform">
                       <DollarSign size={24} />
@@ -355,7 +370,7 @@ export default function CreateInvoice() {
                   <div className="p-6 bg-amber-50/30 border border-amber-100/50 rounded-3xl shadow-sm flex items-center justify-between group hover:bg-amber-50/50 transition-all">
                     <div>
                       <p className="text-[10px] font-black uppercase text-amber-700/60 tracking-widest mb-1">Pending Amount</p>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{calculatePendingTotal()} <span className="text-xs text-slate-400 font-bold uppercase ml-1">USD</span></h3>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{calculatePendingTotal()} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{currencyCode}</span></h3>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-amber-100/50 flex items-center justify-center text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
                       <Clock size={24} />

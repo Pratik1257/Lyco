@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Mail, Hash, DollarSign, PenTool, Layers,
+  Mail, Hash, PenTool, Layers,
   Maximize2, Paperclip, ChevronLeft, Link, Info, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -29,7 +29,7 @@ const quillFormats = [
   'bold', 'italic', 'underline', 'list'
 ];
 
-const premiumInput = "w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all shadow-sm group-hover:border-slate-300";
+
 
 const getCurrencySymbol = (currency: string | null) => {
   if (!currency) return '$';
