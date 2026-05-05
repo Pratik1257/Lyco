@@ -225,7 +225,12 @@ export default function ExpenseList() {
   const formatAmount = (amount: number | null, currency: string | null = 'USD') => {
     if (amount == null) return '--';
     const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AUD' ? 'A$' : '$';
-    const formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    // Hide .00 if it's a whole number, otherwise show 2 decimals
+    const formatted = amount % 1 === 0
+      ? amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+      : amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
     return `${symbol}${formatted}`;
   };
 
@@ -272,7 +277,9 @@ export default function ExpenseList() {
           <div>
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Filtered Total</p>
             <p className="text-2xl font-black text-gray-900">
-              {filteredTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {filteredTotalAmount % 1 === 0
+                ? filteredTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                : filteredTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
@@ -520,7 +527,7 @@ export default function ExpenseList() {
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">Amount <span className="text-red-500">*</span></label>
                   <input
                     type="number"
-                    step="1"
+                    step="any"
                     min="0"
                     value={formData.amount || ''}
                     onChange={(e) => {

@@ -90,7 +90,7 @@ public class InvoicesController : ControllerBase
         var invoiceIds = rawItems.Select(i => i.InvoiceId).ToList();
         var linkedOrders = await _context.OrderDetails
             .Where(o => o.InvoiceId != null && invoiceIds.Contains((long)o.InvoiceId))
-            .Select(o => new { o.InvoiceId, o.PaymentStatus, o.OrderNo })
+            .Select(o => new { o.InvoiceId, o.PaymentStatus, o.OrderNo, o.Currency })
             .ToListAsync();
 
         var items = rawItems.Select(i =>
@@ -114,7 +114,7 @@ public class InvoicesController : ControllerBase
                 Fullname = i.User != null ? $"{i.User.Firstname} {i.User.Lastname}".Trim() : "--",
                 CompanyName = i.User?.Companyname ?? "--",
                 CustomerId = i.User?.UniqueNo?.ToString() ?? "--",
-                Currency = i.User?.Currency ?? "USD",
+                Currency = orders.FirstOrDefault()?.Currency ?? i.User?.Currency ?? "USD",
                 OrderNos = orderNoDisplay,
                 Status = derivedStatus
             };

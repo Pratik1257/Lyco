@@ -145,7 +145,7 @@ public class UserService : IUserService
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Name, user.Username ?? string.Empty),
                 new Claim(ClaimTypes.Role, user.UserType ?? "Customer")
             }),
             Expires = DateTime.UtcNow.AddHours(2),
@@ -157,7 +157,7 @@ public class UserService : IUserService
 
         var response = new LoginResponse(
             user.UserId,
-            user.Username,
+            user.Username ?? string.Empty,
             $"{user.Firstname} {user.Lastname}".Trim(),
             user.UserType ?? "Customer",
             tokenHandler.WriteToken(token)

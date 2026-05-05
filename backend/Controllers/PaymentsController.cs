@@ -288,4 +288,33 @@ public class PaymentsController : ControllerBase
 
         return Ok(new { paypalUrl, transactionNumber });
     }
+    // ── GET /admin/api/Payments/paypal-config ──────────────────────────────
+    [HttpGet("paypal-config")]
+    public async Task<IActionResult> GetPaypalConfig()
+    {
+        var config = await _context.BillingPaypalMasters.ToListAsync();
+        return Ok(config);
+    }
+
+    public class PaypalConfigRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    // ── PUT /admin/api/Payments/paypal-config/{id} ───────────────────────────
+    [HttpPut("paypal-config/{id}")]
+    public async Task<IActionResult> UpdatePaypalConfig(long id, [FromBody] PaypalConfigRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { Message = "Email is required." });
+
+        var config = await _context.BillingPaypalMasters.FindAsync(id);
+        if (config == null)
+            return NotFound(new { Message = "Configuration not found." });
+
+        config.Email = request.Email;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = "PayPal email updated successfully." });
+    }
 }

@@ -58,6 +58,11 @@ export interface InitiatePaymentResponse {
   transactionNumber: string;
 }
 
+export interface PaypalConfig {
+  id: number;
+  email: string;
+}
+
 export const paymentsApi = {
   async getPendingForStatus(uniqueNo: number): Promise<PendingOrder[]> {
     const response = await apiClient.get<PendingOrder[]>(`../admin/api/Payments/pending-for-status?uniqueNo=${uniqueNo}`);
@@ -101,5 +106,14 @@ export const paymentsApi = {
     const response = await apiClient.post<InitiatePaymentResponse>('../admin/api/Payments/initiate', request);
     return response.data;
   },
-};
 
+  async getPaypalConfig(): Promise<PaypalConfig[]> {
+    const response = await apiClient.get<PaypalConfig[]>('../admin/api/Payments/paypal-config');
+    return response.data;
+  },
+
+  async updatePaypalConfig(id: number, email: string): Promise<{ message: string }> {
+    const response = await apiClient.put(`../admin/api/Payments/paypal-config/${id}`, { email });
+    return response.data;
+  },
+};

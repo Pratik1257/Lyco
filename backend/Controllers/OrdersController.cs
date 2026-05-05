@@ -460,8 +460,11 @@ public class OrdersController : ControllerBase
         var order = await _context.OrderDetails.FindAsync(id);
         if (order == null) return NotFound();
 
+        if (order.OrderStatus == "Invoiced")
+            return BadRequest(new { message = "Invoiced orders cannot be deleted. Please contact your administrator for further assistance." });
+
         if (order.PaymentStatus == "Completed")
-            return BadRequest(new { message = "Cannot delete a paid order" });
+            return BadRequest(new { message = "Paid orders cannot be deleted." });
 
         // 1. Find all associated files for this order
         if (!string.IsNullOrEmpty(order.OrderNo))

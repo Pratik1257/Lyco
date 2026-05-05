@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, memo } from 'react';
+import { useState, useMemo, useRef, memo, useEffect } from 'react';
 import Select, { components } from 'react-select';
 import type { MenuProps, StylesConfig, Props as SelectProps } from 'react-select';
 import { Search } from 'lucide-react';
@@ -136,7 +136,7 @@ const CustomMenu = (props: MenuProps<Option, false>) => {
 
   return (
     <components.Menu {...props}>
-      <div className="p-2 border-b border-gray-100 bg-white">
+      <div className="p-2 border-b border-gray-100 bg-white" onMouseDown={e => e.stopPropagation()}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
@@ -215,6 +215,29 @@ export default function CustomSelect({
       ),
     [options, searchText]
   );
+
+  useEffect(() => {
+    if (!menuIsOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      // If clicking inside the container, do nothing (Control handles it)
+      if (containerRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      // If clicking inside the portaled menu, do nothing
+      // We check if the target is inside a div with the react-select portal class
+      const target = event.target as HTMLElement;
+      if (target.closest('.react-select__menu-portal')) {
+        return;
+      }
+
+      setMenuIsOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [menuIsOpen]);
 
   const customStyles: StylesConfig<Option, false> = {
     control: (base, state) => ({
@@ -344,6 +367,7 @@ export default function CustomSelect({
         <ExtendedSelect
           options={filteredOptions}
           value={selectedOption}
+          classNamePrefix="react-select"
           onChange={(option) => {
             onChange(option ? option.value : '');
             setMenuIsOpen(false);
@@ -362,12 +386,7 @@ export default function CustomSelect({
             setTimeout(() => searchInputRef.current?.focus(), 50);
           }}
           onMenuClose={() => {
-            // Slight delay to check where focus went
-            setTimeout(() => {
-              if (document.activeElement !== searchInputRef.current) {
-                setMenuIsOpen(false);
-              }
-            }, 150);
+             // We handle closing via handleClickOutside and Control click
           }}
           customProps={{ searchText, setSearchText, searchInputRef, menuAlign, setMenuIsOpen, menuIsOpen }}
           components={{ 

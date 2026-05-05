@@ -92,18 +92,7 @@ export default function ManagePaymentStatus() {
     setSelectedOrderIds([]);
   };
 
-  const calculateTotalSelected = () => {
-    return orders
-      .filter(o => selectedOrderIds.includes(o.orderId))
-      .reduce((sum, o) => sum + Number(o.amount || 0), 0)
-      .toFixed(2);
-  };
 
-  const calculateTotalPending = () => {
-    return orders
-      .reduce((sum, o) => sum + Number(o.amount || 0), 0)
-      .toFixed(2);
-  };
 
   const handleUpdateStatus = async (status: 'Completed' | 'Bad Debt') => {
     if (selectedOrderIds.length === 0) {
@@ -120,13 +109,9 @@ export default function ManagePaymentStatus() {
       });
       toast.success(response.message);
 
-      // Refresh list
-      const user = users.find(u => u.id === selectedUserId);
-      if (user?.uniqueNo) {
-        const data = await paymentsApi.getPendingForStatus(user.uniqueNo);
-        setOrders(data);
-      }
+      // Reset selection and customer after successful update
       setSelectedOrderIds([]);
+      setSelectedUserId(null);
     } catch (error) {
       console.error('Failed to update status:', error);
       toast.error('Update failed');
@@ -257,7 +242,7 @@ export default function ManagePaymentStatus() {
                               </div>
 
                               <span className={`text-xs font-black mt-0.5 ${isSelected ? 'text-cyan-600' : 'text-slate-700'}`}>
-                                {customerDetails?.currency || 'USD'} {Number(order.amount || 0).toFixed(2)}
+                                {order.currency || 'USD'} {Number(order.amount || 0).toFixed(2)}
                               </span>
                             </label>
                           );
@@ -290,9 +275,24 @@ export default function ManagePaymentStatus() {
                   <div className="p-6 bg-cyan-50/30 border border-cyan-100/50 rounded-3xl shadow-sm flex items-center justify-between group hover:bg-cyan-50/50 transition-all">
                     <div>
                       <p className="text-[10px] font-black uppercase text-cyan-700/60 tracking-widest mb-1">Total Selected Amount</p>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">
-                        {calculateTotalSelected()} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{customerDetails?.currency || 'USD'}</span>
-                      </h3>
+                      <div className="flex flex-col gap-1">
+                        {Object.entries(
+                          orders
+                            .filter(o => selectedOrderIds.includes(o.orderId))
+                            .reduce((acc, o) => {
+                              const curr = o.currency || 'USD';
+                              acc[curr] = (acc[curr] || 0) + Number(o.amount || 0);
+                              return acc;
+                            }, {} as Record<string, number>)
+                        ).map(([curr, amt]) => (
+                          <h3 key={curr} className="text-2xl font-black text-slate-900 tracking-tight">
+                            {amt.toFixed(2)} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{curr}</span>
+                          </h3>
+                        ))}
+                        {selectedOrderIds.length === 0 && (
+                          <h3 className="text-2xl font-black text-slate-300 tracking-tight">0.00</h3>
+                        )}
+                      </div>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-cyan-100/50 flex items-center justify-center text-cyan-600 shadow-inner group-hover:scale-110 transition-transform">
                       <DollarSign size={24} />
@@ -301,9 +301,22 @@ export default function ManagePaymentStatus() {
                   <div className="p-6 bg-amber-50/30 border border-amber-100/50 rounded-3xl shadow-sm flex items-center justify-between group hover:bg-amber-50/50 transition-all">
                     <div>
                       <p className="text-[10px] font-black uppercase text-amber-700/60 tracking-widest mb-1">Total Pending Amount</p>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">
-                        {calculateTotalPending()} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{customerDetails?.currency || 'USD'}</span>
-                      </h3>
+                      <div className="flex flex-col gap-1">
+                        {Object.entries(
+                          orders.reduce((acc, o) => {
+                            const curr = o.currency || 'USD';
+                            acc[curr] = (acc[curr] || 0) + Number(o.amount || 0);
+                            return acc;
+                          }, {} as Record<string, number>)
+                        ).map(([curr, amt]) => (
+                          <h3 key={curr} className="text-2xl font-black text-slate-900 tracking-tight">
+                            {amt.toFixed(2)} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{curr}</span>
+                          </h3>
+                        ))}
+                        {orders.length === 0 && (
+                          <h3 className="text-2xl font-black text-slate-300 tracking-tight">0.00</h3>
+                        )}
+                      </div>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-amber-100/50 flex items-center justify-center text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
                       <Clock size={24} />

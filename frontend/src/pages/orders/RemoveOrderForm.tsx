@@ -52,11 +52,16 @@ export default function RemoveOrderForm() {
       queryClient.invalidateQueries({ queryKey: ['user-orders-remove'] });
       toast.success(`${selectedOrderIds.length} order(s) removed successfully`);
       setSelectedOrderIds([]);
-      // Optionally navigate away or stay to remove more
-      // navigate('/orders/summary');
+      setSelectedUserId(null);
+      setSelectedCustomer(null);
+      setIsModalOpen(false);
     },
     onError: (error: any) => {
-      toast.error(`Failed to remove orders: ${error.message || 'Unknown error'}`);
+      const msg = error.response?.data?.message || error.message || 'Unknown error';
+      toast.error(`Removal Failed: ${msg}`, {
+        duration: 4000
+      });
+      setIsModalOpen(false);
     }
   });
 
@@ -115,6 +120,21 @@ export default function RemoveOrderForm() {
   };
 
   const confirmRemove = () => {
+    // Client-side safety check: Identify any invoiced orders in the selection
+    const invoicedOrders = allOrders.filter(o => 
+      selectedOrderIds.includes(o.orderId) && o.orderStatus === 'Invoiced'
+    );
+
+    if (invoicedOrders.length > 0) {
+      const orderNos = invoicedOrders.map(o => o.orderNo).join(', ');
+      toast.error(`Deletion Blocked: Order(s) [${orderNos}] are already invoiced. Invoiced orders cannot be deleted for audit integrity.`, {
+        duration: 6000,
+        icon: '🚫'
+      });
+      setIsModalOpen(false);
+      return;
+    }
+
     deleteMutation.mutate(selectedOrderIds);
   };
 
@@ -155,7 +175,7 @@ export default function RemoveOrderForm() {
                   <input
                     type="text"
                     readOnly
-                    placeholder="Company Name"
+                    placeholder="Select a customer to see company name"
                     className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-500 focus:outline-none"
                     value={selectedCustomer?.companyname || ''}
                   />

@@ -2,7 +2,8 @@ import { useState, useRef, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   X, Upload, File as FileIcon, Info, Link, 
-  CheckCircle2, AlertCircle, ShoppingBag, User, Hash
+  CheckCircle2, AlertCircle, ShoppingBag, User, Hash,
+  ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ordersApi, type Order } from '../../api/ordersApi';
@@ -297,27 +298,43 @@ export default function CompleteOrderModal({ isOpen, onClose, order }: CompleteO
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 {/* Existing Files */}
                 {existingFiles.map((file, idx) => (
-                  <div key={`existing-${idx}`} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl shadow-sm">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
-                        <FileIcon size={14} className="text-slate-500" />
+                  <div key={`existing-${idx}`} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl shadow-sm group/card hover:border-cyan-200 transition-colors">
+                    <a
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 overflow-hidden flex-1 group/link"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0 group-hover/link:bg-cyan-50 transition-colors">
+                        <FileIcon size={14} className="text-slate-500 group-hover/link:text-cyan-600" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-[11px] font-bold text-slate-700 truncate">{file.fileName}</span>
+                        <span className="text-[11px] font-bold text-slate-700 truncate group-hover/link:text-cyan-600 transition-colors">{file.fileName}</span>
                         <span className="text-[9px] text-slate-400 font-medium uppercase tracking-wider">Existing</span>
                       </div>
+                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-7 h-7 rounded-full bg-white hover:bg-cyan-50 text-slate-400 hover:text-cyan-600 flex items-center justify-center transition-colors shadow-sm"
+                        title="View File"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilesToDelete(prev => [...prev, file.orderFileId]);
+                          setExistingFiles(prev => prev.filter(f => f.orderFileId !== file.orderFileId));
+                        }}
+                        className="w-7 h-7 rounded-full bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors shadow-sm"
+                        title="Remove"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilesToDelete(prev => [...prev, file.orderFileId]);
-                        setExistingFiles(prev => prev.filter(f => f.orderFileId !== file.orderFileId));
-                      }}
-                      className="w-7 h-7 rounded-full bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors shadow-sm"
-                      title="Remove"
-                    >
-                      <X size={14} />
-                    </button>
                   </div>
                 ))}
 

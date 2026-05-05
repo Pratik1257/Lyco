@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   X, FileText, Calendar, User, Mail, Layers,
-  Maximize2, DollarSign, Download, FileIcon, Link, ExternalLink
+  Maximize2, DollarSign, FileIcon, Link, ExternalLink
 } from 'lucide-react';
 import { ordersApi } from '../../api/ordersApi';
 import { Button } from './Button';
@@ -201,22 +201,27 @@ export function OrderDetailsModal({ isOpen, onClose, orderId, initialOrderData }
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {activeOrder.files.map((file: any, idx: number) => (
                       <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl shadow-sm group hover:border-cyan-200 transition-colors">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 group-hover:bg-cyan-50 transition-colors">
-                            <FileIcon size={16} className="text-slate-400 group-hover:text-cyan-600" />
+                        <a
+                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 overflow-hidden flex-1 group/link"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 group-hover/link:bg-cyan-50 transition-colors">
+                            <FileIcon size={16} className="text-slate-400 group-hover/link:text-cyan-600" />
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-[12px] font-bold text-slate-700 truncate">{file.fileName}</span>
+                            <span className="text-[12px] font-bold text-slate-700 truncate group-hover/link:text-cyan-600 transition-colors">{file.fileName}</span>
                           </div>
-                        </div>
+                        </a>
                         <a
                           href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-8 h-8 rounded-full bg-slate-50 hover:bg-cyan-50 text-slate-400 hover:text-cyan-600 flex items-center justify-center transition-all shadow-sm"
-                          title="Download / View"
+                          title="View Image / File"
                         >
-                          <Download size={14} />
+                          <ExternalLink size={14} />
                         </a>
                       </div>
                     ))}

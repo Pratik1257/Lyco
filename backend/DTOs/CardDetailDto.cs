@@ -44,7 +44,7 @@ public record CreateCardRequest
     public string? CardNo { get; init; }
 
     [Required]
-    [RegularExpression(@"^(0[1-9]|1[0-2])\/\d{4}$", ErrorMessage = "Expiry must be in MM/YYYY format")]
+    [RegularExpression(@"^(0[1-9]|1[0-2]),\d{4}$", ErrorMessage = "Expiry must be in MM,YYYY format")]
     public string? ExpDate { get; init; }
 
     [Required]
@@ -109,7 +109,7 @@ public record UpdateCardRequest
     public string? CardNo { get; init; }
 
     [Required]
-    [RegularExpression(@"^(0[1-9]|1[0-2])\/\d{4}$", ErrorMessage = "Expiry must be in MM/YYYY format")]
+    [RegularExpression(@"^(0[1-9]|1[0-2]),\d{4}$", ErrorMessage = "Expiry must be in MM,YYYY format")]
     public string? ExpDate { get; init; }
 
     [Required]

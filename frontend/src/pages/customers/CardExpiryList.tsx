@@ -20,7 +20,7 @@ export default function CardExpiryList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [statusFilter, setStatusFilter] = useState('inactive');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // UI State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -101,7 +101,8 @@ export default function CardExpiryList() {
   const isExpired = (expDate: string | null) => {
     if (!expDate) return false;
     try {
-      const [month, year] = expDate.split('/').map(Number);
+      const separator = expDate.includes(',') ? ',' : '/';
+      const [month, year] = expDate.split(separator).map(Number);
       if (!month || !year) return false;
 
       const now = new Date();
@@ -139,6 +140,11 @@ export default function CardExpiryList() {
     } catch {
       return '--';
     }
+  };
+
+  const formatExpDate = (date: string | null) => {
+    if (!date) return '--';
+    return date.replace(',', '/');
   };
 
   const CardSkeleton = () => (
@@ -243,8 +249,8 @@ export default function CardExpiryList() {
                     <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{card.companyName || '--'}</TableCell>
                     <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{card.email || '--'}</TableCell>
                     <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{card.telephone || '--'}</TableCell>
-                    <TableCell className="text-xs font-bold text-cyan-600 whitespace-nowrap">{formatDate(card.lastOrderDate)}</TableCell>
-                    <TableCell className="text-xs text-slate-600 font-black whitespace-nowrap">{card.expDate || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{formatDate(card.lastOrderDate)}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-black whitespace-nowrap">{formatExpDate(card.expDate)}</TableCell>
                     <TableCell className="text-center whitespace-nowrap">
                       {getStatusBadge(card.expDate)}
                     </TableCell>
@@ -387,7 +393,7 @@ export default function CardExpiryList() {
                             </div>
                             <div className="text-right space-y-1">
                               <span className="text-[8px] uppercase tracking-widest text-white/40 block font-bold">Expires</span>
-                              <span className="text-[13px] font-bold tracking-tight">{cardToView.expDate || '--'}</span>
+                              <span className="text-[13px] font-bold tracking-tight">{formatExpDate(cardToView.expDate)}</span>
                             </div>
                           </div>
                         </div>

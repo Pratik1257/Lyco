@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   ShoppingCart, FileText, CreditCard, Receipt,
-  Users, UserCog, Building2, Tag, Megaphone, Lock, LayoutGrid, ChevronDown, type LucideIcon
+  Users, Tag, Megaphone, Lock, LayoutGrid, ChevronDown, type LucideIcon
 } from 'lucide-react';
 import lycoLogo from '../../assets/LycoLogo.png';
 
@@ -43,9 +43,10 @@ const navSections: { label: string; items: NavItem[] }[] = [
         label: 'Manage Payment',
         subItems: [
           { to: '/admin/payments/make', label: 'Make Payment' },
-          { to: '/admin/payments/status', label: 'Payment Status' },
-          { to: '/admin/payments/remove-bad-debt', label: 'Remove from Bad Debt' },
           { to: '/admin/payments/summary', label: 'Payment Summary' },
+          { to: '/admin/payments/status', label: 'Payment Status' },
+          { to: '/admin/payments/paypal-billing', label: 'Billing Account Details' },
+          { to: '/admin/payments/remove-bad-debt', label: 'Remove From Bad Debt' },
         ]
       },
       { 
@@ -74,8 +75,6 @@ const navSections: { label: string; items: NavItem[] }[] = [
           // { to: '/customers/card-details', label: 'Customer Card Details' }
         ]
       },
-      { to: '/employees', icon: UserCog, label: 'Manage Employee' },
-      { to: '/vendors', icon: Building2, label: 'Manage Vendor' },
     ],
   },
   {

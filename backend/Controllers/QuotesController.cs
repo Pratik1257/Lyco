@@ -37,7 +37,7 @@ public class QuotesController : ControllerBase
         var filteredQuery = from q in query
                            join u in _context.UserRegistrations on q.UniqueNo equals u.UniqueNo into users
                            from user in users.DefaultIfEmpty()
-                           where q.QuoteType == "Quote" &&
+                           where (q.QuoteType == "Quote" || q.QuoteType == "Standard" || string.IsNullOrEmpty(q.QuoteType)) &&
                                  (string.IsNullOrEmpty(search) || 
                                  (q.QuoteNo != null && q.QuoteNo.Contains(search)) ||
                                  (q.Email != null && q.Email.Contains(search)) ||
@@ -161,7 +161,7 @@ public class QuotesController : ControllerBase
             Amount = dto.Amount,
             Currency = dto.Currency,
             Email = dto.Email,
-            QuoteType = dto.QuoteType,
+            QuoteType = string.IsNullOrEmpty(dto.QuoteType) || dto.QuoteType == "Standard" ? "Quote" : dto.QuoteType,
             ImageUrl = dto.ImageUrl,
             QuoteDate = DateTime.Now,
             Quoteuq = Guid.NewGuid().ToString().Substring(0, 8)

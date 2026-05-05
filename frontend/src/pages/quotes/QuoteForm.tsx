@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Mail, Hash, PenTool, Layers,
-  Maximize2, Paperclip, ChevronLeft, Link, Info, AlertCircle
+  Maximize2, Paperclip, ChevronLeft, Link, Info, AlertCircle,
+  X, FileIcon, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
@@ -15,7 +16,6 @@ import { customersApi } from '../../api/customersApi';
 import { pricesApi, usersApi } from '../../api/pricesApi';
 import { Button } from '../../components/ui/Button';
 import CustomSelect from '../../components/ui/CustomSelect';
-import { X, FileIcon, Download } from 'lucide-react';
 
 const quillModules = {
   toolbar: [
@@ -28,8 +28,6 @@ const quillModules = {
 const quillFormats = [
   'bold', 'italic', 'underline', 'list'
 ];
-
-
 
 const getCurrencySymbol = (currency: string | null) => {
   if (!currency) return '$';
@@ -64,7 +62,7 @@ export default function QuoteForm() {
     email: '',
     companyName: '',
     quoteNo: '',
-    quoteType: 'Standard',
+    quoteType: 'Quote',
     imageUrl: ''
   });
 
@@ -113,6 +111,9 @@ export default function QuoteForm() {
 
   // When user and service are selected, fetch Rate
   useEffect(() => {
+    // Skip auto-rate fetch in edit mode to preserve historical pricing
+    if (isEditMode) return;
+
     const { userId, serviceId, currency } = formData;
     if (userId !== null && serviceId !== null) {
       pricesApi.getUserwisePriceLookup(userId, serviceId).then(userPrice => {
@@ -127,7 +128,7 @@ export default function QuoteForm() {
         }
       });
     }
-  }, [formData.userId, formData.serviceId, formData.currency]);
+  }, [formData.userId, formData.serviceId, formData.currency, isEditMode]);
 
   // Auto-generate Quote # when uniqueNo/userId changes
   useEffect(() => {
@@ -170,7 +171,7 @@ export default function QuoteForm() {
           email: quote.email || '',
           companyName: quote.companyName || '',
           quoteNo: quote.quoteNo || '',
-          quoteType: quote.quoteType || 'Standard',
+          quoteType: quote.quoteType || 'Quote',
           imageUrl: quote.imageUrl || ''
         };
 
@@ -327,7 +328,13 @@ export default function QuoteForm() {
                       setFormData(p => ({ 
                         ...p, 
                         userId: uId,
-                        currency: selectedUser?.currency || p.currency || 'USD'
+                        currency: selectedUser?.currency || p.currency || 'USD',
+                        workTitle: '',
+                        instructions: '',
+                        fileFormat: '',
+                        size: '',
+                        amount: '',
+                        imageUrl: ''
                       }));
                       setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
                     }}
@@ -562,25 +569,30 @@ export default function QuoteForm() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                     {/* Existing Files */}
                     {existingFiles.map((file, idx) => (
-                      <div key={`existing-${idx}`} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
-                            <FileIcon size={16} className="text-slate-500" />
+                      <div key={`existing-${idx}`} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm group/card hover:border-cyan-200 transition-colors">
+                        <a
+                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 overflow-hidden flex-1 group/link"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0 group-hover/link:bg-cyan-50 transition-colors">
+                            <FileIcon size={16} className="text-slate-500 group-hover/link:text-cyan-600" />
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-[12px] font-bold text-slate-700 truncate">{file.fileName}</span>
+                            <span className="text-[12px] font-bold text-slate-700 truncate group-hover/link:text-cyan-600 transition-colors">{file.fileName}</span>
                             <span className="text-[10px] text-slate-400 font-medium">Existing File</span>
                           </div>
-                        </div>
+                        </a>
                         <div className="flex items-center gap-2">
                           <a
                             href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-7 h-7 rounded-full bg-white hover:bg-cyan-50 text-slate-400 hover:text-cyan-600 flex items-center justify-center transition-colors shadow-sm"
-                            title="Download"
+                            title="View Image / File"
                           >
-                            <Download size={14} />
+                            <ExternalLink size={14} />
                           </a>
                           <button
                             type="button"

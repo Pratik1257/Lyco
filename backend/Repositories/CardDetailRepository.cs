@@ -17,13 +17,15 @@ public class CardDetailRepository : ICardDetailRepository
         try
         {
             var now = DateTime.UtcNow;
-            // Format: MM/YYYY
-            if (expDate.Contains('/') && expDate.Length >= 7)
+            // Support both slash (new) and comma (legacy) formats
+            char[] separators = { '/', ',' };
+            if (expDate.Any(c => separators.Contains(c)) && expDate.Length >= 7)
             {
-                var parts = expDate.Split('/');
+                var separator = expDate.Contains(',') ? ',' : '/';
+                var parts = expDate.Split(separator);
                 if (parts.Length != 2) return false;
                 var month = int.Parse(parts[0]);
-                var year = parts[1].Length == 4 ? int.Parse(parts[1]) : int.Parse(parts[1]);
+                var year = int.Parse(parts[1]);
                 return year > now.Year || (year == now.Year && month >= now.Month);
             }
             // Format: YYYY-MM-DD
@@ -40,7 +42,6 @@ public class CardDetailRepository : ICardDetailRepository
     {
         var query = _context.CardDetails
             .Include(c => c.User)
-            .Where(c => c.User != null && c.User.IsActive == "Y")
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))

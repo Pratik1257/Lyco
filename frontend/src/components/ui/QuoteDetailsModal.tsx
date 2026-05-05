@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X, FileText, Calendar, User, Mail, Layers,
-  Maximize2, DollarSign, Download, FileIcon, Link,
+  Maximize2, DollarSign, ExternalLink, FileIcon, Link,
   ArrowRightLeft
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -215,24 +215,29 @@ export function QuoteDetailsModal({ isOpen, onClose, quoteId, initialQuoteData }
                   <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold block">Attachments</span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {activeQuote.files.map((file: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl group hover:border-cyan-200 transition-colors shadow-sm">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
-                            <FileIcon size={16} className="text-slate-400 group-hover:text-cyan-500 transition-colors" />
+                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl group/card hover:border-cyan-200 transition-colors shadow-sm">
+                        <a 
+                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 overflow-hidden flex-1 group/link"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-100 group-hover/link:bg-cyan-50 transition-colors">
+                            <FileIcon size={16} className="text-slate-400 group-hover/link:text-cyan-500 transition-colors" />
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-[12px] font-bold text-slate-700 truncate">{file.fileName}</span>
+                            <span className="text-[12px] font-bold text-slate-700 truncate group-hover/link:text-cyan-600 transition-colors">{file.fileName}</span>
                             <span className="text-[10px] text-slate-400 font-medium lowercase">File Attachment</span>
                           </div>
-                        </div>
+                        </a>
                         <a
                           href={`${import.meta.env.VITE_API_URL || 'http://localhost:5193'}${file.fileUrl}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-8 h-8 rounded-full bg-white hover:bg-cyan-500 text-slate-400 hover:text-white flex items-center justify-center transition-all shadow-sm group/btn"
-                          title="Download"
+                          title="View File"
                         >
-                          <Download size={14} className="group-hover/btn:scale-110 transition-transform" />
+                          <ExternalLink size={14} className="group-hover/btn:scale-110 transition-transform" />
                         </a>
                       </div>
                     ))}

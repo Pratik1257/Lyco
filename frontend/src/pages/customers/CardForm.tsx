@@ -74,7 +74,13 @@ export default function CardForm() {
 
   useEffect(() => {
     if (existingCard) {
-      setFormData(existingCard);
+      // Format card number with spaces for display
+      const formattedCard = {
+        ...existingCard,
+        cardNo: existingCard.cardNo ? existingCard.cardNo.match(/.{1,4}/g)?.join(' ') || existingCard.cardNo : ''
+      };
+      setFormData(formattedCard);
+      
       if (existingCard.expDate) {
         // Support both slash (new) and comma (legacy) formats
         const separator = existingCard.expDate.includes(',') ? ',' : '/';
@@ -127,8 +133,12 @@ export default function CardForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     let { name, value } = e.target;
 
-    // Numeric shielding for financial fields
-    if (name === 'cardNo' || name === 'cvv') {
+    // Numeric shielding and formatting for financial fields
+    if (name === 'cardNo') {
+      value = value.replace(/\D/g, ''); // Strip non-digits
+      // Add spaces every 4 characters
+      value = value.match(/.{1,4}/g)?.join(' ') || value;
+    } else if (name === 'cvv') {
       value = value.replace(/\D/g, ''); // Strip non-digits
     }
 
@@ -155,11 +165,12 @@ export default function CardForm() {
 
     if (!formData.userId) errors.userId = 'Please associate an account';
 
-    if (!formData.cardNo) {
+    const cardNoClean = (formData.cardNo || '').replace(/\s/g, '');
+    if (!cardNoClean) {
       errors.cardNo = 'Card number is required';
-    } else if (formData.cardNo.length < 13 || formData.cardNo.length > 19) {
+    } else if (cardNoClean.length < 13 || cardNoClean.length > 19) {
       errors.cardNo = 'Card number must be 13-19 digits';
-    } else if (!validateLuhn(formData.cardNo)) {
+    } else if (!validateLuhn(cardNoClean)) {
       errors.cardNo = 'Invalid card number';
     }
 
@@ -173,8 +184,6 @@ export default function CardForm() {
       const selectedMonth = parseInt(expMonth);
 
       if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
-        // We allow saving expired cards in edit mode if needed, but we should warn.
-        // For strict parity with legacy, we let validation fail.
         errors.expDate = 'Expiry date is invalid. Please choose a valid future date.';
       }
     }
@@ -254,15 +263,21 @@ export default function CardForm() {
       setFormError('Validation Error: Please review required metrics.');
       return;
     }
-    mutation.mutate(formData);
+    
+    // Clean spaces from card number before sending to API
+    const cleanData = {
+      ...formData,
+      cardNo: (formData.cardNo || '').replace(/\s/g, '')
+    };
+    mutation.mutate(cleanData);
   };
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ value: (i + 1).toString().padStart(2, '0'), label: (i + 1).toString().padStart(2, '0') })), []);
-  const currentYear = new Date().getFullYear();
-  const years = useMemo(() => Array.from({ length: 30 }, (_, i) => {
-    const y = (currentYear - 5 + i).toString();
+  const currentYearVal = new Date().getFullYear();
+  const years = useMemo(() => Array.from({ length: 21 }, (_, i) => {
+    const y = (currentYearVal + i).toString();
     return { value: y, label: y };
-  }), [currentYear]);
+  }), [currentYearVal]);
 
   const isExpired = useMemo(() => {
     if (!expMonth || !expYear) return false;
@@ -429,7 +444,7 @@ export default function CardForm() {
                       type="text"
                       name="cardNo"
                       placeholder="0000 0000 0000 0000"
-                      maxLength={19}
+                      maxLength={23}
                       value={formData.cardNo || ''}
                       onChange={handleInputChange}
                       className={`${premiumInput} ${fieldErrors.cardNo ? 'border-red-500 ring-4 ring-red-500/5' : ''}`}

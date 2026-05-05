@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
-  Loader2, Search, X, ShoppingCart, CreditCard
+  Search as SearchIcon, 
+  X as XIcon, 
+  Loader2 as LoaderIcon, 
+  ShoppingCart as CartIcon, 
+  CreditCard as CardIcon
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { paymentsApi } from '../../api/paymentsApi';
@@ -171,6 +175,56 @@ export default function ManagePayment() {
 
   return (
     <div className="relative animate-in fade-in duration-500 space-y-4">
+      
+      {/* Checkout Summary Bar — Moved to Top */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orders Selected</span>
+              <span className="text-2xl font-black text-slate-800 tracking-tight">
+                {selectedOrderIds.length} <span className="text-xs text-slate-300 font-bold uppercase ml-1">Items</span>
+              </span>
+            </div>
+            <div className="h-10 w-px bg-slate-100 hidden md:block" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">Total Amount:</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">
+                {activeSymbol}{selectedTotal.toFixed(2)} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{activeCurrency}</span>
+              </span>
+            </div>
+            {selectedOrderIds.length > 0 && (
+              <>
+                <div className="h-10 w-px bg-slate-100 hidden lg:block" />
+                <div className="hidden lg:flex flex-col">
+                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Checkout Note:</span>
+                  <p className="text-[10px] font-bold text-slate-400 leading-tight max-w-[200px]">
+                    Showing orders for <span className="text-slate-600">{activeCurrency}</span> only. 
+                    Uncheck to select other currencies.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <Button
+              onClick={handleMakePayment}
+              disabled={initiating || selectedOrderIds.length === 0}
+              className="flex-1 md:flex-none h-14 px-10 bg-[#fbb03b] hover:bg-[#e89d2a] text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+              variant="unstyled"
+            >
+              {initiating ? (
+                <LoaderIcon className="animate-spin" size={20} />
+              ) : (
+                <CardIcon size={20} />
+              )}
+              {initiating ? 'Processing...' : 'Pay Now'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Unified Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 
@@ -194,7 +248,7 @@ export default function ManagePayment() {
                 />
               </div>
               <div className="relative flex-1 max-w-md group">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
                 <input
                   type="text"
                   placeholder="Search orders, usernames, PO..."
@@ -207,7 +261,7 @@ export default function ManagePayment() {
                     onClick={() => setSearchQuery('')}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    <X size={14} />
+                    <XIcon size={14} />
                   </button>
                 )}
               </div>
@@ -318,7 +372,7 @@ export default function ManagePayment() {
           ) : (
             <div className="flex flex-col items-center justify-center py-32 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart className="text-slate-300" size={32} />
+                <CartIcon className="text-slate-300" size={32} />
               </div>
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">No pending orders found</h3>
               <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or search query</p>
@@ -345,57 +399,6 @@ export default function ManagePayment() {
             />
           </div>
         )}
-      </div>
-
-      {/* Footer Actions — Standardized Bar */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-8">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orders Selected</span>
-              <span className="text-2xl font-black text-slate-800 tracking-tight">
-                {selectedOrderIds.length} <span className="text-xs text-slate-300 font-bold uppercase ml-1">Items</span>
-              </span>
-            </div>
-            <div className="h-10 w-px bg-slate-100 hidden md:block" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">Total Amount:</span>
-              <span className="text-2xl font-black text-slate-900 tracking-tight">
-                {activeSymbol}{selectedTotal.toFixed(2)} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{activeCurrency}</span>
-              </span>
-            </div>
-            {selectedOrderIds.length > 0 && (
-              <>
-                <div className="h-10 w-px bg-slate-100 hidden lg:block" />
-                <div className="hidden lg:flex flex-col">
-                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Checkout Note:</span>
-                  <p className="text-[10px] font-bold text-slate-400 leading-tight max-w-[200px]">
-                    Showing orders for <span className="text-slate-600">{activeCurrency}</span> only. 
-                    Uncheck to select other currencies.
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <Button
-              onClick={handleMakePayment}
-              disabled={initiating || selectedOrderIds.length === 0}
-              className="flex-1 md:flex-none h-14 px-10 bg-[#fbb03b] hover:bg-[#e89d2a] text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-              variant="unstyled"
-            >
-              {initiating ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <CreditCard size={20} />
-              )}
-              {initiating ? 'Processing...' : 'Pay Now'}
-            </Button>
-
-
-          </div>
-        </div>
       </div>
     </div>
   );

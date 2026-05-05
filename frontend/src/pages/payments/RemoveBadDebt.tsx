@@ -118,12 +118,8 @@ export default function RemoveBadDebt() {
       });
       toast.success(response.message || 'Successfully restored orders to pending');
 
-      // Refresh list
-      const user = users.find(u => u.id === selectedUserId);
-      if (user?.uniqueNo) {
-        const data = await paymentsApi.getBadDebtOrders(user.uniqueNo);
-        setOrders(data);
-      }
+      // Reset selection and customer after successful action
+      setSelectedUserId(null);
       setSelectedOrderIds([]);
     } catch (error) {
       console.error('Failed to update status:', error);

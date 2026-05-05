@@ -36,6 +36,7 @@ import ManagePaymentStatus from './pages/payments/ManagePaymentStatus';
 import RemoveBadDebt from './pages/payments/RemoveBadDebt';
 import PaymentSummary from './pages/payments/PaymentSummary';
 import ManagePayment from './pages/payments/ManagePayment';
+import PayPalBillingDetails from './pages/payments/PayPalBillingDetails';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -102,6 +103,7 @@ export default function App() {
                 <Route path="admin/payments/remove-bad-debt" element={<RemoveBadDebt />} />
                 <Route path="admin/payments/summary" element={<PaymentSummary />} />
                 <Route path="admin/payments/make" element={<ManagePayment />} />
+                <Route path="admin/payments/paypal-billing" element={<PayPalBillingDetails />} />
                 <Route path="invoices/create" element={<CreateInvoice />} />
                 <Route path="invoices/summary" element={<InvoiceList />} />
                 <Route path="invoices/pending" element={<PendingInvoiceList />} />
