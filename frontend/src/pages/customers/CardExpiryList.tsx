@@ -220,14 +220,14 @@ export default function CardExpiryList() {
             <TableHeader>
               <TableRow>
                 {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
-                <TableHead className="whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="whitespace-nowrap">Company Name</TableHead>
-                <TableHead className="whitespace-nowrap">Email</TableHead>
-                <TableHead className="whitespace-nowrap">Telephone</TableHead>
-                <TableHead className="whitespace-nowrap">Last Order Date</TableHead>
-                <TableHead className="whitespace-nowrap">Expiry Date</TableHead>
-                <TableHead className="whitespace-nowrap text-center">Status</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Company Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Email</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Telephone</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Last Order Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Expiry Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-center whitespace-nowrap">Status</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -237,12 +237,14 @@ export default function CardExpiryList() {
                 cards.map((card) => (
                   <TableRow key={card.cardId} className="group hover:bg-gray-50/50">
                     {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{card.userId || '--'}</TableCell> */}
-                    <TableCell className="py-1.5 px-6 text-sm font-medium text-gray-800 whitespace-nowrap">{card.clientFullName || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.companyName || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.email || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.telephone || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap font-medium text-cyan-600">{formatDate(card.lastOrderDate)}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{card.expDate || '--'}</TableCell>
+                    <TableCell className="pl-6 whitespace-nowrap">
+                      <span className="font-bold text-slate-800 text-sm">{card.clientFullName || '--'}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{card.companyName || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{card.email || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{card.telephone || '--'}</TableCell>
+                    <TableCell className="text-xs font-bold text-cyan-600 whitespace-nowrap">{formatDate(card.lastOrderDate)}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-black whitespace-nowrap">{card.expDate || '--'}</TableCell>
                     <TableCell className="text-center whitespace-nowrap">
                       {getStatusBadge(card.expDate)}
                     </TableCell>

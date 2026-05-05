@@ -79,7 +79,7 @@ export default function QuoteForm() {
   // Fetch users for dropdown
   const { data: users = [] } = useQuery({
     queryKey: ['users-dropdown'],
-    queryFn: usersApi.getUsers
+    queryFn: () => usersApi.getUsers()
   });
 
   // Fetch services for dropdown

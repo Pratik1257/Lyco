@@ -73,7 +73,7 @@ export default function QuoteList() {
 
   const formatPrice = (amount: string | null, currency: string | null) => {
     if (!amount) return '--';
-    const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+    const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AUD' ? 'A$' : '$';
     return `${symbol}${amount}`;
   };
 
@@ -141,14 +141,14 @@ export default function QuoteList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-2 px-6 whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Quote #</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Quote Date</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Email</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">PO No.</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Service</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Rate</TableHead>
-                <TableHead className="py-2 px-6 text-right whitespace-nowrap">Actions</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Quote #</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Quote Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Email</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO No.</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Service</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Rate</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -168,20 +168,24 @@ export default function QuoteList() {
                     key={quote.quoteId}
                     className="group hover:bg-slate-50/50 transition-colors"
                   >
-                    <TableCell className="px-6 text-slate-900 text-sm font-medium whitespace-nowrap">{quote.fullname}</TableCell>
-                    <TableCell className="px-4 font-bold text-cyan-600 text-sm whitespace-nowrap">
-                      {quote.quoteNo || '--'}
+                    <TableCell className="pl-6 whitespace-nowrap">
+                      <span className="font-bold text-slate-800 text-sm">{quote.fullname}</span>
                     </TableCell>
-                    <TableCell className="px-4 text-slate-600 text-sm font-medium whitespace-nowrap">{formatDate(quote.quoteDate)}</TableCell>
-                    <TableCell className="px-4 text-slate-500 text-xs whitespace-nowrap">{quote.email || '--'}</TableCell>
-                    <TableCell className="px-4 text-slate-600 text-xs font-medium whitespace-nowrap">{quote.workTitle || '--'}</TableCell>
-                    <TableCell className="px-4 whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap">
+                      <span className="font-black text-slate-900 text-sm text-cyan-600">{quote.quoteNo || '--'}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{formatDate(quote.quoteDate)}</TableCell>
+                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">{quote.email || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{quote.workTitle || '--'}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold">
                         {quote.serviceName}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 font-bold text-slate-900 text-sm whitespace-nowrap">
-                      {formatPrice(quote.amount, quote.currency)}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="font-black text-slate-900 text-sm">
+                        {formatPrice(quote.amount, quote.currency)}
+                      </span>
                     </TableCell>
                     <TableCell className="px-6 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">

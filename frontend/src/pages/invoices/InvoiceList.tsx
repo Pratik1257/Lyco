@@ -12,6 +12,7 @@ import { Pagination } from '../../components/ui/Pagination';
 import CustomSelect from '../../components/ui/CustomSelect';
 import DatePicker from '../../components/ui/DatePicker';
 import { invoicesApi, type Invoice } from '../../api/invoicesApi';
+import { TableSkeleton } from '../../components/ui/Skeleton';
 
 export default function InvoiceList() {
   const navigate = useNavigate();
@@ -21,7 +22,6 @@ export default function InvoiceList() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  // Fetch real invoices from API
   const { data, isLoading } = useQuery({
     queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate],
     queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate)
@@ -50,6 +50,21 @@ export default function InvoiceList() {
 
   const indexOfFirst = (currentPage - 1) * itemsPerPage;
   const indexOfLast = Math.min(indexOfFirst + itemsPerPage, totalCount);
+
+  const formatPrice = (amount: any, currency: string | null) => {
+    if (amount === undefined || amount === null) return '--';
+    const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AUD' ? 'A$' : '$';
+    return `${symbol}${amount}`;
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '--';
+    const date = new Date(dateStr);
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${m}/${d}/${y}`;
+  };
 
   return (
     <div className="relative animate-in fade-in duration-500 space-y-4">
@@ -115,75 +130,77 @@ export default function InvoiceList() {
 
         {/* Table */}
         <div className="overflow-x-auto relative">
-          {isLoading && (
-            <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
-              <RefreshCw size={20} className="animate-spin text-cyan-600" />
-            </div>
-          )}
+          {isLoading ? (
+            <TableSkeleton rows={itemsPerPage} cols={8} />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-2 px-6 whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Invoice #</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Invoice Date</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Customer ID</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Order No.</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Type</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Amount</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Status</TableHead>
-                <TableHead className="py-2 px-6 text-right whitespace-nowrap">Actions</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Invoice #</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Invoice Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Customer ID</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order No.</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Amount</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Status</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoices.length > 0 ? (
                 invoices.map((invoice: Invoice) => (
                   <TableRow key={invoice.invoiceId} className="group hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="px-6 text-sm font-bold text-slate-900 whitespace-nowrap">
-                      {invoice.fullname}
+                    <TableCell className="pl-6 whitespace-nowrap">
+                      <span className="font-medium text-slate-800 text-sm">{invoice.fullname}</span>
                     </TableCell>
-                    <TableCell
-                      className="px-4 font-bold text-cyan-600 text-sm whitespace-nowrap transition-colors"
-                    >
-                      {invoice.pdfUrl ? (
-                        <a
-                          href={`http://localhost:5193${invoice.pdfUrl}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:text-cyan-700 hover:underline cursor-pointer"
-                          title="View Invoice PDF"
-                        >
-                          {invoice.invoiceNo}
-                        </a>
-                      ) : (
-                        <span
-                          className="text-slate-400 cursor-help"
-                          onClick={() => toast.error('PDF not available for this invoice')}
-                          title="PDF not available"
-                        >
-                          {invoice.invoiceNo}
-                        </span>
-                      )}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="font-black text-slate-900 text-sm text-cyan-600 transition-colors">
+                        {invoice.pdfUrl ? (
+                          <a
+                            href={`http://localhost:5193${invoice.pdfUrl}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:text-cyan-700 hover:underline cursor-pointer"
+                            title="View Invoice PDF"
+                          >
+                            {invoice.invoiceNo}
+                          </a>
+                        ) : (
+                          <span
+                            className="text-slate-400 cursor-help"
+                            onClick={() => toast.error('PDF not available for this invoice')}
+                            title="PDF not available"
+                          >
+                            {invoice.invoiceNo}
+                          </span>
+                        )}
+                      </span>
                     </TableCell>
-                    <TableCell className="px-4 text-slate-500 text-xs font-medium whitespace-nowrap">
-                      {invoice.invoiceDate
-                        ? new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                        : '--'}
+                    <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                      {formatDate(invoice.invoiceDate)}
                     </TableCell>
-                    <TableCell className="px-4 text-slate-500 text-xs font-bold whitespace-nowrap">
+                    <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
                       {invoice.customerId}
                     </TableCell>
-                    <TableCell className="px-4 text-slate-600 text-xs font-semibold whitespace-nowrap">
+                    <TableCell className="text-xs text-cyan-600 font-bold whitespace-nowrap">
                       {invoice.orderNos || '--'}
                     </TableCell>
-                    <TableCell className="px-4 whitespace-nowrap">
+                    <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
+                      {invoice.po || '--'}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-bold ${getTypeStyle(invoice.invoiceType)}`}>
                         {invoice.invoiceType || '--'}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 font-bold text-slate-900 text-sm whitespace-nowrap">
-                      {invoice.currency || 'USD'} {invoice.amount}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="font-black text-slate-900 text-sm">
+                        {formatPrice(invoice.amount, invoice.currency)}
+                      </span>
                     </TableCell>
-                    <TableCell className="px-4 whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap">
                       <div
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${getStatusStyle(invoice.status)}`}
                       >
@@ -223,6 +240,7 @@ export default function InvoiceList() {
               )}
             </TableBody>
           </Table>
+          )}
         </div>
 
         {/* Pagination */}

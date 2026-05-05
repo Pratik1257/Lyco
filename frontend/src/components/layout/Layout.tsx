@@ -25,6 +25,13 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/prices':       { title: 'Manage Price',    subtitle: 'pricing catalogue' },
   '/change-password': { title: 'Change Password', subtitle: 'update your account security' },
   '/promotions':   { title: 'Manage Promotions', subtitle: 'marketing campaigns' },
+  '/admin/payments/make':          { title: 'Manage Payment', subtitle: 'Make Payment for Customer' },
+  '/admin/payments/status':        { title: 'Manage Payment', subtitle: 'Payment Status' },
+  '/admin/payments/remove-bad-debt': { title: 'Manage Payment', subtitle: 'Remove from Bad Debt' },
+  '/admin/payments/summary':       { title: 'Manage Payment', subtitle: 'Payment Summary' },
+  '/invoices/create':   { title: 'Manage Invoice', subtitle: 'Create Invoice' },
+  '/invoices/summary':  { title: 'Manage Invoice', subtitle: 'Invoice Summary' },
+  '/invoices/pending':  { title: 'Manage Invoice', subtitle: 'Pending Invoice Summary' },
 };
 
 import { useState } from 'react';

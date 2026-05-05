@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { invoicesApi } from '../../api/invoicesApi';
 import DatePicker from '../../components/ui/DatePicker';
 import CustomSelect from '../../components/ui/CustomSelect';
+import { TableSkeleton } from '../../components/ui/Skeleton';
 
 export default function PendingInvoiceList() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +21,21 @@ export default function PendingInvoiceList() {
   const [endDate, setEndDate] = useState('');
   const [headerCurrency, setHeaderCurrency] = useState('USD');
   const [currentPage, setCurrentPage] = useState(1);
+
+  const formatPrice = (amount: any, currency: string | null) => {
+    if (amount === undefined || amount === null) return '--';
+    const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AUD' ? 'A$' : '$';
+    return `${symbol}${amount}`;
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '--';
+    const date = new Date(dateStr);
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${m}/${d}/${y}`;
+  };
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['pendingInvoices', currentPage, itemsPerPage, searchQuery, startDate, endDate],
@@ -209,28 +225,25 @@ export default function PendingInvoiceList() {
 
         {/* Table Section */}
         <div className="overflow-x-auto relative">
+          {isLoading ? (
+            <TableSkeleton rows={itemsPerPage} cols={9} />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-2 px-6 whitespace-nowrap">Invoice #</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Date</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Customer</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Company</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Orders</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Type</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">PO</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Amount</TableHead>
-                <TableHead className="py-2 px-6 text-right whitespace-nowrap">Actions</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Invoice #</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Customer</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Company</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Orders</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Amount</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center text-slate-500 font-medium">
-                    Loading pending invoices...
-                  </TableCell>
-                </TableRow>
-              ) : isError ? (
+              {isError ? (
                 <TableRow>
                   <TableCell colSpan={9} className="h-32 text-center text-red-500 font-medium">
                     Error loading invoices: {(error as Error)?.message}
@@ -242,31 +255,33 @@ export default function PendingInvoiceList() {
                     key={invoice.invoiceId}
                     className="group hover:bg-slate-50/50 transition-colors"
                   >
-                    <TableCell className="px-6 font-bold text-cyan-600 hover:text-cyan-700 cursor-pointer text-sm whitespace-nowrap transition-colors">
-                      {invoice.invoiceNo}
+                    <TableCell className="pl-6 whitespace-nowrap">
+                      <span className="font-black text-cyan-600 hover:text-cyan-700 cursor-pointer text-sm transition-colors">{invoice.invoiceNo}</span>
                     </TableCell>
-                    <TableCell className="px-4 text-slate-500 text-xs font-medium whitespace-nowrap">
-                      {new Date(invoice.invoiceDate).toLocaleDateString()}
+                    <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                      {formatDate(invoice.invoiceDate)}
                     </TableCell>
-                    <TableCell className="px-4 text-slate-900 text-sm font-bold whitespace-nowrap">
+                    <TableCell className="text-sm font-medium text-slate-800 whitespace-nowrap">
                       {invoice.fullname}
                     </TableCell>
-                    <TableCell className="px-4 text-slate-500 text-xs whitespace-nowrap">
+                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                       {invoice.companyName}
                     </TableCell>
-                    <TableCell className="px-4 text-slate-600 text-xs font-bold whitespace-nowrap">
+                    <TableCell className="text-xs text-slate-600 font-bold whitespace-nowrap">
                       {invoice.orderNos}
                     </TableCell>
-                    <TableCell className="px-4 whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap">
                       <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
                         {invoice.invoiceType}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 text-slate-500 text-xs whitespace-nowrap">
+                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                       {invoice.po || '--'}
                     </TableCell>
-                    <TableCell className="px-4 font-bold text-slate-900 text-sm whitespace-nowrap">
-                      {invoice.currency || 'USD'} {parseFloat(invoice.amount).toFixed(2)}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="font-black text-slate-900 text-sm">
+                        {formatPrice(parseFloat(invoice.amount).toFixed(2), invoice.currency)}
+                      </span>
                     </TableCell>
                     <TableCell className="px-6 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
@@ -300,6 +315,7 @@ export default function PendingInvoiceList() {
               )}
             </TableBody>
           </Table>
+          )}
         </div>
 
         {/* Pagination */}

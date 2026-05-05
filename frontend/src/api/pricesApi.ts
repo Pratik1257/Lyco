@@ -37,6 +37,7 @@ export interface UserDto {
   lastname?: string;
   currency?: string;
   uniqueNo?: number;
+  companyname?: string;
 }
 
 export interface CurrencyDto {
@@ -139,8 +140,10 @@ export const pricesApi = {
 };
 
 export const usersApi = {
-  getUsers: async () => {
-    const response = await apiClient.get<UserDto[]>('/Users/dropdown');
+  getUsers: async (includeId?: number) => {
+    const response = await apiClient.get<UserDto[]>('/Users/dropdown', {
+      params: { includeId }
+    });
     return response.data;
   }
 };

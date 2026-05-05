@@ -13,4 +13,5 @@ public interface IUserRepository
     Task<long> GetNextUniqueNoAsync();
     Task<bool> IsEmailUniqueAsync(string email, long? excludeUserId = null);
     Task<bool> IsUsernameUniqueAsync(string username, long? excludeUserId = null);
+    Task<UserRegistration?> GetByUsernameAsync(string username);
 }

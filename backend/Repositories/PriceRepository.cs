@@ -195,10 +195,10 @@ public class PriceRepository : IPriceRepository
 
     // ── Users ─────────────────────────────────────────────────────────────────
 
-    public async Task<IEnumerable<UserRegistration>> GetAllUsersAsync() =>
+    public async Task<IEnumerable<UserRegistration>> GetAllUsersAsync(long? includeId = null) =>
         await _db.UserRegistrations
             .Include(u => u.CardDetails)
-            .Where(u => u.Username != null && u.Username != "" && u.IsActive == "Y")
+            .Where(u => u.Username != null && u.Username != "" && (u.IsActive == "Y" || u.UserId == includeId))
             .OrderBy(u => u.Username)
             .ToListAsync();
 

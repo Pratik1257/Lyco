@@ -1,15 +1,26 @@
 using Lyco.Api.DTOs;
 using Lyco.Api.Models;
 using Lyco.Api.Repositories;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace Lyco.Api.Services;
 
 public class UserService : IUserService
 {
     private readonly IUserRepository _repo;
+    private readonly ICardDetailRepository _cardRepo;
+    private readonly IConfiguration _config;
     private static readonly HashSet<int> AllowedPageSizes = [10, 20, 50, 100];
 
-    public UserService(IUserRepository repo) => _repo = repo;
+    public UserService(IUserRepository repo, ICardDetailRepository cardRepo, IConfiguration config)
+    {
+        _repo = repo;
+        _cardRepo = cardRepo;
+        _config = config;
+    }
 
     public async Task<PagedResult<UserRegistrationDto>> GetPagedAsync(string? search, string? status, int page, int pageSize)
     {
@@ -115,6 +126,132 @@ public class UserService : IUserService
     public async Task<(bool Success, string? Error)> DeleteAsync(long id)
     {
         return await _repo.DeleteAsync(id);
+    }
+
+    public async Task<(LoginResponse? Response, string? Error)> LoginAsync(LoginRequest req)
+    {
+        var user = await _repo.GetByUsernameAsync(req.Username);
+        if (user == null) return (null, "Invalid username or password.");
+
+        if (user.IsActive != "Y") return (null, "Your account is inactive. Please contact administrator.");
+
+        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.Password))
+            return (null, "Invalid username or password.");
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured"));
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, user.UserType ?? "Customer")
+            }),
+            Expires = DateTime.UtcNow.AddHours(2),
+            Issuer = _config["Jwt:Issuer"],
+            Audience = _config["Jwt:Audience"],
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        var response = new LoginResponse(
+            user.UserId,
+            user.Username,
+            $"{user.Firstname} {user.Lastname}".Trim(),
+            user.UserType ?? "Customer",
+            tokenHandler.WriteToken(token)
+        );
+
+        return (response, null);
+    }
+
+    public async Task<(UserRegistrationDto? Dto, string? Error)> AuthRegisterAsync(AuthRegisterRequest req)
+    {
+        if (!await _repo.IsUsernameUniqueAsync(req.Username))
+            return (null, "Username is already taken.");
+
+        if (!string.IsNullOrWhiteSpace(req.Email) && !await _repo.IsEmailUniqueAsync(req.Email))
+            return (null, "Email is already registered to another user.");
+
+        var user = new UserRegistration
+        {
+            Username = req.Username,
+            Password = BCrypt.Net.BCrypt.HashPassword(req.Password),
+            Firstname = req.Firstname,
+            Lastname = req.Lastname,
+            Companyname = req.Companyname,
+            PrimaryEmail = req.Email,
+            WebsiteUrl = req.Website,
+            Address1 = req.Address1,
+            Address2 = req.Address2,
+            City = req.City,
+            State = req.State,
+            CountryId = req.CountryId,
+            Zipcode = req.Zipcode,
+            Telephone = req.Telephone,
+            Currency = req.Currency,
+            IsActive = "Y",
+            UserType = "Customer",
+            IsSecondary = "N",
+            UniqueNo = await _repo.GetNextUniqueNoAsync(),
+            CreatedDate = DateTime.UtcNow
+        };
+
+        var created = await _repo.CreateAsync(user);
+
+        // If card details provided, create card record
+        if (!string.IsNullOrEmpty(req.CardNo))
+        {
+            var card = new CardDetail
+            {
+                UserId = created.UserId,
+                CardType = req.CardType ?? "Visa",
+                CardNo = req.CardNo,
+                ExpDate = req.ExpDate,
+                Cvv = req.Cvv,
+                AsRegistered = "Y",
+                FirstName = req.Firstname,
+                LastName = req.Lastname,
+                Address1 = req.BillingAddress1 ?? req.Address1,
+                Address2 = req.BillingAddress2 ?? req.Address2,
+                City = req.BillingCity ?? req.City,
+                State = req.BillingState ?? req.State,
+                Postcode = req.BillingZipcode ?? req.Zipcode,
+                CountryId = req.BillingCountryId ?? req.CountryId,
+                Currency = req.Currency,
+                Comments = "Added during registration"
+            };
+            await _cardRepo.CreateAsync(card);
+        }
+
+        return (MapToDto(created), null);
+    }
+
+    public async Task<(string? Email, string? Error)> ForgotPasswordAsync(string username)
+    {
+        Console.WriteLine($"[UserService] Looking up username: '{username}'");
+        var user = await _repo.GetByUsernameAsync(username);
+        
+        if (user == null) 
+        {
+            Console.WriteLine($"[UserService] No user found for: '{username}'");
+            return (null, "Invalid username. This account does not exist.");
+        }
+
+        Console.WriteLine($"[UserService] Found user: {user.Username}, Email: {user.PrimaryEmail}");
+        return (user.PrimaryEmail, null);
+    }
+
+    public async Task<(bool Success, string? Error)> ResetPasswordAsync(ResetPasswordRequest req)
+    {
+        var user = await _repo.GetByUsernameAsync(req.Username);
+        if (user == null) return (false, "User not found.");
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+        await _repo.UpdateAsync(user);
+
+        return (true, null);
     }
 
     // Handles both "MM/YYYY" and ISO "YYYY-MM-DD" formats stored in the DB

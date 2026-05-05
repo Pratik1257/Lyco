@@ -10,4 +10,8 @@ public interface IUserService
     Task<(UserRegistrationDto? Dto, string? Error)> UpdateAsync(long id, UpdateUserRequest req);
     Task<UserRegistrationDto?> ToggleActiveAsync(long id);
     Task<(bool Success, string? Error)> DeleteAsync(long id);
+    Task<(LoginResponse? Response, string? Error)> LoginAsync(LoginRequest req);
+    Task<(UserRegistrationDto? Dto, string? Error)> AuthRegisterAsync(AuthRegisterRequest req);
+    Task<(string? Email, string? Error)> ForgotPasswordAsync(string username);
+    Task<(bool Success, string? Error)> ResetPasswordAsync(ResetPasswordRequest req);
 }

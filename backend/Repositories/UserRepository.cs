@@ -144,4 +144,6 @@ public class UserRepository : IUserRepository
         
         return !await query.AnyAsync();
     }
+    public Task<UserRegistration?> GetByUsernameAsync(string username) =>
+        _context.UserRegistrations.FirstOrDefaultAsync(u => u.Username == username);
 }

@@ -65,6 +65,16 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   if (!isOpen) return null;
 
+  const handleLogout = () => {
+    localStorage.removeItem('lyco_user');
+    navigate('/login');
+    onClose();
+  };
+
+  const savedUser = localStorage.getItem('lyco_user');
+  let user = { fullname: 'Guest', userType: 'User' };
+  try { if (savedUser) user = JSON.parse(savedUser); } catch(e) {}
+
   return (
     <div 
       className="absolute -right-[10px] sm:right-0 top-[calc(100%+8px)] w-[calc(100vw-32px)] sm:w-[300px] max-w-[300px] bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] border border-black/[0.12] z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
@@ -86,7 +96,11 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         </div>
         <SettingsRow 
           label="My profile"
-          subtext="Snehal Patel · Administrator"
+          subtext={`${user.fullname} · ${user.userType}`}
+          onClick={() => {
+            navigate('/profile');
+            onClose();
+          }}
         />
         <SettingsRow 
           label="Change password"
@@ -139,6 +153,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           subtext="End your current session"
           isDanger={true}
           showChevron={false}
+          onClick={handleLogout}
         />
       </div>
     </div>

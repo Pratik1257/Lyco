@@ -78,8 +78,8 @@ export default function OrderForm() {
 
   // Fetch users for dropdown
   const { data: users = [] } = useQuery({
-    queryKey: ['users-dropdown'],
-    queryFn: usersApi.getUsers
+    queryKey: ['users-dropdown', formData.userId],
+    queryFn: () => usersApi.getUsers(formData.userId || undefined)
   });
 
   // Fetch services for dropdown
@@ -91,6 +91,9 @@ export default function OrderForm() {
 
   // When user is selected, fetch full details for auto-fill
   useEffect(() => {
+    // Skip auto-fill if in edit mode (data already loaded from order)
+    if (isEditMode) return;
+
     if (formData.userId) {
       customersApi.getCustomerById(formData.userId).then(user => {
         setFormData(prev => ({
@@ -109,7 +112,7 @@ export default function OrderForm() {
         uniqueNo: null
       }));
     }
-  }, [formData.userId]);
+  }, [formData.userId, isEditMode]);
 
   // When user and service are selected, fetch Rate
   useEffect(() => {
@@ -179,16 +182,9 @@ export default function OrderForm() {
   useEffect(() => {
     if (isEditMode) {
       ordersApi.getOrderById(Number(id)).then(order => {
-        // We need to map the user back to its userId from the users list
-        // Or find it by uniqueNo
-        const matchingUser = users.find(u =>
-          (u.uniqueNo && order.uniqueNo && String(u.uniqueNo) === String(order.uniqueNo)) ||
-          (u.username && order.username && u.username === order.username)
-        );
-
         const orderData = {
           uniqueNo: order.uniqueNo,
-          userId: matchingUser ? matchingUser.id : null,
+          userId: order.userId || order.UserId || null,
           serviceId: order.serviceId,
           workTitle: order.workTitle || '',
           instructions: order.instructions || '',
@@ -212,7 +208,7 @@ export default function OrderForm() {
         navigate('/orders/summary');
       });
     }
-  }, [id, isEditMode, users, navigate]);
+  }, [id, isEditMode, navigate]);
 
   const hasChanges = useMemo(() => {
     if (!isEditMode) return true;

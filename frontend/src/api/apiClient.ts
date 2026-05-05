@@ -9,6 +9,22 @@ const apiClient = axios.create({
   headers: {},
 });
 
+// Interceptor to add auth token
+apiClient.interceptors.request.use((config) => {
+  const savedUser = localStorage.getItem('lyco_user');
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      if (user.token) {
+        config.headers.Authorization = `Bearer ${user.token}`;
+      }
+    } catch (e) {
+      console.error('Error parsing user from localStorage', e);
+    }
+  }
+  return config;
+});
+
 // Interceptor for better error handling/extraction
 apiClient.interceptors.response.use(
   (response) => response,

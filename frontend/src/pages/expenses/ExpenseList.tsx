@@ -222,9 +222,11 @@ export default function ExpenseList() {
     } catch { return d; }
   };
 
-  const formatAmount = (amount: number | null) => {
+  const formatAmount = (amount: number | null, currency: string | null = 'USD') => {
     if (amount == null) return '--';
-    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AUD' ? 'A$' : '$';
+    const formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${symbol}${formatted}`;
   };
 
   // ── Skeleton ────────────────────────────────────────────────────────────────
@@ -376,12 +378,12 @@ export default function ExpenseList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="whitespace-nowrap">Service</TableHead>
-                <TableHead className="whitespace-nowrap">Title</TableHead>
-                <TableHead className="whitespace-nowrap">Amount</TableHead>
-                <TableHead className="whitespace-nowrap">Date</TableHead>
-                <TableHead className="whitespace-nowrap">Notes</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Service</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Title</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Amount</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Notes</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -390,18 +392,18 @@ export default function ExpenseList() {
               ) : expenses.length > 0 ? (
                 expenses.map((expense) => (
                   <TableRow key={expense.expenseId} className="group hover:bg-gray-50/50">
-                    <TableCell className="text-sm font-semibold text-gray-800 whitespace-nowrap">
+                    <TableCell className="pl-6 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-md bg-cyan-50 border border-cyan-100/50 flex items-center justify-center">
                           <FileText size={12} className="text-cyan-600" />
                         </div>
-                        {expense.serviceName || '--'}
+                        <span className="text-sm font-bold text-slate-800">{expense.serviceName || '--'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm font-medium text-gray-700 max-w-[200px] truncate">{expense.title || '--'}</TableCell>
-                    <TableCell className="text-sm font-bold text-gray-900 whitespace-nowrap">{formatAmount(expense.amount)}</TableCell>
-                    <TableCell className="text-sm text-gray-500 whitespace-nowrap">{formatDate(expense.expenseDate)}</TableCell>
-                    <TableCell className="text-sm text-gray-400 max-w-[180px] truncate">{expense.notes || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium max-w-[200px] truncate">{expense.title || '--'}</TableCell>
+                    <TableCell className="text-sm font-black text-slate-900 whitespace-nowrap">{formatAmount(expense.amount, expense.currency)}</TableCell>
+                    <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">{formatDate(expense.expenseDate)}</TableCell>
+                    <TableCell className="text-xs text-slate-400 max-w-[180px] truncate">{expense.notes || '--'}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost-cyan" size="icon" onClick={() => openEdit(expense)} title="Edit">

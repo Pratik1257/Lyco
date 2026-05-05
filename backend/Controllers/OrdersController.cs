@@ -179,7 +179,8 @@ public class OrdersController : ControllerBase
             Username = user?.Username ?? "--",
             Fullname = user != null ? $"{user.Firstname} {user.Lastname}".Trim() : "--",
             CompanyName = user?.Companyname ?? "--",
-            ServiceName = order.Service?.ServiceName ?? "Others"
+            ServiceName = order.Service?.ServiceName ?? "Others",
+            UserId = user?.UserId
         });
     }
 
@@ -259,6 +260,7 @@ public class OrdersController : ControllerBase
             OrderStatus = "In Process",
             PaymentStatus = "Pending",
             OrderState = "New",
+            Ordertype = "Order",
             Orderuq = orderNo.Contains('-') ? orderNo.Split('-').Last() : orderNo
         };
 

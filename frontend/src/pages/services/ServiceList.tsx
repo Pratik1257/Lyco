@@ -190,8 +190,8 @@ export default function ServiceList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Service Name</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Service Name</TableHead>
+              <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -200,8 +200,8 @@ export default function ServiceList() {
             ) : services.length > 0 ? (
               services.map((service) => (
                 <TableRow key={service.id} className="group hover:bg-gray-50/50">
-                  <TableCell>
-                    <span className="text-sm font-semibold text-gray-700 group-hover:text-cyan-700 transition-colors">
+                  <TableCell className="pl-6 whitespace-nowrap">
+                    <span className="text-sm font-bold text-slate-800 group-hover:text-cyan-700 transition-colors">
                       {service.name}
                     </span>
                   </TableCell>

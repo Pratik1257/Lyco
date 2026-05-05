@@ -156,14 +156,14 @@ export default function CustomerList() {
             <TableHeader>
               <TableRow>
                 {/* <TableHead className="whitespace-nowrap">Client Id</TableHead> */}
-                <TableHead className="whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="whitespace-nowrap">Company Name</TableHead>
-                <TableHead className="whitespace-nowrap">Email</TableHead>
-                <TableHead className="whitespace-nowrap">Telephone</TableHead>
-                <TableHead className="whitespace-nowrap">City</TableHead>
-                <TableHead className="whitespace-nowrap">State</TableHead>
-                <TableHead className="whitespace-nowrap">Status</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Company Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Email</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Telephone</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">City</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">State</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Status</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -173,12 +173,14 @@ export default function CustomerList() {
                 customers.map((customer) => (
                   <TableRow key={customer.userId} className="group hover:bg-gray-50/50">
                     {/* <TableCell className="text-sm font-bold text-gray-700 whitespace-nowrap">{customer.userId}</TableCell> */}
-                    <TableCell className="text-sm font-medium text-gray-800 whitespace-nowrap">{customer.fullname || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.companyname || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.primaryEmail || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-500 whitespace-nowrap">{customer.telephone || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.city || '--'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">{customer.state || '--'}</TableCell>
+                    <TableCell className="pl-6 whitespace-nowrap">
+                      <span className="font-bold text-slate-800 text-sm">{customer.fullname || '--'}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{customer.companyname || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">{customer.primaryEmail || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">{customer.telephone || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 whitespace-nowrap">{customer.city || '--'}</TableCell>
+                    <TableCell className="text-xs text-slate-600 whitespace-nowrap">{customer.state || '--'}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <div className="relative group/status inline-block">
                         <button

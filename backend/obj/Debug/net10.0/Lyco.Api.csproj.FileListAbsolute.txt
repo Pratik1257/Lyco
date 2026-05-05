@@ -213,3 +213,4 @@ C:\Users\DELL\Desktop\Lyco\backend\bin\Debug\net10.0\RBush.dll
 C:\Users\DELL\Desktop\Lyco\backend\bin\Debug\net10.0\SixLabors.Fonts.dll
 C:\Users\DELL\Desktop\Lyco\backend\bin\Debug\net10.0\System.IO.Packaging.dll
 C:\Users\DELL\Desktop\Lyco\backend\bin\Debug\net10.0\BCrypt.Net-Next.dll
+C:\Users\DELL\Desktop\Lyco\backend\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll

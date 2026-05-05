@@ -9,6 +9,11 @@ import PriceManagement from './pages/prices/PriceManagement';
 import ChangePasswordForm from './pages/auth/ChangePasswordForm';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import MyProfile from './pages/auth/MyProfile';
+import ResetPassword from './pages/auth/ResetPassword';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+
 import CustomerList from './pages/customers/CustomerList';
 import CustomerForm from './pages/customers/CustomerForm';
 import CustomerFormModal from './components/customers/CustomerFormModal';
@@ -27,6 +32,10 @@ import QuoteForm from './pages/quotes/QuoteForm';
 import CreateInvoice from './pages/invoices/CreateInvoice';
 import InvoiceList from './pages/invoices/InvoiceList';
 import PendingInvoiceList from './pages/invoices/PendingInvoiceList';
+import ManagePaymentStatus from './pages/payments/ManagePaymentStatus';
+import RemoveBadDebt from './pages/payments/RemoveBadDebt';
+import PaymentSummary from './pages/payments/PaymentSummary';
+import ManagePayment from './pages/payments/ManagePayment';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -73,41 +82,49 @@ export default function App() {
           }}
         />
         <BrowserRouter basename="/">
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="services" element={<ServiceList />} />
-              <Route path="orders/new" element={<OrderForm />} />
-              <Route path="orders/edit/:id" element={<OrderForm />} />
-              <Route path="orders/summary" element={<OrderList />} />
-              <Route path="orders/complete" element={<CompleteOrderList />} />
-              <Route path="orders/complete/manual" element={<CompleteOrderForm />} />
-              <Route path="orders/remove" element={<RemoveOrderForm />} />
-              <Route path="orders" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Orders</div>} />
-              <Route path="quotes" element={<QuoteList />} />
-              <Route path="quotes/new" element={<QuoteForm />} />
-              <Route path="quotes/edit/:id" element={<QuoteForm />} />
-              <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
-              <Route path="invoices/create" element={<CreateInvoice />} />
-              <Route path="invoices/summary" element={<InvoiceList />} />
-              <Route path="invoices/pending" element={<PendingInvoiceList />} />
-              <Route path="invoices" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Invoice</div>} />
-              <Route path="customers/status" element={<CustomerList />} />
-              <Route path="customers/add-two" element={<CustomerForm />} />
-              <Route path="customers/add-three" element={<CustomerFormModalPage />} />
-              <Route path="customers/card-summary" element={<CardExpiryList />} />
-              <Route path="customers/card-details" element={<CardForm />} />
-              <Route path="customers" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Customers</div>} />
-              <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employee — coming soon</div>} />
-              <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendor — coming soon</div>} />
-              <Route path="prices" element={<PriceManagement />} />
-              <Route path="expenses" element={<ExpenseList />} />
-              <Route path="change-password" element={<ChangePasswordForm />} />
-              <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
-            </Route>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                <Route index element={<Dashboard />} />
+                <Route path="services" element={<ServiceList />} />
+                <Route path="orders/new" element={<OrderForm />} />
+                <Route path="orders/edit/:id" element={<OrderForm />} />
+                <Route path="orders/summary" element={<OrderList />} />
+                <Route path="orders/complete" element={<CompleteOrderList />} />
+                <Route path="orders/complete/manual" element={<CompleteOrderForm />} />
+                <Route path="orders/remove" element={<RemoveOrderForm />} />
+                <Route path="orders" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Orders</div>} />
+                <Route path="quotes" element={<QuoteList />} />
+                <Route path="quotes/new" element={<QuoteForm />} />
+                <Route path="quotes/edit/:id" element={<QuoteForm />} />
+                <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
+                <Route path="admin/payments/status" element={<ManagePaymentStatus />} />
+                <Route path="admin/payments/remove-bad-debt" element={<RemoveBadDebt />} />
+                <Route path="admin/payments/summary" element={<PaymentSummary />} />
+                <Route path="admin/payments/make" element={<ManagePayment />} />
+                <Route path="invoices/create" element={<CreateInvoice />} />
+                <Route path="invoices/summary" element={<InvoiceList />} />
+                <Route path="invoices/pending" element={<PendingInvoiceList />} />
+                <Route path="invoices" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Invoice</div>} />
+                <Route path="customers/status" element={<CustomerList />} />
+                <Route path="customers/add-two" element={<CustomerForm />} />
+                <Route path="customers/add-three" element={<CustomerFormModalPage />} />
+                <Route path="customers/card-summary" element={<CardExpiryList />} />
+                <Route path="customers/card-details" element={<CardForm />} />
+                <Route path="customers" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Customers</div>} />
+                <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employee — coming soon</div>} />
+                <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendor — coming soon</div>} />
+                <Route path="prices" element={<PriceManagement />} />
+                <Route path="expenses" element={<ExpenseList />} />
+                <Route path="change-password" element={<ChangePasswordForm />} />
+                <Route path="profile" element={<MyProfile />} />
+                <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
+              </Route>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

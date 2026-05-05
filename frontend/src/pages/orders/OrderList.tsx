@@ -16,6 +16,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Pagination } from '../../components/ui/Pagination';
 import CustomSelect from '../../components/ui/CustomSelect';
 import DatePicker from '../../components/ui/DatePicker';
+import { Skeleton, TableSkeleton } from '../../components/ui/Skeleton';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { OrderDetailsModal } from '../../components/ui/OrderDetailsModal';
 import CompleteOrderModal from './CompleteOrderModal';
@@ -297,6 +298,9 @@ export default function OrderList() {
 
       {/* Main Table Section */}
       <div className="overflow-x-auto relative">
+        {isLoading ? (
+          <TableSkeleton rows={itemsPerPage} cols={9} />
+        ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
@@ -436,7 +440,8 @@ export default function OrderList() {
               )}
             </TableBody>
           </Table>
-        </div>
+        )}
+      </div>
 
         {/* Pagination */}
         <div className="p-6 bg-slate-50/30 border-t border-slate-50 rounded-b-2xl">

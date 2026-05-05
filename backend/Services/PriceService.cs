@@ -182,9 +182,9 @@ public class PriceService : IPriceService
 
     // ── Users ─────────────────────────────────────────────────────────────────
 
-    public async Task<IEnumerable<UserDto>> GetUsersAsync()
+    public async Task<IEnumerable<UserDto>> GetUsersAsync(long? includeId = null)
     {
-        var users = await _repo.GetAllUsersAsync();
+        var users = await _repo.GetAllUsersAsync(includeId);
         return users.Select(u => new UserDto(
             u.UserId, 
             u.Username ?? "", 
@@ -193,7 +193,8 @@ public class PriceService : IPriceService
             u.Currency,
             u.CardDetails.FirstOrDefault()?.CardId,
             u.UniqueNo,
-            $"{u.Firstname} {u.Lastname}".Trim()
+            $"{u.Firstname} {u.Lastname}".Trim(),
+            u.Companyname
         ));
     }
 

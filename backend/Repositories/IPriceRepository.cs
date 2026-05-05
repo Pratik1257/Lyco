@@ -21,7 +21,7 @@ public interface IPriceRepository
     Task<decimal?> GetUserwisePriceValueAsync(long userId, long serviceId);
 
     // Users for dropdown
-    Task<IEnumerable<UserRegistration>> GetAllUsersAsync();
+    Task<IEnumerable<UserRegistration>> GetAllUsersAsync(long? includeId = null);
 
     // Deletion
     Task DeleteGeneralPriceAsync(long id);

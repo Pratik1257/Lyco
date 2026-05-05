@@ -193,3 +193,53 @@ public record UpdateUserRequest
     public string? IsActive { get; init; } = "Y";
     public string? UserType { get; init; }
 }
+public record LoginRequest(
+    [Required] string Username,
+    [Required] string Password
+);
+
+public record LoginResponse(
+    long UserId,
+    string Username,
+    string Fullname,
+    string UserType,
+    string Token
+);
+
+public record AuthRegisterRequest(
+    [Required] string Username,
+    [Required] string Password,
+    [Required] string Firstname,
+    [Required] string Lastname,
+    [Required] string Companyname,
+    [Required] string Email,
+    string? Website,
+    string? Address1,
+    string? Address2,
+    string? City,
+    string? State,
+    long? CountryId,
+    string? Zipcode,
+    string? Telephone,
+    string? Currency,
+    // Optional Card Details
+    string? CardType = null,
+    string? CardNo = null,
+    string? ExpDate = null,
+    string? Cvv = null,
+    string? BillingAddress1 = null,
+    string? BillingAddress2 = null,
+    string? BillingCity = null,
+    string? BillingState = null,
+    string? BillingZipcode = null,
+    long? BillingCountryId = null
+);
+
+public record ForgotPasswordRequest(
+    [Required] string Username
+);
+
+public record ResetPasswordRequest(
+    [Required] string Username,
+    [Required] string NewPassword
+);

@@ -18,9 +18,9 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("dropdown")]
-    public async Task<IActionResult> GetUsersForDropdown()
+    public async Task<IActionResult> GetUsersForDropdown([FromQuery] long? includeId)
     {
-        var result = await _priceService.GetUsersAsync();
+        var result = await _priceService.GetUsersAsync(includeId);
         return Ok(result);
     }
 

@@ -37,7 +37,17 @@ const navSections: { label: string; items: NavItem[] }[] = [
         ]
       },
       { to: '/quotes', icon: FileText, label: 'Manage Quote' },
-      { to: '/payments', icon: CreditCard, label: 'Manage Payment' },
+      { 
+        to: '/payments', 
+        icon: CreditCard, 
+        label: 'Manage Payment',
+        subItems: [
+          { to: '/admin/payments/make', label: 'Make Payment' },
+          { to: '/admin/payments/status', label: 'Payment Status' },
+          { to: '/admin/payments/remove-bad-debt', label: 'Remove from Bad Debt' },
+          { to: '/admin/payments/summary', label: 'Payment Summary' },
+        ]
+      },
       { 
         to: '/invoices', 
         icon: Receipt, 
@@ -235,19 +245,29 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
 
       {/* User */}
       <div className="relative border-t border-white/[0.06] p-4">
-        <div className="flex items-center gap-3 px-1">
-          <div className="relative shrink-0">
-            <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-sm" />
-            <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-cyan-500/30">
-              SP
+        {(() => {
+          const savedUser = localStorage.getItem('lyco_user');
+          let user = { fullname: 'Guest', userType: 'User' };
+          try { if (savedUser) user = JSON.parse(savedUser); } catch(e) {}
+          
+          const initials = user.fullname.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+          return (
+            <div className="flex items-center gap-3 px-1">
+              <div className="relative shrink-0">
+                <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-sm" />
+                <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-cyan-500/30">
+                  {initials || '??'}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-semibold truncate">{user.fullname}</p>
+                <p className="text-[#3a4a6a] text-[10px]">{user.userType}</p>
+              </div>
+              <Lock size={13} className="text-[#3a4a6a] shrink-0" />
             </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-semibold truncate">Snehal Patel</p>
-            <p className="text-[#3a4a6a] text-[10px]">Administrator</p>
-          </div>
-          <Lock size={13} className="text-[#3a4a6a] shrink-0" />
-        </div>
+          );
+        })()}
       </div>
     </aside>
     </>

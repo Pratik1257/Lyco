@@ -98,11 +98,11 @@ export default function CompleteOrderList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="py-3 px-6 whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="py-3 px-4 whitespace-nowrap">Order #</TableHead>
-                <TableHead className="py-3 px-4 whitespace-nowrap">Order Date</TableHead>
-                <TableHead className="py-3 px-4 whitespace-nowrap">PO No.</TableHead>
-                <TableHead className="py-3 px-4 whitespace-nowrap">Service</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order #</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order Date</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO No.</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Service</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,23 +111,23 @@ export default function CompleteOrderList() {
               ) : orders.length > 0 ? (
                 orders.map((order) => (
                   <TableRow key={order.orderId} className="group hover:bg-gray-50/50 transition-colors">
-                    <TableCell className="text-sm font-medium text-gray-800 px-6 whitespace-nowrap">
-                      {order.fullname}
+                    <TableCell className="pl-6 whitespace-nowrap">
+                      <span className="font-bold text-slate-800 text-sm">{order.fullname}</span>
                     </TableCell>
                     <TableCell
-                      className="text-sm font-bold text-cyan-600 px-4 whitespace-nowrap cursor-pointer hover:text-cyan-700 transition-colors"
+                      className="whitespace-nowrap cursor-pointer hover:text-cyan-700 transition-colors"
                       onClick={() => {
                         setSelectedOrderId(order.orderId);
                         setOrderToView(order);
                         setIsViewModalOpen(true);
                       }}
                     >
-                      {order.orderNo || '--'}
+                      <span className="font-black text-cyan-600 text-sm">{order.orderNo || '--'}</span>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500 px-4 whitespace-nowrap">
+                    <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">
                       {formatDate(order.orderDate)}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600 px-4 whitespace-nowrap font-medium">
+                    <TableCell className="text-xs text-slate-600 whitespace-nowrap font-medium">
                       {order.workTitle || '--'}
                     </TableCell>
                     <TableCell className="px-4 whitespace-nowrap">

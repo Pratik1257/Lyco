@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
+import { TableSkeleton } from '../../components/ui/Skeleton';
 
 type TabType = 'general' | 'userwise';
 
@@ -484,12 +485,9 @@ export default function PriceManagement() {
         </div>
 
         <div className="overflow-x-auto relative">
-          {isLoading && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
-              <Loader2 className="animate-spin text-cyan-600" size={32} />
-            </div>
-          )}
-
+          {isLoading ? (
+            <TableSkeleton rows={itemsPerPage} cols={activeTab === 'general' ? 4 : 5} />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -642,6 +640,7 @@ export default function PriceManagement() {
               )}
             </TableBody>
           </Table>
+          )}
         </div>
 
         <Pagination
