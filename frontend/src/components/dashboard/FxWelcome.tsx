@@ -2,8 +2,9 @@ import { TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import type { DashboardData } from '../../types/dashboard';
 import CountUp from '../ui/CountUp';
 
-export default function FxWelcome({ data }: { data: DashboardData }) {
+export default function FxWelcome({ data, timeframe }: { data: DashboardData, timeframe: string }) {
   const { greeting, todayRevenue, todayOrders } = data;
+  const labelSuffix = timeframe === 'Month' ? 'month' : timeframe === 'Week' ? 'week' : 'year';
   const hour = new Date().getHours();
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
@@ -24,7 +25,7 @@ export default function FxWelcome({ data }: { data: DashboardData }) {
           <p className="text-sm text-slate-400 mb-4">Here's what's happening with your business today.</p>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 text-xs font-medium px-3 py-1 rounded-full border border-emerald-500/20">
-              <TrendingUp size={11} /> Revenue up {greeting.revenueChangePercent}% vs last month
+              <TrendingUp size={11} /> Revenue up {greeting.revenueChangePercent}% vs last {labelSuffix}
             </span>
             <span className="inline-flex items-center gap-1.5 bg-cyan-500/15 text-cyan-300 text-xs font-medium px-3 py-1 rounded-full border border-cyan-500/20">
               <Clock size={11} /> {greeting.ordersInProgress} orders in progress
@@ -37,7 +38,7 @@ export default function FxWelcome({ data }: { data: DashboardData }) {
 
         <div className="flex flex-wrap gap-4 w-full md:w-auto md:ml-8">
           {[
-            { label: "TODAY'S REVENUE", value: <CountUp prefix="$" end={todayRevenue.amount} decimals={0} />, change: `+${todayRevenue.changePercent}% vs yesterday` },
+            { label: "TODAY'S REVENUE", value: <CountUp prefix={data.currencySymbol} end={todayRevenue.amount} decimals={0} />, change: `+${todayRevenue.changePercent}% vs yesterday` },
             { label: "TODAY'S ORDERS", value: <CountUp end={todayOrders.count} />, change: `+${todayOrders.changeFromAvg} more than avg` },
           ].map((s) => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-right min-w-[140px] backdrop-blur-sm">

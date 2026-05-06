@@ -23,15 +23,26 @@ export default function FxMiddleRow({ data }: { data: DashboardData }) {
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
         <h3 className="text-sm font-bold text-gray-800 mb-0.5">Service Breakdown</h3>
         <p className="text-xs text-gray-400 mb-3">Total orders by service type</p>
-        <ResponsiveContainer width="100%" height={170}>
-          <PieChart>
-            <Pie data={data.serviceBreakdown} cx="50%" cy="50%" innerRadius={48} outerRadius={72}
-              dataKey="count" nameKey="name" paddingAngle={3}>
-              {data.serviceBreakdown.map((e, i) => <Cell key={i} fill={e.color} />)}
-            </Pie>
-            <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="min-h-[170px] w-full">
+          <ResponsiveContainer width="100%" height={170}>
+            <PieChart>
+              <Pie 
+                data={data.serviceBreakdown} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={50} 
+                outerRadius={80}
+                dataKey="count" 
+                nameKey="name" 
+                paddingAngle={4}
+                isAnimationActive={false}
+              >
+                {data.serviceBreakdown.map((e, i) => <Cell key={i} fill={e.color} />)}
+              </Pie>
+              <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
         <div className="space-y-2 mt-1">
           {data.serviceBreakdown.map((s) => (
             <div key={s.name} className="flex items-center justify-between">
@@ -68,7 +79,7 @@ export default function FxMiddleRow({ data }: { data: DashboardData }) {
                   <p className="text-[11px] text-gray-400">{o.service} · {o.orderNumber}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-xs font-black text-gray-800"><CountUp prefix="$" end={o.amount} decimals={2} /></p>
+                  <p className="text-xs font-black text-gray-800"><CountUp prefix={data.currencySymbol} end={o.amount} decimals={2} /></p>
                   <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.bg} ${s.text}`}>
                     <span className={`w-1 h-1 rounded-full ${s.dot}`} />{o.status}
                   </span>

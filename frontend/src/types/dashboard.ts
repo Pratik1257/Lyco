@@ -1,4 +1,5 @@
 export interface DashboardData {
+  currencySymbol: string;
   greeting: {
     name: string;
     revenueChangePercent: number;

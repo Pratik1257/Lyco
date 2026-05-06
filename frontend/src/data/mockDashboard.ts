@@ -1,6 +1,7 @@
 import type { DashboardData } from '../types/dashboard';
 
 export const mockDashboard: DashboardData = {
+  currencySymbol: "$",
   greeting: {
     name: 'Kelly',
     revenueChangePercent: 8,

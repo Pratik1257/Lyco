@@ -11,8 +11,9 @@ function GlowCard({ children, gradient }: { children: React.ReactNode; gradient:
   );
 }
 
-export default function FxStatsGrid({ data }: { data: DashboardData }) {
+export default function FxStatsGrid({ data, timeframe }: { data: DashboardData, timeframe: string }) {
   const { pendingPayments, totalUsers, totalOrders, inProcessOrders, monthOrders, monthInvoices, monthOrderValue, pendingMonth } = data;
+  const labelPrefix = timeframe === 'Month' ? 'Month' : timeframe === 'Week' ? 'Week' : 'Year';
 
   return (
     <div className="space-y-4">
@@ -32,7 +33,7 @@ export default function FxStatsGrid({ data }: { data: DashboardData }) {
                 Needs attention
               </span>
             </div>
-            <p className="text-3xl font-black text-white tracking-tight"><CountUp prefix="$" end={pendingPayments.amount} decimals={0} /></p>
+            <p className="text-3xl font-black text-white tracking-tight"><CountUp prefix={data.currencySymbol} end={pendingPayments.amount} decimals={0} /></p>
             <p className="text-white/80 text-sm font-semibold mt-1">Pending Payments</p>
             <p className="text-white/50 text-xs mt-0.5">Across {pendingPayments.openOrders} open orders</p>
           </div>
@@ -71,10 +72,10 @@ export default function FxStatsGrid({ data }: { data: DashboardData }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'In-Process', value: <CountUp end={inProcessOrders} />, badge: 'Active', icon: Clock, from: 'from-cyan-400', to: 'to-teal-500', shadow: 'shadow-cyan-200', change: null },
-          { label: 'Month Orders', value: <CountUp end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: `+${monthOrders.changePercent}%` },
-          { label: 'Month Invoices', value: <CountUp end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: `+${monthInvoices.changePercent}%` },
-          { label: 'Order Value', value: <CountUp prefix="$" end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: `+${monthOrderValue.changePercent}%` },
-          { label: 'Pending Month', value: <CountUp prefix="$" end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null },
+          { label: `${labelPrefix} Orders`, value: <CountUp end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: `+${monthOrders.changePercent}%` },
+          { label: `${labelPrefix} Invoices`, value: <CountUp end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: `+${monthInvoices.changePercent}%` },
+          { label: `${labelPrefix} Value`, value: <CountUp prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: `+${monthOrderValue.changePercent}%` },
+          { label: `Pending ${labelPrefix}`, value: <CountUp prefix={data.currencySymbol} end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null },
         ].map((m) => (
           <div key={m.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-3">
