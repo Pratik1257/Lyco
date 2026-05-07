@@ -15,10 +15,13 @@ import { customersApi, type Customer } from '../../api/customersApi';
 import { Button } from '../../components/ui/Button';
 import CustomSelect from '../../components/ui/CustomSelect';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
 
 export default function RemoveOrderForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   // State
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -338,7 +341,7 @@ export default function RemoveOrderForm() {
               <div className="pt-5 border-t border-slate-100 flex items-center justify-end gap-3">
                 <Button
                   variant="secondary"
-                  onClick={() => navigate('/orders/summary')}
+                  onClick={() => navigate(isAdmin ? '/admin/orders/history' : '/orders/history')}
                   className="px-6 h-11 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-50 shadow-none"
                 >
                   Cancel

@@ -5,13 +5,15 @@ interface FxGlobalFiltersProps {
   setTimeframe: (val: string) => void;
   currency: string;
   setCurrency: (val: string) => void;
+  isAdmin?: boolean;
 }
 
 export default function FxGlobalFilters({ 
   timeframe, 
   setTimeframe, 
   currency, 
-  setCurrency 
+  setCurrency,
+  isAdmin = true
 }: FxGlobalFiltersProps) {
   const timeframes = ['Week', 'Month', 'Year'];
   const currencies = ['USD', 'GBP', 'EUR', 'CAD', 'AUD'];
@@ -38,35 +40,37 @@ export default function FxGlobalFilters({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Currency Filter (Dropdown) */}
-        <div className="relative group">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-2xl shadow-sm cursor-pointer hover:border-cyan-200 transition-all">
-            <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center text-cyan-600">
-              <Globe size={16} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-none mb-1">Currency</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-black text-gray-800">{currency}</span>
-                <ChevronDown size={14} className="text-gray-400 group-hover:text-cyan-500 transition-colors" />
+        {/* Currency Filter (Dropdown) - Admin Only */}
+        {isAdmin && (
+          <div className="relative group">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-2xl shadow-sm cursor-pointer hover:border-cyan-200 transition-all">
+              <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center text-cyan-600">
+                <Globe size={16} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-none mb-1">Currency</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-black text-gray-800">{currency}</span>
+                  <ChevronDown size={14} className="text-gray-400 group-hover:text-cyan-500 transition-colors" />
+                </div>
               </div>
             </div>
+            
+            <div className="absolute right-0 top-full mt-2 w-32 bg-white border border-gray-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden py-1">
+              {currencies.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCurrency(c)}
+                  className={`w-full text-left px-4 py-2 text-sm font-bold transition-colors ${
+                    currency === c ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
-          
-          <div className="absolute right-0 top-full mt-2 w-32 bg-white border border-gray-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden py-1">
-            {currencies.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCurrency(c)}
-                className={`w-full text-left px-4 py-2 text-sm font-bold transition-colors ${
-                  currency === c ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         <div className="h-10 w-px bg-gray-100 mx-1 hidden sm:block" />
 

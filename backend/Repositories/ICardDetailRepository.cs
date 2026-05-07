@@ -11,4 +11,5 @@ public interface ICardDetailRepository
     Task DeleteAsync(long id);
     Task<bool> ExistsAsync(long id);
     Task<bool> ExistsForUserAsync(long userId);
+    Task<CardDetail?> GetByUserIdAsync(long userId);
 }

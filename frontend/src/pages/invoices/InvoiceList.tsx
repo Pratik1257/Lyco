@@ -5,6 +5,7 @@ import {
   Search, Download, Plus, Eye,
   CheckCircle2, Clock, Receipt, RefreshCw
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Button } from '../../components/ui/Button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
@@ -16,6 +17,8 @@ import { TableSkeleton } from '../../components/ui/Skeleton';
 
 export default function InvoiceList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,8 +26,8 @@ export default function InvoiceList() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate],
-    queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate)
+    queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate, (user as any)?.uniqueNo],
+    queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate, isAdmin ? undefined : (user as any)?.uniqueNo)
   });
 
   const invoices = data?.items || [];
@@ -77,7 +80,7 @@ export default function InvoiceList() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Search by Name, Invoice no."
+                placeholder={isAdmin ? "Search by Name, Invoice no." : "Search by Invoice no."}
                 className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -119,10 +122,12 @@ export default function InvoiceList() {
                   className="h-11 flex-1 sm:flex-none px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-2 shadow-none whitespace-nowrap">
                   <Download size={16} /> Export
                 </Button>
-                <Button variant="primary" onClick={() => navigate('/invoices/create')}
-                  className="h-11 flex-1 sm:flex-none bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 px-5 rounded-xl text-xs whitespace-nowrap">
-                  <Plus size={16} /> Create
-                </Button>
+                {isAdmin && (
+                  <Button variant="primary" onClick={() => navigate(isAdmin ? '/admin/invoices/create' : '/invoices/create')}
+                    className="h-11 flex-1 sm:flex-none bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 px-5 rounded-xl text-xs whitespace-nowrap">
+                    <Plus size={16} /> Create
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -136,10 +141,10 @@ export default function InvoiceList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Invoice #</TableHead>
+                {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>}
+                <TableHead className={`font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>Invoice #</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Invoice Date</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Customer ID</TableHead>
+                {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Customer ID</TableHead>}
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order No.</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</TableHead>
@@ -152,10 +157,12 @@ export default function InvoiceList() {
               {invoices.length > 0 ? (
                 invoices.map((invoice: Invoice) => (
                   <TableRow key={invoice.invoiceId} className="group hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="pl-6 whitespace-nowrap">
-                      <span className="font-medium text-slate-800 text-sm">{invoice.fullname}</span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    {isAdmin && (
+                      <TableCell className="pl-6 whitespace-nowrap">
+                        <span className="font-medium text-slate-800 text-sm">{invoice.fullname}</span>
+                      </TableCell>
+                    )}
+                    <TableCell className={`whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>
                       <span className="font-black text-slate-900 text-sm text-cyan-600 transition-colors">
                         {invoice.pdfUrl ? (
                           <a
@@ -181,9 +188,11 @@ export default function InvoiceList() {
                     <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">
                       {formatDate(invoice.invoiceDate)}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
-                      {invoice.customerId}
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
+                        {invoice.customerId}
+                      </TableCell>
+                    )}
                     <TableCell className="text-xs text-cyan-600 font-bold whitespace-nowrap">
                       {invoice.orderNos || '--'}
                     </TableCell>

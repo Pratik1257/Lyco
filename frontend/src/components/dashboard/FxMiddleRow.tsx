@@ -1,13 +1,17 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ShoppingCart } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { DashboardData } from '../../types/dashboard';
 import CountUp from '../ui/CountUp';
 
 const statusStyle: Record<string, { bg: string; text: string; dot: string }> = {
-  New:         { bg: 'bg-blue-50',   text: 'text-blue-600',   dot: 'bg-blue-500' },
-  Pending:     { bg: 'bg-amber-50',  text: 'text-amber-600',  dot: 'bg-amber-500' },
-  Done:        { bg: 'bg-green-50',  text: 'text-green-600',  dot: 'bg-green-500' },
-  'In-Process':{ bg: 'bg-cyan-50',   text: 'text-cyan-600',   dot: 'bg-cyan-500' },
+  'New':        { bg: 'bg-indigo-50',  text: 'text-indigo-600', dot: 'bg-indigo-500' },
+  'Pending':    { bg: 'bg-amber-50',   text: 'text-amber-600',  dot: 'bg-amber-500' },
+  'Completed':  { bg: 'bg-emerald-50', text: 'text-emerald-600',dot: 'bg-emerald-500' },
+  'Done':       { bg: 'bg-emerald-50', text: 'text-emerald-600',dot: 'bg-emerald-500' },
+  'In Process': { bg: 'bg-sky-50',     text: 'text-sky-600',    dot: 'bg-sky-500' },
+  'In-Process': { bg: 'bg-sky-50',     text: 'text-sky-600',    dot: 'bg-sky-500' },
+  'Invoiced':   { bg: 'bg-purple-50',  text: 'text-purple-600', dot: 'bg-purple-500' },
 };
 
 const serviceColor: Record<string, string> = {
@@ -16,7 +20,15 @@ const serviceColor: Record<string, string> = {
   Digitizing: 'text-cyan-600',
 };
 
-export default function FxMiddleRow({ data }: { data: DashboardData }) {
+function GradientBar({ pct, colors }: { pct: number; colors: string }) {
+  return (
+    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full bg-gradient-to-r ${colors}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardData, isAdmin?: boolean }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Service Breakdown */}
@@ -56,37 +68,53 @@ export default function FxMiddleRow({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      {/* Recent Orders */}
+      {/* Order Status */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-sm font-bold text-gray-800">Recent Orders</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Latest received orders</p>
+            <h3 className="text-sm font-bold text-gray-800">Order Status</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Breakdown by current state</p>
           </div>
-          <button className="text-xs text-[#0891b2] font-bold flex items-center gap-0.5 hover:gap-1.5 transition-all">
-            View All <ArrowUpRight size={12} />
-          </button>
+          <span className="text-xs font-black text-gray-700 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-lg">
+            {data.orderStatus.total.toLocaleString()} total
+          </span>
         </div>
-        <div className="space-y-3">
-          {data.recentOrders.map((o) => {
-            const s = statusStyle[o.status] ?? statusStyle['New'];
-            return (
-              <div key={o.id} className="flex items-center gap-3 group">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-md"
-                  style={{ backgroundColor: o.avatarColor }}>{o.initials}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-gray-800 truncate">{o.customer}</p>
-                  <p className="text-[11px] text-gray-400">{o.service} · {o.orderNumber}</p>
+
+        <div className="space-y-4">
+          {[
+            { label: 'Completed', ...data.orderStatus.completed, colors: 'from-emerald-400 to-teal-500' },
+            { label: 'New Orders', ...data.orderStatus.newOrders, colors: 'from-blue-400 to-cyan-500' },
+            { label: 'Pending', ...data.orderStatus.pending, colors: 'from-amber-400 to-orange-500' },
+            { label: 'In-Process', ...data.orderStatus.inProcess, colors: 'from-cyan-400 to-teal-500' },
+          ].map((s) => (
+            <div key={s.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full bg-gradient-to-br ${s.colors}`} />
+                  <span className="text-xs font-medium text-gray-600">{s.label}</span>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs font-black text-gray-800"><CountUp prefix={data.currencySymbol} end={o.amount} decimals={2} /></p>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.bg} ${s.text}`}>
-                    <span className={`w-1 h-1 rounded-full ${s.dot}`} />{o.status}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-gray-800">{s.count}</span>
+                  <span className="text-[10px] text-gray-400 w-7 text-right">{s.percent}%</span>
                 </div>
               </div>
-            );
-          })}
+              <GradientBar pct={s.percent} colors={s.colors} />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5">
+          <p className="text-[10px] text-gray-400 mb-2 font-medium">Overall distribution</p>
+          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden flex gap-0.5">
+            {[
+              { label: 'Completed', ...data.orderStatus.completed, colors: 'from-emerald-400 to-teal-500' },
+              { label: 'New Orders', ...data.orderStatus.newOrders, colors: 'from-blue-400 to-cyan-500' },
+              { label: 'Pending', ...data.orderStatus.pending, colors: 'from-amber-400 to-orange-500' },
+              { label: 'In-Process', ...data.orderStatus.inProcess, colors: 'from-cyan-400 to-teal-500' },
+            ].map((s, i) => (
+              <div key={i} className={`h-full rounded-full bg-gradient-to-r ${s.colors}`} style={{ width: `${s.percent}%` }} />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -97,9 +125,9 @@ export default function FxMiddleRow({ data }: { data: DashboardData }) {
             <h3 className="text-sm font-bold text-gray-800">New Quote Requests</h3>
             <p className="text-xs text-gray-400 mt-0.5">Awaiting review</p>
           </div>
-          <button className="text-xs text-[#0891b2] font-bold flex items-center gap-0.5 hover:gap-1.5 transition-all">
+          <Link to={isAdmin ? "/admin/quotes" : "/quotes"} className="text-xs text-[#0891b2] font-bold flex items-center gap-0.5 hover:gap-1.5 transition-all">
             View All <ArrowUpRight size={12} />
-          </button>
+          </Link>
         </div>
         <div className="space-y-3">
           {data.newQuoteRequests.map((q) => (
@@ -108,8 +136,8 @@ export default function FxMiddleRow({ data }: { data: DashboardData }) {
                 <span className="text-[10px] font-mono font-bold text-[#0891b2] bg-gradient-to-r from-cyan-50 to-sky-50 border border-cyan-100 px-1.5 py-0.5 rounded-md inline-block mb-0.5">
                   {q.id}
                 </span>
-                <p className="text-xs font-bold text-gray-800 truncate">{q.customer}</p>
-                <p className={`text-[11px] font-medium ${serviceColor[q.service] ?? 'text-gray-500'}`}>{q.service}</p>
+                <p className="text-xs font-bold text-gray-800 truncate">{isAdmin ? q.customer : q.service}</p>
+                {isAdmin && <p className={`text-[11px] font-medium ${serviceColor[q.service] ?? 'text-gray-500'}`}>{q.service}</p>}
               </div>
               <span className="text-[11px] text-gray-400 shrink-0 font-medium">{q.date}</span>
             </div>

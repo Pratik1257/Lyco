@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { useAuth } from '../../context/AuthContext';
 
 import { quotesApi } from '../../api/quotesApi';
 import { servicesApi } from '../../api/servicesApi';
@@ -43,6 +44,9 @@ const getCurrencySymbol = (currency: string | null) => {
 };
 
 export default function QuoteForm() {
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -89,14 +93,31 @@ export default function QuoteForm() {
 
   // When user is selected, fetch full details for auto-fill
   useEffect(() => {
+    // Skip auto-fill if in edit mode
+    if (isEditMode) return;
+
+    // For Customer, use their own identity
+    if (!isAdmin && user) {
+      const u = user as any;
+      setFormData(prev => ({
+        ...prev,
+        userId: Number(u.userId),
+        uniqueNo: u.uniqueNo,
+        email: u.email || '',
+        companyName: u.companyName || '',
+        currency: u.currency || 'USD'
+      }));
+      return;
+    }
+
     if (formData.userId) {
-      customersApi.getCustomerById(formData.userId).then(user => {
+      customersApi.getCustomerById(formData.userId).then(u => {
         setFormData(prev => ({
           ...prev,
-          email: user.primaryEmail || (user as any).PrimaryEmail || '',
-          companyName: user.companyname || (user as any).Companyname || '',
-          uniqueNo: user.uniqueNo ?? (user as any).UniqueNo ?? null,
-          currency: user.currency || (user as any).Currency || 'USD'
+          email: u.primaryEmail || (u as any).PrimaryEmail || '',
+          companyName: u.companyname || (u as any).Companyname || '',
+          uniqueNo: u.uniqueNo ?? (u as any).UniqueNo ?? null,
+          currency: u.currency || (u as any).Currency || 'USD'
         }));
       });
     } else {
@@ -107,7 +128,7 @@ export default function QuoteForm() {
         uniqueNo: null
       }));
     }
-  }, [formData.userId]);
+  }, [formData.userId, isEditMode, isAdmin, user]);
 
   // When user and service are selected, fetch Rate
   useEffect(() => {
@@ -181,7 +202,7 @@ export default function QuoteForm() {
         setExistingFiles((quote as any).files || []);
       }).catch(() => {
         toast.error('Failed to load quote details');
-        navigate('/quotes');
+        navigate(isAdmin ? '/admin/quotes' : '/quotes');
       });
     }
   }, [id, isEditMode, users, navigate]);
@@ -217,7 +238,7 @@ export default function QuoteForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast.success(isEditMode ? 'Quote updated successfully' : 'Quote placed successfully');
-      navigate('/quotes');
+      navigate(isAdmin ? '/admin/quotes' : '/quotes');
     },
     onError: (err: any) => {
       setFormError(err.response?.data?.message || err.message);
@@ -318,38 +339,40 @@ export default function QuoteForm() {
               <section className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-6">
 
                 {/* --- Row 1 (Username, Company Name, Quote #) --- */}
-                <div className="space-y-1 lg:col-span-4">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Full Name <span className="text-red-500">*</span></label>
-                  <CustomSelect
-                    value={formData.userId || ''}
-                    onChange={(val) => {
-                      const uId = val ? Number(val) : null;
-                      const selectedUser = users.find(u => u.id === uId);
-                      setFormData(p => ({ 
-                        ...p, 
-                        userId: uId,
-                        currency: selectedUser?.currency || p.currency || 'USD',
-                        workTitle: '',
-                        instructions: '',
-                        fileFormat: '',
-                        size: '',
-                        amount: '',
-                        imageUrl: ''
-                      }));
-                      setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
-                    }}
-                    options={(Array.isArray(users) ? users : []).map(u => {
-                      const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
-                      return {
-                        value: u.id,
-                        label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
-                      };
-                    })}
-                    placeholder="Choose Full Name"
-                    error={fieldErrors.userId}
-                    isDisabled={isEditMode}
-                  />
-                </div>
+                {isAdmin && (
+                  <div className="space-y-1 lg:col-span-4">
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Full Name <span className="text-red-500">*</span></label>
+                    <CustomSelect
+                      value={formData.userId || ''}
+                      onChange={(val) => {
+                        const uId = val ? Number(val) : null;
+                        const selectedUser = users.find(u => u.id === uId);
+                        setFormData(p => ({ 
+                          ...p, 
+                          userId: uId,
+                          currency: selectedUser?.currency || p.currency || 'USD',
+                          workTitle: '',
+                          instructions: '',
+                          fileFormat: '',
+                          size: '',
+                          amount: '',
+                          imageUrl: ''
+                        }));
+                        setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
+                      }}
+                      options={(Array.isArray(users) ? users : []).map(u => {
+                        const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                        return {
+                          value: u.id,
+                          label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
+                        };
+                      })}
+                      placeholder="Choose Full Name"
+                      error={fieldErrors.userId}
+                      isDisabled={isEditMode}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-1 lg:col-span-4">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">Company Name</label>
@@ -410,7 +433,8 @@ export default function QuoteForm() {
                           if (fieldErrors.amount) setFieldErrors(p => { const n = { ...p }; delete n.amount; return n; });
                         }
                       }}
-                      className={`${premiumInput} pl-10 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''}`}
+                      readOnly={!isAdmin}
+                      className={`${premiumInput} pl-10 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''} ${!isAdmin ? 'bg-slate-50 border-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
                     />
                   </div>
                   {renderError('amount')}
@@ -642,7 +666,7 @@ export default function QuoteForm() {
             <div className="bg-slate-50/80 p-5 sm:p-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
               <button
                 type="button"
-                onClick={() => navigate('/quotes')}
+                onClick={() => navigate(isAdmin ? '/admin/quotes' : '/quotes')}
                 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <ChevronLeft size={16} /> Cancel

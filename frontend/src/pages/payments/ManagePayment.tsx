@@ -6,6 +6,7 @@ import {
   ShoppingCart as CartIcon, 
   CreditCard as CardIcon
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { paymentsApi } from '../../api/paymentsApi';
 import type { PaymentOrder } from '../../api/paymentsApi';
@@ -36,9 +37,12 @@ const formatDate = (dateStr: string | null) => {
 };
 
 export default function ManagePayment() {
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
+  
   const [users, setUsers] = useState<UserDto[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(isAdmin);
 
   const [orders, setOrders] = useState<PaymentOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -51,8 +55,12 @@ export default function ManagePayment() {
 
   const [initiating, setInitiating] = useState(false);
 
-  // ── Load users ─────────────────────────────────────────────────────────────
+  // ── Load users (Admins Only) ──────────────────────────────────────────────
   useEffect(() => {
+    if (!isAdmin) {
+      if (user?.userId) setSelectedUserId(Number(user.userId));
+      return;
+    }
     const fetch = async () => {
       try {
         const data = await usersApi.getUsers();
@@ -64,10 +72,13 @@ export default function ManagePayment() {
       }
     };
     fetch();
-  }, []);
+  }, [isAdmin, user?.userId]);
 
   // ── Load orders ────────────────────────────────────────────────────────────
   useEffect(() => {
+    // If not admin, we MUST wait for the userId to be resolved from session
+    if (!isAdmin && !selectedUserId) return;
+
     const fetchOrders = async () => {
       setLoadingOrders(true);
       setSelectedOrderIds([]);
@@ -82,7 +93,7 @@ export default function ManagePayment() {
     };
 
     fetchOrders();
-  }, [selectedUserId]);
+  }, [selectedUserId, isAdmin]);
 
   // ── Filtering & Pagination ────────────────────────────────────────────────
   const filteredOrders = orders.filter(order => {
@@ -232,21 +243,23 @@ export default function ManagePayment() {
         <div className="p-4 sm:px-6 space-y-4 border-b border-slate-100 bg-slate-50/30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-64">
-                <CustomSelect
-                  value={selectedUserId || ''}
-                  onChange={(val) => setSelectedUserId(val ? Number(val) : null)}
-                  options={users.map(u => {
-                    const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
-                    return {
-                      value: u.id,
-                      label: fullName ? `${fullName} (${u.username})` : u.username || 'Unknown',
-                    };
-                  })}
-                  placeholder="Choose Username"
-                  isDisabled={loadingUsers}
-                />
-              </div>
+              {isAdmin && (
+                <div className="w-64">
+                  <CustomSelect
+                    value={selectedUserId || ''}
+                    onChange={(val) => setSelectedUserId(val ? Number(val) : null)}
+                    options={users.map(u => {
+                      const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                      return {
+                        value: u.id,
+                        label: fullName ? `${fullName} (${u.username})` : u.username || 'Unknown',
+                      };
+                    })}
+                    placeholder="Choose Username"
+                    isDisabled={loadingUsers}
+                  />
+                </div>
+              )}
               <div className="relative flex-1 max-w-md group">
                 <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
                 <input
@@ -294,7 +307,7 @@ export default function ManagePayment() {
                       className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
                     />
                   </TableHead>
-                  <TableHead className="text-[11px] font-black text-slate-500 uppercase tracking-wider py-4">Full Name</TableHead>
+                  {isAdmin && <TableHead className="text-[11px] font-black text-slate-500 uppercase tracking-wider py-4">Full Name</TableHead>}
                   <TableHead className="text-[11px] font-black text-slate-500 uppercase tracking-wider py-4">Order #</TableHead>
                   <TableHead className="text-[11px] font-black text-slate-500 uppercase tracking-wider py-4 whitespace-nowrap">Order Date</TableHead>
                   <TableHead className="text-[11px] font-black text-slate-500 uppercase tracking-wider py-4">PO No.</TableHead>
@@ -333,9 +346,11 @@ export default function ManagePayment() {
                         }`}
                       />
                     </TableCell>
-                    <TableCell>
-                      <span className="text-[13px] font-medium text-slate-600">{order.fullname}</span>
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <span className="text-[13px] font-medium text-slate-600">{order.fullname}</span>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <span className="text-[13px] font-black text-cyan-600">
                         {order.orderNo}

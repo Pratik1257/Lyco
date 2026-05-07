@@ -34,6 +34,14 @@ public class CardDetailsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("user/{userId}")]
+    public async Task<ActionResult<CardDetailDto>> GetByUserId(long userId)
+    {
+        var result = await _cardService.GetByUserIdAsync(userId);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCardRequest req)
     {

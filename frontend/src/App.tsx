@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/layout/Layout';
@@ -11,7 +11,7 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import MyProfile from './pages/auth/MyProfile';
 import ResetPassword from './pages/auth/ResetPassword';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 import CustomerList from './pages/customers/CustomerList';
@@ -41,10 +41,12 @@ import PayPalBillingDetails from './pages/payments/PayPalBillingDetails';
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
   return (
     <CustomerFormModal
       isOpen={true}
-      onClose={() => navigate('/customers/status')}
+      onClose={() => navigate(isAdmin ? '/admin/customers/summary' : '/customers/status')}
       customerToEdit={null}
     />
   );
@@ -86,41 +88,67 @@ export default function App() {
           <AuthProvider>
             <Routes>
               <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                {/* Unified Redirect / Home */}
                 <Route index element={<Dashboard />} />
-                <Route path="services" element={<ServiceList />} />
-                <Route path="orders/new" element={<OrderForm />} />
-                <Route path="orders/edit/:id" element={<OrderForm />} />
-                <Route path="orders/summary" element={<OrderList />} />
-                <Route path="orders/complete" element={<CompleteOrderList />} />
-                <Route path="orders/complete/manual" element={<CompleteOrderForm />} />
-                <Route path="orders/remove" element={<RemoveOrderForm />} />
-                <Route path="orders" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Orders</div>} />
-                <Route path="quotes" element={<QuoteList />} />
-                <Route path="quotes/new" element={<QuoteForm />} />
-                <Route path="quotes/edit/:id" element={<QuoteForm />} />
-                <Route path="payments" element={<div className="p-4 text-gray-500">Manage Payments — coming soon</div>} />
+                
+                {/* Admin Specific Paths (Optional prefixing) */}
+                <Route path="admin/dashboard" element={<Dashboard />} />
+                <Route path="admin/orders/new" element={<OrderForm />} />
+                <Route path="admin/orders/edit/:id" element={<OrderForm />} />
+                <Route path="admin/orders/history" element={<OrderList />} />
+                <Route path="admin/orders/complete" element={<CompleteOrderList />} />
+                <Route path="admin/orders/complete/manual" element={<CompleteOrderForm />} />
+                <Route path="admin/orders/remove" element={<RemoveOrderForm />} />
+                <Route path="admin/quotes" element={<QuoteList />} />
+                <Route path="admin/quotes/new" element={<QuoteForm />} />
+                <Route path="admin/quotes/edit/:id" element={<QuoteForm />} />
                 <Route path="admin/payments/status" element={<ManagePaymentStatus />} />
                 <Route path="admin/payments/remove-bad-debt" element={<RemoveBadDebt />} />
-                <Route path="admin/payments/summary" element={<PaymentSummary />} />
+                <Route path="admin/payments/history" element={<PaymentSummary />} />
                 <Route path="admin/payments/make" element={<ManagePayment />} />
                 <Route path="admin/payments/paypal-billing" element={<PayPalBillingDetails />} />
-                <Route path="invoices/create" element={<CreateInvoice />} />
+                <Route path="admin/invoices/create" element={<CreateInvoice />} />
+                <Route path="admin/invoices/summary" element={<InvoiceList />} />
+                <Route path="admin/invoices/pending" element={<PendingInvoiceList />} />
+                <Route path="admin/customers/summary" element={<CustomerList />} />
+                <Route path="admin/customers/add-customer" element={<CustomerForm />} />
+                <Route path="admin/customers/add-three" element={<CustomerFormModalPage />} />
+                <Route path="admin/customers/card-summary" element={<CardExpiryList />} />
+                <Route path="admin/customers/card-details" element={<CardForm />} />
+                <Route path="admin/services" element={<ServiceList />} />
+                <Route path="admin/prices" element={<PriceManagement />} />
+                <Route path="admin/expenses" element={<ExpenseList />} />
+                <Route path="admin/profile" element={<MyProfile />} />
+                <Route path="admin/change-password" element={<ChangePasswordForm />} />
+                <Route path="admin/card-details" element={<CardForm />} />
+
+                {/* Customer / Root Paths */}
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="orders/new" element={<OrderForm />} />
+                <Route path="orders/edit/:id" element={<OrderForm />} />
+                <Route path="orders/history" element={<OrderList />} />
+                <Route path="orders/complete" element={<CompleteOrderList />} />
+                <Route path="quotes" element={<QuoteList />} />
+                <Route path="quotes/new" element={<QuoteForm />} />
+                <Route path="payments/make" element={<ManagePayment />} />
+                <Route path="payments/history" element={<PaymentSummary />} />
                 <Route path="invoices/summary" element={<InvoiceList />} />
-                <Route path="invoices/pending" element={<PendingInvoiceList />} />
-                <Route path="invoices" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Invoice</div>} />
-                <Route path="customers/status" element={<CustomerList />} />
-                <Route path="customers/add-two" element={<CustomerForm />} />
-                <Route path="customers/add-three" element={<CustomerFormModalPage />} />
-                <Route path="customers/card-summary" element={<CardExpiryList />} />
-                <Route path="customers/card-details" element={<CardForm />} />
-                <Route path="customers" element={<div className="p-4 text-gray-500">Select a sub-menu under Manage Customers</div>} />
-                <Route path="employees" element={<div className="p-4 text-gray-500">Manage Employee — coming soon</div>} />
-                <Route path="vendors" element={<div className="p-4 text-gray-500">Manage Vendor — coming soon</div>} />
-                <Route path="prices" element={<PriceManagement />} />
-                <Route path="expenses" element={<ExpenseList />} />
+                <Route path="card-details" element={<CardForm />} />
+                
+                {/* Account Settings (Shared) */}
                 <Route path="change-password" element={<ChangePasswordForm />} />
                 <Route path="profile" element={<MyProfile />} />
-                <Route path="promotions" element={<div className="p-4 text-gray-500">Manage Promotions — coming soon</div>} />
+                
+                {/* Base Category Redirects */}
+                <Route path="orders" element={<Navigate to="/orders/history" replace />} />
+                <Route path="quotes" element={<Navigate to="/quotes" replace />} />
+                <Route path="payments" element={<Navigate to="/payments/make" replace />} />
+                <Route path="invoices" element={<Navigate to="/invoices/summary" replace />} />
+                
+                {/* Admin Base Category Redirects */}
+                <Route path="admin/orders" element={<Navigate to="/admin/orders/history" replace />} />
+                <Route path="admin/invoices" element={<Navigate to="/admin/invoices/summary" replace />} />
+                <Route path="admin/customers" element={<Navigate to="/admin/customers/summary" replace />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />

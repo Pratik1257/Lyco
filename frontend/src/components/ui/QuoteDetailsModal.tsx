@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { quotesApi } from '../../api/quotesApi';
 import { Button } from './Button';
+import { useAuth } from '../../context/AuthContext';
 
 interface QuoteDetailsModalProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ interface QuoteDetailsModalProps {
 export function QuoteDetailsModal({ isOpen, onClose, quoteId, initialQuoteData }: QuoteDetailsModalProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   const { data: fullQuoteDetails, isLoading } = useQuery({
     queryKey: ['quote-details', quoteId],
@@ -36,7 +39,7 @@ export function QuoteDetailsModal({ isOpen, onClose, quoteId, initialQuoteData }
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success(data.message || 'Successfully converted to order');
       onClose();
-      navigate('/orders/summary');
+      navigate(isAdmin ? '/admin/orders/history' : '/orders/history');
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Failed to convert quote');

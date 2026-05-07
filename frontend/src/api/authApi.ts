@@ -6,6 +6,10 @@ export interface LoginResponse {
   fullname: string;
   userType: string;
   token: string;
+  uniqueNo?: number;
+  email?: string;
+  currency?: string;
+  companyName?: string;
 }
 
 export const authApi = {

@@ -203,7 +203,11 @@ public record LoginResponse(
     string Username,
     string Fullname,
     string UserType,
-    string Token
+    string Token,
+    long? UniqueNo = null,
+    string? Email = null,
+    string? Currency = null,
+    string? CompanyName = null
 );
 
 public record AuthRegisterRequest(

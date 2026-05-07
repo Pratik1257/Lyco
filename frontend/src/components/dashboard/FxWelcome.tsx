@@ -2,7 +2,7 @@ import { TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import type { DashboardData } from '../../types/dashboard';
 import CountUp from '../ui/CountUp';
 
-export default function FxWelcome({ data, timeframe }: { data: DashboardData, timeframe: string }) {
+export default function FxWelcome({ data, timeframe, isAdmin = true }: { data: DashboardData, timeframe: string, isAdmin?: boolean }) {
   const { greeting, todayRevenue, todayOrders } = data;
   const labelSuffix = timeframe === 'Month' ? 'month' : timeframe === 'Week' ? 'week' : 'year';
   const hour = new Date().getHours();
@@ -22,7 +22,7 @@ export default function FxWelcome({ data, timeframe }: { data: DashboardData, ti
           <h2 className="text-xl font-bold text-white mb-1">
             Good {timeOfDay}, <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">{greeting.name}</span> 👋
           </h2>
-          <p className="text-sm text-slate-400 mb-4">Here's what's happening with your business today.</p>
+          <p className="text-sm text-slate-400 mb-4">Here's what's happening with {isAdmin ? 'your business' : 'your orders'} today.</p>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 text-xs font-medium px-3 py-1 rounded-full border border-emerald-500/20">
               <TrendingUp size={11} /> Revenue up {greeting.revenueChangePercent}% vs last {labelSuffix}

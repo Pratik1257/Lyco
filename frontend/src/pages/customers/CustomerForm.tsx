@@ -4,6 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle, User, MapPin, Settings, Eye, EyeOff, ChevronLeft
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import _PhoneInput from 'react-phone-input-2';
 const PhoneInput = (_PhoneInput as any).default || _PhoneInput;
@@ -19,8 +21,11 @@ import CustomSelect from '../../components/ui/CustomSelect';
 export default function CustomerForm() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get('id');
+
   const isEdit = !!customerId;
   const [showPassword, setShowPassword] = useState(false);
 
@@ -90,7 +95,7 @@ export default function CustomerForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.success(isEdit ? 'Customer identity updated successfully' : 'New customer profile established');
-      navigate('/customers/status');
+      navigate(isAdmin ? '/admin/customers/summary' : '/customers/status');
     },
     onError: (err: any) => {
       let errorMessage = 'An unexpected validation error occurred.';
@@ -403,10 +408,7 @@ export default function CustomerForm() {
   if (isEdit && isCustomerLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center">
-        <div className="relative">
-          <div className="w-12 h-12 border-4 border-cyan-100 rounded-full"></div>
-          <div className="absolute top-0 left-0 w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
+        <p className="text-slate-400 font-bold tracking-widest uppercase text-xs animate-pulse">Loading Details...</p>
       </div>
     );
   }
@@ -476,7 +478,16 @@ export default function CustomerForm() {
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Email <span className="text-red-500">*</span></label>
-                    <input type="email" name="primaryEmail" maxLength={150} placeholder="name@domain.com" value={formData.primaryEmail || ''} onChange={handleInputChange} className={`${premiumInput} ${fieldErrors.primaryEmail ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} />
+                    <input 
+                      type="email" 
+                      name="primaryEmail" 
+                      maxLength={150} 
+                      placeholder="name@domain.com" 
+                      value={formData.primaryEmail || ''} 
+                      onChange={handleInputChange} 
+                      disabled={isEdit}
+                      className={`${premiumInput} ${isEdit ? 'bg-slate-50 text-slate-500 cursor-not-allowed select-none' : ''} ${fieldErrors.primaryEmail ? 'border-red-500 ring-4 ring-red-500/5' : ''}`} 
+                    />
                     {renderError('primaryEmail')}
                   </div>
 
@@ -594,29 +605,31 @@ export default function CustomerForm() {
                     />
                     {renderError('username')}
                   </div>
-                  <div className="space-y-1">
-                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Password {!isEdit && <span className="text-red-500">*</span>}</label>
-                    <div className="relative group">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        maxLength={100}
-                        placeholder={isEdit ? '••••••••' : 'Enter Password'}
-                        value={formData.password || ''}
-                        onChange={handleInputChange}
-                        className={`${premiumInput} pr-12 ${fieldErrors.password ? 'border-red-500 ring-4 ring-red-500/5' : ''}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-all duration-200"
-                        title={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
+                  {!isEdit && (
+                    <div className="space-y-1">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Password <span className="text-red-500">*</span></label>
+                      <div className="relative group">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          maxLength={100}
+                          placeholder="Enter Password"
+                          value={formData.password || ''}
+                          onChange={handleInputChange}
+                          className={`${premiumInput} pr-12 ${fieldErrors.password ? 'border-red-500 ring-4 ring-red-500/5' : ''}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-all duration-200"
+                          title={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                      {renderError('password')}
                     </div>
-                    {renderError('password')}
-                  </div>
+                  )}
 
                   <CustomSelect
                     label="Financial Currency"
@@ -647,7 +660,7 @@ export default function CustomerForm() {
             <div className="bg-slate-50/50 border-t border-slate-100 p-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <button
                 type="button"
-                onClick={() => navigate('/customers/status')}
+                onClick={() => navigate(isAdmin ? '/admin/customers/summary' : '/customers/status')}
                 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <ChevronLeft size={16} /> Cancel

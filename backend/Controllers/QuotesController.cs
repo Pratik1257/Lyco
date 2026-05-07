@@ -309,6 +309,7 @@ public class QuotesController : ControllerBase
             OrderStatus = "In Process",
             OrderState = "New",           // BUG-Q2 fix
             PaymentStatus = "Pending",    // BUG-Q1 fix
+            Ordertype = "Order",          // Ensure legacy compatibility
             Orderuq = orderuq             // BUG-Q3 fix
         };
 

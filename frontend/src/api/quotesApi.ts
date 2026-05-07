@@ -34,7 +34,8 @@ export const quotesApi = {
     search: string = '',
     serviceId?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    uniqueNo?: number
   ): Promise<QuotesResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
@@ -43,6 +44,7 @@ export const quotesApi = {
     if (serviceId) params.append('serviceId', serviceId.toString());
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (uniqueNo) params.append('uniqueNo', uniqueNo.toString());
 
     const res = await apiClient.get<QuotesResponse>(`/Quotes?${params.toString()}`);
     return res.data;

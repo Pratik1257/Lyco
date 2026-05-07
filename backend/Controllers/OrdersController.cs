@@ -28,6 +28,7 @@ public class OrdersController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] string? search = null,
         [FromQuery] string? status = null,
+        [FromQuery] string? paymentStatus = null,
         [FromQuery] long? serviceId = null,
         [FromQuery] long? uniqueNo = null,
         [FromQuery] DateTime? startDate = null,
@@ -78,6 +79,7 @@ public class OrdersController : ControllerBase
             InvoiceNo = x.o.InvoiceNo,
             ExternalLink = _context.OrderFileMsts
                .Where(f => f.OrderNo == x.o.OrderNo && f.FileName == "External Asset Link")
+               .OrderByDescending(f => f.OrderFileId)
                .Select(f => f.FileUrl)
                .FirstOrDefault()
         });
@@ -85,6 +87,11 @@ public class OrdersController : ControllerBase
         if (!string.IsNullOrEmpty(status) && status != "all")
         {
             joinedQuery = joinedQuery.Where(o => o.OrderStatus != null && o.OrderStatus.ToLower() == status.ToLower());
+        }
+
+        if (!string.IsNullOrEmpty(paymentStatus) && paymentStatus != "all")
+        {
+            joinedQuery = joinedQuery.Where(o => o.PaymentStatus != null && o.PaymentStatus.ToLower() == paymentStatus.ToLower());
         }
 
         if (serviceId.HasValue)
@@ -143,6 +150,7 @@ public class OrdersController : ControllerBase
         // Get external link from files table
         var externalLink = await _context.OrderFileMsts
             .Where(f => f.OrderNo == order.OrderNo && f.FileName == "External Asset Link")
+            .OrderByDescending(f => f.OrderFileId)
             .Select(f => f.FileUrl)
             .FirstOrDefaultAsync();
 
@@ -187,44 +195,40 @@ public class OrdersController : ControllerBase
     [HttpGet("next-number")]
     public async Task<IActionResult> GetNextOrderNumber([FromQuery] long uniqueNo)
     {
-        // Find max sequence in Orders
-        var maxOrderSeq = 0;
-        var lastOrder = await _context.OrderDetails
+        // Scan ALL order numbers for this user and find the true max sequence.
+        // Using LastOrDefault by OrderId was unreliable after deletions — this approach
+        // parses every existing number so deletions can never cause a reused sequence.
+        var allOrderNos = await _context.OrderDetails
             .Where(o => o.UniqueNo == uniqueNo && o.OrderNo != null && o.OrderNo.Contains("-"))
-            .OrderByDescending(o => o.OrderId)
-            .FirstOrDefaultAsync();
+            .Select(o => o.OrderNo)
+            .ToListAsync();
 
-        if (lastOrder?.OrderNo != null)
-        {
-            var parts = lastOrder.OrderNo.Split('-');
-            if (parts.Length >= 2 && int.TryParse(parts.Last(), out var seq))
-                maxOrderSeq = seq;
-        }
+        var maxOrderSeq = allOrderNos
+            .Select(no =>
+            {
+                var parts = no!.Split('-');
+                return parts.Length >= 2 && int.TryParse(parts.Last(), out var seq) ? seq : 0;
+            })
+            .DefaultIfEmpty(0)
+            .Max();
 
-        // Find max sequence in Quotes
-        var maxQuoteSeq = 0;
-        var lastQuote = await _context.Quotes
+        // Scan ALL quote numbers for this user and find the true max sequence.
+        var allQuoteNos = await _context.Quotes
             .Where(q => q.UniqueNo == uniqueNo && q.QuoteNo != null && q.QuoteNo.Contains("-"))
-            .OrderByDescending(q => q.QuoteId)
-            .FirstOrDefaultAsync();
+            .Select(q => q.QuoteNo)
+            .ToListAsync();
 
-        if (lastQuote?.QuoteNo != null)
-        {
-            var parts = lastQuote.QuoteNo.Split('-');
-            if (parts.Length >= 2 && int.TryParse(parts.Last(), out var seq))
-                maxQuoteSeq = seq;
-        }
+        var maxQuoteSeq = allQuoteNos
+            .Select(no =>
+            {
+                var parts = no!.Split('-');
+                return parts.Length >= 2 && int.TryParse(parts.Last(), out var seq) ? seq : 0;
+            })
+            .DefaultIfEmpty(0)
+            .Max();
 
-        // Use the highest sequence across both tables + 1
+        // Next number is the highest ever used across orders + quotes, plus one.
         var nextSequence = Math.Max(maxOrderSeq, maxQuoteSeq) + 1;
-        
-        // Fallback for cases where string parsing fails but records exist
-        if (nextSequence == 1)
-        {
-            var orderCount = await _context.OrderDetails.CountAsync(o => o.UniqueNo == uniqueNo);
-            var quoteCount = await _context.Quotes.CountAsync(q => q.UniqueNo == uniqueNo);
-            nextSequence = Math.Max(orderCount, quoteCount) + 1;
-        }
 
         return Ok(new { orderNo = $"{uniqueNo}-{nextSequence}" });
     }
@@ -310,6 +314,11 @@ public class OrdersController : ControllerBase
         order.Amount = dto.Amount;
         order.Currency = dto.Currency;
         order.Email = dto.Email;
+
+        // Ensure legacy fields are populated for consistency if they were null
+        if (string.IsNullOrEmpty(order.Ordertype)) order.Ordertype = "Order";
+        if (string.IsNullOrEmpty(order.OrderState)) order.OrderState = "New";
+        if (string.IsNullOrEmpty(order.PaymentStatus)) order.PaymentStatus = "Pending";
 
         // Manual Validation
         var serviceExistsUpdate = await _context.ServiceMsts.AnyAsync(s => s.ServiceId == dto.ServiceId);
@@ -429,7 +438,9 @@ public class OrdersController : ControllerBase
     {
         // Check if an external link already exists for this order
         var existingLink = await _context.OrderFileMsts
-            .FirstOrDefaultAsync(f => f.OrderNo == orderNo && f.FileName == "External Asset Link");
+            .Where(f => f.OrderNo == orderNo && f.FileName == "External Asset Link")
+            .OrderByDescending(f => f.OrderFileId)
+            .FirstOrDefaultAsync();
 
         if (existingLink != null)
         {

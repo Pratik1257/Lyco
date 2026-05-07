@@ -24,6 +24,7 @@ export interface Order {
   paymentStatus: string | null;
   invoiceId?: number | null;
   invoiceNo?: string | null;
+  userId?: number | null;
 }
 
 export interface OrdersResponse {
@@ -40,6 +41,7 @@ export const ordersApi = {
     pageSize: number = 10,
     search: string = '',
     status: string = 'all',
+    paymentStatus: string = 'all',
     serviceId?: number,
     uniqueNo?: number,
     startDate?: string,
@@ -50,6 +52,7 @@ export const ordersApi = {
     params.append('pageSize', pageSize.toString());
     if (search) params.append('search', search);
     if (status) params.append('status', status);
+    if (paymentStatus) params.append('paymentStatus', paymentStatus);
     if (serviceId) params.append('serviceId', serviceId.toString());
     if (uniqueNo) params.append('uniqueNo', uniqueNo.toString());
     if (startDate) params.append('startDate', startDate);

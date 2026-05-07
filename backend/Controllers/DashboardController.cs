@@ -21,7 +21,7 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetDashboardData([FromQuery] string timeframe = "Month", [FromQuery] string currency = "USD")
+    public async Task<IActionResult> GetDashboardData([FromQuery] string timeframe = "Month", [FromQuery] string currency = "USD", [FromQuery] long? uniqueNo = null)
     {
         var now = DateTime.Now;
         var startOfToday = now.Date;
@@ -43,18 +43,29 @@ public class DashboardController : ControllerBase
 
         // Pre-fetch commonly used lists to memory to avoid multiple db hits if they're small. 
         // For large datasets, we should do IQueryable aggregations.
-        var usersCount = await _context.UserRegistrations.CountAsync();
+        var usersCount = await _context.UserRegistrations.CountAsync(u => u.UserType != "Admin");
         
+        long? filteredUserId = null;
+        if (uniqueNo.HasValue)
+        {
+            filteredUserId = await _context.UserRegistrations
+                .Where(u => u.UniqueNo == uniqueNo.Value)
+                .Select(u => (long?)u.UserId)
+                .FirstOrDefaultAsync();
+        }
+
         var allOrders = await _context.OrderDetails.AsNoTracking()
-            .Where(o => string.IsNullOrEmpty(currency) || o.Currency == currency)
+            .Where(o => (string.IsNullOrEmpty(currency) || o.Currency == currency) && (!uniqueNo.HasValue || o.UniqueNo == uniqueNo.Value))
             .ToListAsync();
-        var allInvoices = await _context.InvoiceMsts.AsNoTracking().ToListAsync();
+        var allInvoices = await _context.InvoiceMsts.AsNoTracking()
+            .Where(i => !filteredUserId.HasValue || i.UserId == filteredUserId.Value)
+            .ToListAsync();
         var allQuotes = await _context.Quotes.AsNoTracking()
-            .Where(q => string.IsNullOrEmpty(currency) || q.Currency == currency)
+            .Where(q => (string.IsNullOrEmpty(currency) || q.Currency == currency) && (!uniqueNo.HasValue || q.UniqueNo == uniqueNo.Value))
             .ToListAsync();
         var allServices = await _context.ServiceMsts.AsNoTracking().ToListAsync();
         var allExpenses = await _context.ExpenseMsts.AsNoTracking()
-            .Where(e => string.IsNullOrEmpty(currency) || e.Currency == currency)
+            .Where(e => (string.IsNullOrEmpty(currency) || e.Currency == currency))
             .ToListAsync();
 
         // Filter by timeframe
@@ -205,16 +216,26 @@ public class DashboardController : ControllerBase
         }
 
         // 6. Recent Orders
-        var recentOrdersDb = filteredOrders.OrderByDescending(o => o.OrderId).Take(5).ToList();
+        var recentOrdersDb = filteredOrders
+            .Where(o => o.PaymentStatus != "Paid" && o.PaymentStatus != "Completed")
+            .OrderByDescending(o => o.OrderId)
+            .Take(5)
+            .ToList();
         var recentOrders = new List<RecentOrderDto>();
-        var random = new Random();
         foreach (var ro in recentOrdersDb)
         {
             var user = await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == ro.UniqueNo);
             var service = allServices.FirstOrDefault(s => s.ServiceId == ro.ServiceId);
             
-            var customerName = user?.Username ?? "Unknown";
-            var initials = customerName.Length >= 2 ? customerName.Substring(0, 2).ToUpper() : "UN";
+            var customerName = !string.IsNullOrEmpty(user?.Firstname) 
+                ? $"{user.Firstname} {user.Lastname}".Trim() 
+                : user?.Username ?? "Unknown";
+
+            var initials = "";
+            if (!string.IsNullOrEmpty(user?.Firstname) && !string.IsNullOrEmpty(user?.Lastname))
+                initials = $"{user.Firstname[0]}{user.Lastname[0]}".ToUpper();
+            else
+                initials = customerName.Length >= 2 ? customerName.Substring(0, 2).ToUpper() : "UN";
             
             // Deterministic color based on name
             var colorHash = Math.Abs(customerName.GetHashCode());
@@ -234,7 +255,6 @@ public class DashboardController : ControllerBase
         }
 
         // 7. New Quote Requests
-        // Quotes usually have a date, let's filter them too if they have a date field
         var filteredQuotes = allQuotes.Where(q => q.QuoteDate >= timeframeStart).ToList();
         var recentQuotesDb = filteredQuotes.OrderByDescending(q => q.QuoteId).Take(5).ToList();
         var newQuoteRequests = new List<NewQuoteRequestDto>();
@@ -242,12 +262,17 @@ public class DashboardController : ControllerBase
         {
             var user = await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == rq.UniqueNo);
             var service = allServices.FirstOrDefault(s => s.ServiceId == rq.ServiceId);
+
+            var customerName = !string.IsNullOrEmpty(user?.Firstname) 
+                ? $"{user.Firstname} {user.Lastname}".Trim() 
+                : user?.Username ?? "Unknown";
+
             newQuoteRequests.Add(new NewQuoteRequestDto
             {
                 Id = rq.QuoteNo ?? rq.QuoteId.ToString(),
-                Customer = user?.Username ?? "Unknown",
+                Customer = customerName,
                 Service = service?.ServiceName ?? "Others",
-                Date = rq.QuoteDate?.ToString("M/d") ?? ""
+                Date = rq.QuoteDate?.ToString("MM/dd/yyyy") ?? ""
             });
         }
 
@@ -292,9 +317,14 @@ public class DashboardController : ControllerBase
         foreach (var tcg in topCustGroups)
         {
             var user = await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == tcg.UniqueNo);
+            
+            var customerName = !string.IsNullOrEmpty(user?.Firstname) 
+                ? $"{user.Firstname} {user.Lastname}".Trim() 
+                : user?.Username ?? "Unknown";
+
             topCustomers.Add(new TopCustomerDto
             {
-                Name = user?.Username ?? "Unknown",
+                Name = customerName,
                 Orders = tcg.Count,
                 Color = colors[colorIdx % colors.Length]
             });
@@ -307,7 +337,9 @@ public class DashboardController : ControllerBase
             CurrencySymbol = currencySymbol,
             Greeting = new DashboardGreeting
             {
-                Name = "Admin", // or User identity name
+                Name = uniqueNo.HasValue 
+                    ? (await _context.UserRegistrations.FirstOrDefaultAsync(u => u.UniqueNo == uniqueNo))?.Firstname ?? "User"
+                    : "Admin",
                 RevenueChangePercent = Math.Round(revenueChange, 1),
                 OrdersInProgress = ordersInProgress,
                 QuotesAwaiting = quotesAwaiting
@@ -341,7 +373,13 @@ public class DashboardController : ControllerBase
             NewQuoteRequests = newQuoteRequests,
             RevenueByService = revenueByService,
             TopCustomers = topCustomers,
-            ServiceStats = serviceStats
+            ServiceStats = serviceStats,
+            
+            // Legacy Artwork Categories
+            BasicArtworkCount = allOrders.Count(o => allServices.FirstOrDefault(s => s.ServiceId == o.ServiceId)?.ServiceName == "Basic Artwork"),
+            ComplexArtworkCount = allOrders.Count(o => allServices.FirstOrDefault(s => s.ServiceId == o.ServiceId)?.ServiceName == "Complex Artwork"),
+            DigitizingCount = allOrders.Count(o => allServices.FirstOrDefault(s => s.ServiceId == o.ServiceId)?.ServiceName == "Digitizing"),
+            OtherArtworkCount = allOrders.Count(o => !new[] { "Basic Artwork", "Complex Artwork", "Digitizing" }.Contains(allServices.FirstOrDefault(s => s.ServiceId == o.ServiceId)?.ServiceName ?? ""))
         };
 
         return Ok(dto);

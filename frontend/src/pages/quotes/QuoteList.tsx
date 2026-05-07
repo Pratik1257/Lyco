@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Search, Eye, Trash2, Plus, FileText, Pencil
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 import { quotesApi } from '../../api/quotesApi';
@@ -19,6 +20,8 @@ import { QuoteDetailsModal } from '../../components/ui/QuoteDetailsModal';
 export default function QuoteList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   // State
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,8 +44,8 @@ export default function QuoteList() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['quotes', currentPage, itemsPerPage, searchQuery, serviceFilter, startDate, endDate],
-    queryFn: () => quotesApi.getQuotes(currentPage, itemsPerPage, searchQuery, serviceFilter, startDate, endDate),
+    queryKey: ['quotes', currentPage, itemsPerPage, searchQuery, serviceFilter, startDate, endDate, (user as any)?.uniqueNo],
+    queryFn: () => quotesApi.getQuotes(currentPage, itemsPerPage, searchQuery, serviceFilter, startDate, endDate, isAdmin ? undefined : (user as any)?.uniqueNo),
   });
 
   const deleteMutation = useMutation({
@@ -99,7 +102,7 @@ export default function QuoteList() {
             <div className="flex items-center gap-2">
               <Button
                 variant="primary"
-                onClick={() => navigate('/quotes/new')}
+                onClick={() => navigate(isAdmin ? '/admin/quotes/new' : '/quotes/new')}
                 className="h-11 px-6 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-slate-200"
               >
                 <Plus size={18} />
@@ -141,10 +144,10 @@ export default function QuoteList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Quote #</TableHead>
+                {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>}
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap pl-6 lg:pl-4">Quote #</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Quote Date</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Email</TableHead>
+                {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Email</TableHead>}
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO No.</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Service</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Rate</TableHead>
@@ -168,14 +171,16 @@ export default function QuoteList() {
                     key={quote.quoteId}
                     className="group hover:bg-slate-50/50 transition-colors"
                   >
-                    <TableCell className="pl-6 whitespace-nowrap">
-                      <span className="font-bold text-slate-800 text-sm">{quote.fullname}</span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    {isAdmin && (
+                      <TableCell className="pl-6 whitespace-nowrap">
+                        <span className="font-bold text-slate-800 text-sm">{quote.fullname}</span>
+                      </TableCell>
+                    )}
+                    <TableCell className={`whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>
                       <span className="font-black text-slate-900 text-sm text-cyan-600">{quote.quoteNo || '--'}</span>
                     </TableCell>
                     <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{formatDate(quote.quoteDate)}</TableCell>
-                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">{quote.email || '--'}</TableCell>
+                    {isAdmin && <TableCell className="text-xs text-slate-500 whitespace-nowrap">{quote.email || '--'}</TableCell>}
                     <TableCell className="text-xs text-slate-600 font-medium whitespace-nowrap">{quote.workTitle || '--'}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold">
@@ -204,24 +209,26 @@ export default function QuoteList() {
                         <Button
                           variant="ghost-cyan"
                           size="icon"
-                          onClick={() => navigate(`/quotes/edit/${quote.quoteId}`)}
+                          onClick={() => navigate(isAdmin ? `/admin/quotes/edit/${quote.quoteId}` : `/quotes/edit/${quote.quoteId}`)}
                           className="w-7 h-7 rounded-lg hover:bg-cyan-50 text-cyan-600"
                           title="Edit Quote"
                         >
                           <Pencil size={14} />
                         </Button>
-                        <Button
-                          variant="ghost-red"
-                          size="icon"
-                          className="w-7 h-7 rounded-lg hover:bg-red-50 text-red-600"
-                          title="Delete Quote"
-                          onClick={() => {
-                            setQuoteToDelete(quote);
-                            setIsDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost-red"
+                            size="icon"
+                            className="w-7 h-7 rounded-lg hover:bg-red-50 text-red-600"
+                            title="Delete Quote"
+                            onClick={() => {
+                              setQuoteToDelete(quote);
+                              setIsDeleteModalOpen(true);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

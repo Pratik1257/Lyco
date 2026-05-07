@@ -11,10 +11,13 @@ import { customersApi } from '../../api/customersApi';
 import { ordersApi } from '../../api/ordersApi';
 import { invoicesApi } from '../../api/invoicesApi';
 import { generateDraftPdf } from '../../utils/invoiceDraftPdf';
+import { useAuth } from '../../context/AuthContext';
 
 
 export default function CreateInvoice() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUniqueNo, setSelectedUniqueNo] = useState<number | null>(null);
@@ -151,7 +154,7 @@ export default function CreateInvoice() {
         }
       });
 
-      navigate('/invoices/summary');
+      navigate(isAdmin ? '/admin/invoices/summary' : '/invoices/summary');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create invoice');
     } finally {
@@ -430,7 +433,7 @@ export default function CreateInvoice() {
             <div className="bg-slate-50/50 p-6 sm:p-7 border-t border-slate-100 flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => navigate('/invoices/summary')}
+                onClick={() => navigate(isAdmin ? '/admin/invoices/summary' : '/invoices/summary')}
                 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <ChevronLeft size={16} /> Cancel

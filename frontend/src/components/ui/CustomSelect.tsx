@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 interface Option {
   value: string | number;
   label: string;
+  isDisabled?: boolean;
 }
 
 interface CustomProps {
@@ -65,6 +66,7 @@ const CustomOption = memo((props: any) => {
   const parts = props.label.split(', ');
   const isSelected = props.isSelected;
   const isFocused = props.isFocused;
+  const isDisabled = props.isDisabled;
 
   // Logic for color contrast
   const showWhiteText = isFocused; // When focused, we use a dark background, so text MUST be white
@@ -74,7 +76,7 @@ const CustomOption = memo((props: any) => {
     const [symbol, code, name] = parts;
     return (
       <components.Option {...props}>
-        <div className="flex items-center gap-3 py-0.5">
+        <div className={`flex items-center gap-3 py-0.5 ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale-[0.5]' : ''}`}>
           {/* Visual Badge for Symbol */}
           <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base font-bold transition-all duration-200 ${isFocused
             ? 'bg-white/20 text-white scale-110 shadow-lg'
@@ -119,7 +121,7 @@ const CustomOption = memo((props: any) => {
   // Fallback for standard items
   return (
     <components.Option {...props}>
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
         <span className={`font-medium ${isFocused ? 'text-white' : 'text-gray-900'}`}>{props.label}</span>
         {isSelected && (
           <div className={`w-2 h-2 rounded-full ${isFocused ? 'bg-white' : 'bg-cyan-500'}`} />
@@ -330,13 +332,15 @@ export default function CustomSelect({
         : state.isSelected
           ? '#ecfeff'
           : 'transparent',
-      color: state.isFocused
-        ? '#ffffff'
-        : state.isSelected
-          ? '#0891b2'
-          : '#4b5563',
+      color: state.isDisabled
+        ? '#9ca3af'
+        : state.isFocused
+          ? '#ffffff'
+          : state.isSelected
+            ? '#0891b2'
+            : '#4b5563',
       '&:active': {
-        backgroundColor: state.isSelected ? '#ecfeff' : '#0e7490',
+        backgroundColor: state.isDisabled ? 'transparent' : (state.isSelected ? '#ecfeff' : '#0e7490'),
       }
     }),
     indicatorSeparator: () => ({

@@ -10,10 +10,13 @@ import { ordersApi } from '../../api/ordersApi';
 import { customersApi } from '../../api/customersApi';
 import { Button } from '../../components/ui/Button';
 import CustomSelect from '../../components/ui/CustomSelect';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CompleteOrderForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
@@ -106,7 +109,7 @@ export default function CompleteOrderForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Order completed successfully');
-      navigate('/orders/complete');
+      navigate(isAdmin ? '/admin/orders/complete' : '/orders/complete');
     },
     onError: (err: any) => {
       setFormError(err.response?.data?.message || 'Failed to complete order');
@@ -440,7 +443,7 @@ export default function CompleteOrderForm() {
             <div className="bg-slate-50/80 p-5 sm:p-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 sm:gap-0">
               <button
                 type="button"
-                onClick={() => navigate('/orders/complete')}
+                onClick={() => navigate(isAdmin ? '/admin/orders/complete' : '/orders/complete')}
                 className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors order-2 sm:order-1"
               >
                 <ChevronLeft size={16} /> Cancel

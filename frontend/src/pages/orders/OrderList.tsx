@@ -1,22 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Search, ShoppingBag, Eye, Edit2, Trash2,
-  Download, Plus, Clock, CheckCircle2, AlertCircle
+  Download, Plus, Clock, CheckCircle2, AlertCircle,
+  CreditCard, Loader2,
+  Search, ShoppingBag, Eye, Edit2, Trash2
 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { useAuth } from '../../context/AuthContext';
 
 import { ordersApi } from '../../api/ordersApi';
+import { paymentsApi } from '../../api/paymentsApi';
 import { servicesApi } from '../../api/servicesApi';
 import { Button } from '../../components/ui/Button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
 import CustomSelect from '../../components/ui/CustomSelect';
 import DatePicker from '../../components/ui/DatePicker';
-import { Skeleton, TableSkeleton } from '../../components/ui/Skeleton';
+import { TableSkeleton } from '../../components/ui/Skeleton';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { OrderDetailsModal } from '../../components/ui/OrderDetailsModal';
 import CompleteOrderModal from './CompleteOrderModal';
@@ -24,13 +27,19 @@ import type { Order } from '../../api/ordersApi';
 
 export default function OrderList() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'all';
+  
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
   const queryClient = useQueryClient();
 
   // State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState<number | undefined>(undefined);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -46,6 +55,17 @@ export default function OrderList() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
 
+  // Payment Selection State
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [initiating, setInitiating] = useState(false);
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status) {
+      setStatusFilter(status);
+    }
+  }, [searchParams]);
+
   // Queries
   const { data: servicesData } = useQuery({
     queryKey: ['services-dropdown'],
@@ -53,8 +73,8 @@ export default function OrderList() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['orders', currentPage, itemsPerPage, searchQuery, statusFilter, serviceFilter, startDate, endDate],
-    queryFn: () => ordersApi.getOrders(currentPage, itemsPerPage, searchQuery, statusFilter, serviceFilter, undefined, startDate, endDate),
+    queryKey: ['orders', currentPage, itemsPerPage, searchQuery, statusFilter, paymentStatusFilter, serviceFilter, startDate, endDate, (user as any)?.uniqueNo],
+    queryFn: () => ordersApi.getOrders(currentPage, itemsPerPage, searchQuery, statusFilter, paymentStatusFilter, serviceFilter, isAdmin ? undefined : (user as any)?.uniqueNo, startDate, endDate),
   });
 
   const deleteMutation = useMutation({
@@ -73,6 +93,77 @@ export default function OrderList() {
   const orders = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const totalPages = data?.totalPages ?? 1;
+
+  // ── Payment Selection Logic ───────────────────────────────────────────────
+  const validOrdersForSelection = orders.filter((o: any) => o.orderStatus === 'Completed' && (o.paymentStatus === 'Pending' || o.paymentStatus === 'Unpaid'));
+  
+  const toggleOrder = (id: number) => {
+    setSelectedOrderIds(prev =>
+      prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]
+    );
+  };
+
+  const selectedOrders = orders.filter((o: any) => selectedOrderIds.includes(o.orderId));
+  const hasSelections = selectedOrderIds.length > 0;
+
+  // Determine the "anchor" for selection (the first selected order, or the first valid one on the page)
+  const selectionAnchor = selectedOrders.length > 0 ? selectedOrders[0] : validOrdersForSelection[0];
+  
+  // Orders that match the anchor's currency (and user, if Admin)
+  const compatibleMatches = selectionAnchor ? validOrdersForSelection.filter((o: any) => 
+    o.currency === selectionAnchor.currency && 
+    (!isAdmin || (o.userId || o.uniqueNo) === (selectionAnchor.userId || selectionAnchor.uniqueNo))
+  ) : [];
+
+  const isAllSelected = compatibleMatches.length > 0 && compatibleMatches.every(m => selectedOrderIds.includes(m.orderId));
+
+  const handleToggleAll = () => {
+    if (!selectionAnchor) return;
+
+    if (isAllSelected) {
+      // If everything compatible is already selected, clear the selection
+      setSelectedOrderIds([]);
+    } else {
+      // Otherwise, select all compatible orders
+      setSelectedOrderIds(compatibleMatches.map(m => m.orderId));
+      
+      if (compatibleMatches.length < validOrdersForSelection.length) {
+        toast.success(`Selected all orders for ${selectionAnchor.username || selectionAnchor.fullname} (${selectionAnchor.currency}).`);
+      }
+    }
+  };
+
+  const selectedTotal = selectedOrders.reduce((sum: number, o: any) => sum + Number(o.amount || 0), 0);
+  const activeCurrency = selectedOrders.length > 0 ? selectedOrders[0].currency : 'USD';
+  const activeSymbol = activeCurrency === 'GBP' ? '£' : (activeCurrency === 'EUR' || activeCurrency === 'EURO') ? '€' : activeCurrency === 'AUD' ? 'A$' : activeCurrency === 'INR' ? '₹' : '$';
+
+  const handleMakePayment = async () => {
+    if (selectedOrderIds.length === 0) {
+      toast.error('Please select at least one order');
+      return;
+    }
+
+    setInitiating(true);
+    try {
+      const targetUserId = isAdmin ? (selectedOrders[0].userId || selectedOrders[0].uniqueNo) : ((user as any)?.userId || selectedOrders[0].uniqueNo);
+      
+      const result = await paymentsApi.initiatePayment({
+        userId: targetUserId || 0,
+        orderIds: selectedOrderIds,
+      });
+      toast.success('Payment initiated! Opening PayPal...');
+      window.open(result.paypalUrl, '_blank', 'noopener,noreferrer');
+
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setSelectedOrderIds([]);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Failed to initiate payment';
+      toast.error(msg);
+    } finally {
+      setInitiating(false);
+    }
+  };
+
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '--';
@@ -106,10 +197,19 @@ export default function OrderList() {
     return <Clock size={12} />;
   };
 
+  const getPaymentStatusStyle = (status: string | null) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'paid') return 'bg-green-50 text-green-700 border-green-100';
+    if (s === 'pending' || s === 'unpaid') return 'bg-amber-50 text-amber-700 border-amber-100';
+    if (s === 'overdue') return 'bg-red-50 text-red-700 border-red-100';
+    if (s.includes('bad')) return 'bg-slate-800 text-slate-100 border-slate-700';
+    return 'bg-slate-50 text-slate-700 border-slate-100';
+  };
+
   const handleExport = async () => {
     const loadingToast = toast.loading('Preparing professional Excel export...');
     try {
-      const allData = await ordersApi.getOrders(1, 1000, searchQuery, statusFilter, serviceFilter, undefined, startDate, endDate);
+      const allData = await ordersApi.getOrders(1, 1000, searchQuery, statusFilter, paymentStatusFilter, serviceFilter, isAdmin ? undefined : (user as any)?.uniqueNo, startDate, endDate);
       const items = allData.items;
 
       if (items.length === 0) {
@@ -223,6 +323,52 @@ export default function OrderList() {
 
   return (
     <div className="relative animate-in fade-in duration-500 space-y-4">
+      {/* Checkout Summary Bar */}
+      {selectedOrderIds.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm animate-in slide-in-from-top-2">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-8">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orders Selected</span>
+                <span className="text-2xl font-black text-slate-800 tracking-tight">
+                  {selectedOrderIds.length} <span className="text-xs text-slate-300 font-bold uppercase ml-1">Items</span>
+                </span>
+              </div>
+              <div className="h-10 w-px bg-slate-100 hidden md:block" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">Total Amount:</span>
+                <span className="text-2xl font-black text-slate-900 tracking-tight">
+                  {activeSymbol}{selectedTotal.toFixed(2)} <span className="text-xs text-slate-400 font-bold uppercase ml-1">{activeCurrency}</span>
+                </span>
+              </div>
+              <div className="h-10 w-px bg-slate-100 hidden lg:block" />
+              <div className="hidden lg:flex flex-col">
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Checkout Note:</span>
+                <p className="text-[10px] font-bold text-slate-400 leading-tight max-w-[200px]">
+                  Showing valid orders matching selected currency{isAdmin ? ' and user' : ''}. Uncheck to select others.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <Button
+                onClick={handleMakePayment}
+                disabled={initiating || selectedOrderIds.length === 0}
+                className="flex-1 md:flex-none h-14 px-10 bg-[#fbb03b] hover:bg-[#e89d2a] text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                variant="unstyled"
+              >
+                {initiating ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <CreditCard size={20} />
+                )}
+                {initiating ? 'Processing...' : 'Pay Now'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Unified Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
         {/* Header & Filter Section */}
@@ -251,7 +397,7 @@ export default function OrderList() {
             </Button>
             <Button
               variant="primary"
-              onClick={() => navigate('/orders/new')}
+              onClick={() => navigate(isAdmin ? '/admin/orders/new' : '/orders/new')}
               className="bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 h-11 px-5 rounded-xl text-xs"
             >
               <Plus size={16} />
@@ -261,7 +407,7 @@ export default function OrderList() {
         </div>
 
         {/* Bottom Row: Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <CustomSelect
             value={serviceFilter || ''}
             onChange={(val) => { setServiceFilter(val ? Number(val) : undefined); setCurrentPage(1); }}
@@ -281,6 +427,19 @@ export default function OrderList() {
               { value: 'Completed', label: 'Completed' },
             ]}
             placeholder="Status"
+          />
+          <CustomSelect
+            value={paymentStatusFilter}
+            onChange={(val) => { setPaymentStatusFilter(val as string); setCurrentPage(1); }}
+            options={[
+              { value: 'all', label: 'All Payment' },
+              { value: 'Paid', label: 'Paid' },
+              { value: 'Pending', label: 'Pending' },
+              { value: 'Unpaid', label: 'Unpaid' },
+              { value: 'Overdue', label: 'Overdue' },
+              { value: 'Bad Debt', label: 'Bad Debt' },
+            ]}
+            placeholder="Payment Status"
           />
           <DatePicker
             value={startDate}
@@ -304,15 +463,25 @@ export default function OrderList() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50">
+                <TableHead className="w-12 pl-6">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleToggleAll}
+                    disabled={validOrdersForSelection.length === 0}
+                    className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </TableHead>
                 <TableHead className="py-2 px-6 whitespace-nowrap">Order #</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Ordered On</TableHead>
-                <TableHead className="py-2 px-4 whitespace-nowrap">Full Name</TableHead>
+                {isAdmin && <TableHead className="py-2 px-4 whitespace-nowrap">Full Name</TableHead>}
                 <TableHead className="py-2 px-4 whitespace-nowrap">Email</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">PO No.</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Service</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Price</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Status</TableHead>
                 <TableHead className="py-2 px-4 whitespace-nowrap">Completed Date</TableHead>
+                <TableHead className="py-2 px-4 whitespace-nowrap">Payment Status</TableHead>
                 <TableHead className="py-2 px-6 text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -321,6 +490,9 @@ export default function OrderList() {
                 /* Skeleton rows */
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
+                    <TableCell className="py-2.5 px-6">
+                      <div className="h-4 w-4 bg-slate-100 rounded"></div>
+                    </TableCell>
                     {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j} className="py-2.5 px-6">
                         <div className="h-3 bg-slate-100 rounded-md w-full"></div>
@@ -329,13 +501,56 @@ export default function OrderList() {
                   </TableRow>
                 ))
               ) : orders.length > 0 ? (
-                orders.map((order) => (
-                  <TableRow
-                    key={order.orderId}
-                    className="group hover:bg-slate-50/50 transition-colors"
-                  >
-                    <TableCell
-                      className="px-6 font-bold text-cyan-600 hover:text-cyan-700 cursor-pointer text-sm whitespace-nowrap transition-colors"
+                orders.map((order) => {
+                  const isSelected = selectedOrderIds.includes(order.orderId);
+                  const firstSelectedOrder = selectedOrders[0];
+                  
+                  let isCheckboxDisabled = false;
+                  let disabledReason = '';
+
+                  if (order.orderStatus !== 'Completed') {
+                    isCheckboxDisabled = true;
+                  } else if (order.paymentStatus !== 'Pending' && order.paymentStatus !== 'Unpaid') {
+                    isCheckboxDisabled = true;
+                  } else if (firstSelectedOrder) {
+                    if (firstSelectedOrder.currency !== order.currency) {
+                      isCheckboxDisabled = true;
+                      disabledReason = `Diff. Currency`;
+                    } else if (isAdmin && (firstSelectedOrder.userId || firstSelectedOrder.uniqueNo) !== (order.userId || order.uniqueNo)) {
+                      isCheckboxDisabled = true;
+                      disabledReason = 'Diff. User';
+                    }
+                  }
+
+                  return (
+                    <TableRow
+                      key={order.orderId}
+                      className={`group transition-colors ${
+                        isSelected ? 'bg-slate-50/80' : 
+                        isCheckboxDisabled && hasSelections ? 'opacity-40 bg-slate-50/20' : 
+                        'hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <TableCell className="pl-6">
+                        <div className="flex flex-col gap-1 w-12">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            disabled={isCheckboxDisabled}
+                            onChange={() => toggleOrder(order.orderId)}
+                            className={`rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 ${
+                              isCheckboxDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                            }`}
+                          />
+                          {isCheckboxDisabled && hasSelections && disabledReason && (
+                             <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter whitespace-nowrap">
+                               {disabledReason}
+                             </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell
+                        className="px-6 font-bold text-cyan-600 hover:text-cyan-700 cursor-pointer text-sm whitespace-nowrap transition-colors"
                       onClick={() => {
                         setOrderToView(order);
                         setSelectedOrderId(order.orderId);
@@ -345,7 +560,7 @@ export default function OrderList() {
                       {order.orderNo || '--'}
                     </TableCell>
                     <TableCell className="px-4 text-slate-600 text-sm font-medium whitespace-nowrap">{formatDate(order.orderDate)}</TableCell>
-                    <TableCell className="px-4 text-slate-900 text-sm font-medium whitespace-nowrap">{order.fullname}</TableCell>
+                    {isAdmin && <TableCell className="px-4 text-slate-900 text-sm font-medium whitespace-nowrap">{order.fullname}</TableCell>}
                     <TableCell className="px-4 text-slate-500 text-xs whitespace-nowrap">{order.email || '--'}</TableCell>
                     <TableCell className="px-4 text-slate-600 text-xs font-medium whitespace-nowrap">{order.workTitle || '--'}</TableCell>
                     <TableCell className="px-4 whitespace-nowrap">
@@ -363,6 +578,11 @@ export default function OrderList() {
                       </div>
                     </TableCell>
                     <TableCell className="px-4 text-slate-500 text-xs font-medium whitespace-nowrap">{formatDate(order.completedDate)}</TableCell>
+                    <TableCell className="px-4 whitespace-nowrap">
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold transition-all ${getPaymentStatusStyle(order.paymentStatus)}`}>
+                        {order.paymentStatus || 'Pending'}
+                      </div>
+                    </TableCell>
                     <TableCell className="px-6 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -378,18 +598,20 @@ export default function OrderList() {
                         >
                           <Eye size={14} />
                         </Button>
-                        <Button
-                          variant="ghost-blue"
-                          size="icon"
-                          className="w-7 h-7 rounded-lg hover:bg-blue-50 text-blue-600"
-                          title="Edit Order"
-                          onClick={() => {
-                            navigate(`/orders/edit/${order.orderId}`);
-                          }}
-                        >
-                          <Edit2 size={14} />
-                        </Button>
-                        {order.orderStatus !== 'Completed' && order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Invoiced' && (
+                        {isAdmin && (
+                          <Button
+                            variant="ghost-blue"
+                            size="icon"
+                            className="w-7 h-7 rounded-lg hover:bg-blue-50 text-blue-600"
+                            title="Edit Order"
+                            onClick={() => {
+                              navigate(isAdmin ? `/admin/orders/edit/${order.orderId}` : `/orders/edit/${order.orderId}`);
+                            }}
+                          >
+                            <Edit2 size={14} />
+                          </Button>
+                        )}
+                        {isAdmin && order.orderStatus !== 'Completed' && order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Invoiced' && (
                           <Button
                             variant="ghost-green"
                             size="icon"
@@ -403,30 +625,33 @@ export default function OrderList() {
                             <CheckCircle2 size={14} />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost-red"
-                          size="icon"
-                          className="w-7 h-7 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title={
-                            order.orderStatus === 'Completed' ? "Cannot delete completed orders" :
-                            order.orderStatus === 'Invoiced' ? "Cannot delete invoiced orders" :
-                            "Delete Order"
-                          }
-                          disabled={order.orderStatus === 'Completed' || order.orderStatus === 'Invoiced'}
-                          onClick={() => {
-                            setOrderToDelete(order);
-                            setIsDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost-red"
+                            size="icon"
+                            className="w-7 h-7 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={
+                              order.orderStatus === 'Completed' ? "Cannot delete completed orders" :
+                              order.orderStatus === 'Invoiced' ? "Cannot delete invoiced orders" :
+                              "Delete Order"
+                            }
+                            disabled={order.orderStatus === 'Completed' || order.orderStatus === 'Invoiced'}
+                            onClick={() => {
+                              setOrderToDelete(order);
+                              setIsDeleteModalOpen(true);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
+                );
+              })
+            ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-24 text-center">
+                  <TableCell colSpan={11} className="py-24 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                         <ShoppingBag size={32} className="text-slate-200" />

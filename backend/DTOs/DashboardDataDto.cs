@@ -24,6 +24,12 @@ public class DashboardDataDto
     public List<RevenueByServiceDto> RevenueByService { get; set; } = new();
     public List<TopCustomerDto> TopCustomers { get; set; } = new();
     public List<ServiceStatsDto> ServiceStats { get; set; } = new();
+    
+    // Artwork category counts (Legacy compatibility)
+    public int BasicArtworkCount { get; set; }
+    public int ComplexArtworkCount { get; set; }
+    public int DigitizingCount { get; set; }
+    public int OtherArtworkCount { get; set; }
 }
 
 public class DashboardGreeting

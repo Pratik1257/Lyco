@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Mail, Hash, DollarSign, PenTool, Layers,
+  Mail, Hash, PenTool, Layers,
   Maximize2, Paperclip, ChevronLeft, AlertCircle, Link, Info,
   X, FileIcon, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { useAuth } from '../../context/AuthContext';
 
 import { ordersApi } from '../../api/ordersApi';
 import { servicesApi } from '../../api/servicesApi';
@@ -45,6 +46,9 @@ const getCurrencySymbol = (currency: string | null) => {
 };
 
 export default function OrderForm() {
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -89,70 +93,90 @@ export default function OrderForm() {
   });
   const services = servicesData?.items || [];
 
-  // When user is selected, fetch full details for auto-fill
+  // Consolidate Customer Identity & Sequence Fetch
   useEffect(() => {
-    // Skip auto-fill if in edit mode (data already loaded from order)
     if (isEditMode) return;
 
-    if (formData.userId) {
-      customersApi.getCustomerById(formData.userId).then(user => {
-        setFormData(prev => ({
-          ...prev,
-          email: user.primaryEmail || (user as any).PrimaryEmail || '',
-          companyName: user.companyname || (user as any).Companyname || '',
-          uniqueNo: user.uniqueNo ?? (user as any).UniqueNo ?? null,
-          currency: user.currency || (user as any).Currency || 'USD'
-        }));
-      });
-    } else {
+    if (!isAdmin && user) {
+      const uId = user.userId;
+      const uNo = user.uniqueNo ?? (user as any).UniqueNo ?? null;
+      const uEmail = user.email || '';
+      const uCompany = (user as any).companyname || (user as any).Companyname || '';
+      const uCurrency = user.currency || 'USD';
+
+      // Set identity all at once to prevent effect race conditions
       setFormData(prev => ({
         ...prev,
-        email: '',
-        companyName: '',
-        uniqueNo: null
+        userId: uId,
+        uniqueNo: uNo,
+        email: uEmail,
+        companyName: uCompany,
+        currency: uCurrency
       }));
-    }
-  }, [formData.userId, isEditMode]);
 
-  // When user and service are selected, fetch Rate
+      // Immediately trigger Order # fetch if we have a uniqueNo
+      if (uNo) {
+        ordersApi.getNextOrderNumber(uNo).then(no => {
+          setFormData(prev => ({ ...prev, orderNo: no }));
+        });
+      }
+    }
+  }, [user, isAdmin, isEditMode]);
+
+  // Handle Admin User details fetch
   useEffect(() => {
-    // Skip auto-rate fetch in edit mode to preserve historical pricing
+    if (isEditMode || !isAdmin || !formData.userId) return;
+
+    customersApi.getCustomerById(formData.userId).then(u => {
+      setFormData(prev => ({
+        ...prev,
+        email: u.primaryEmail || (u as any).PrimaryEmail || '',
+        companyName: u.companyname || (u as any).Companyname || '',
+        uniqueNo: u.uniqueNo ?? (u as any).UniqueNo ?? null,
+        currency: u.currency || (u as any).Currency || 'USD'
+      }));
+    });
+  }, [formData.userId, isAdmin, isEditMode]);
+
+  // Fetch Rate when user, service, or currency changes
+  useEffect(() => {
     if (isEditMode) return;
 
-    const { userId, serviceId, currency } = formData;
-    if (userId !== null && serviceId !== null) {
-      pricesApi.getUserwisePriceLookup(userId, serviceId).then(userPrice => {
-        if (userPrice !== null) {
-          setFormData(prev => ({ ...prev, amount: userPrice.toString() }));
-        } else {
-          pricesApi.getGeneralPriceLookup(serviceId, currency).then(genPrice => {
-            if (genPrice !== null) {
-              setFormData(prev => ({ ...prev, amount: genPrice.toString() }));
-            }
-          });
+    const { userId, uniqueNo, serviceId, currency } = formData;
+    
+    if (serviceId && currency && (userId || uniqueNo)) {
+      const fetchRate = async () => {
+        try {
+          // 1. Try User-Specific Price (Priority)
+          // We check both PK (userId) and Legacy (uniqueNo) if they differ
+          let price = await pricesApi.getUserwisePriceLookup(userId!, serviceId);
+          
+          if ((price === null || price === undefined) && uniqueNo) {
+            // Fallback to legacy ID if PK lookup failed (common in migrated data)
+            price = await pricesApi.getUserwisePriceLookup(uniqueNo, serviceId);
+          }
+
+          if (price !== null && price !== undefined) {
+            setFormData(prev => ({ ...prev, amount: price.toString() }));
+            return;
+          }
+          
+          // 2. Fallback to General Price
+          const genPrice = await pricesApi.getGeneralPriceLookup(serviceId, currency);
+          if (genPrice !== null && genPrice !== undefined) {
+            setFormData(prev => ({ ...prev, amount: genPrice.toString() }));
+          } else {
+            setFormData(prev => ({ ...prev, amount: '0.00' }));
+          }
+        } catch (err) {
+          console.error("Pricing Resolution Error:", err);
         }
-      });
+      };
+      fetchRate();
+    } else if (serviceId === null) {
+      setFormData(prev => ({ ...prev, amount: '' }));
     }
-  }, [formData.userId, formData.serviceId, formData.currency, isEditMode]);
-
-  // Auto-generate Order # when uniqueNo/userId changes
-  useEffect(() => {
-    // Skip if in edit mode
-    if (isEditMode) return;
-
-    const { uniqueNo, userId } = formData;
-    const identifier = uniqueNo || userId;
-
-    if (identifier !== null && identifier !== undefined) {
-      ordersApi.getNextOrderNumber(identifier).then(no => {
-        setFormData(prev => ({ ...prev, orderNo: no }));
-      }).catch(err => {
-        console.error('Failed to fetch next order number:', err);
-      });
-    } else {
-      setFormData(prev => ({ ...prev, orderNo: '' }));
-    }
-  }, [formData.uniqueNo, formData.userId, isEditMode]);
+  }, [formData.userId, formData.uniqueNo, formData.serviceId, formData.currency, isEditMode]);
 
   // Reset form when switching from edit to create mode
   useEffect(() => {
@@ -208,7 +232,7 @@ export default function OrderForm() {
         setExistingFiles(order.files || []);
       }).catch(() => {
         toast.error('Failed to load order details');
-        navigate('/orders/summary');
+        navigate(isAdmin ? '/admin/orders/history' : '/orders/history');
       });
     }
   }, [id, isEditMode, navigate]);
@@ -255,7 +279,7 @@ export default function OrderForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success(isEditMode ? 'Order updated successfully' : 'Order placed successfully');
-      navigate('/orders/summary');
+      navigate(isAdmin ? '/admin/orders/history' : '/orders/history');
     },
     onError: (err: any) => {
       setFormError(err.response?.data?.message || err.message);
@@ -403,98 +427,167 @@ export default function OrderForm() {
               {/* Main Fields (Custom 12-Column Layout) */}
               <section className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-6">
 
-                {/* --- Row 1 (3 items - 4 cols each) --- */}
-                <div className="space-y-1 lg:col-span-4">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Full Name <span className="text-red-500">*</span></label>
-                  <CustomSelect
-                    value={formData.userId || ''}
-                    onChange={(val) => {
-                      const uId = val ? Number(val) : null;
-                      const selectedUser = users.find(u => u.id === uId);
-                      setFormData(p => ({ 
-                        ...p, 
-                        userId: uId,
-                        currency: selectedUser?.currency || p.currency || 'USD',
-                        workTitle: '',
-                        instructions: '',
-                        fileFormat: '',
-                        size: '',
-                        amount: '',
-                        externalLink: ''
-                      }));
-                      setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
-                    }}
-                    options={(Array.isArray(users) ? users : []).map(u => {
-                      const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
-                      return {
-                        value: u.id,
-                        label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
-                      };
-                    })}
-                    placeholder="Choose Full Name"
-                    error={fieldErrors.userId}
-                    isDisabled={isEditMode}
-                  />
-                </div>
-
-                <div className="space-y-1 lg:col-span-4">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Company Name</label>
-                  <input
-                    type="text"
-                    readOnly
-                    placeholder="Auto-fills from account"
-                    value={formData.companyName}
-                    className={`${premiumInput} bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed`}
-                  />
-                </div>
-
-                <div className="space-y-1 lg:col-span-4">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order #</label>
-                  <div className="relative group">
-                    <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input
-                      type="text"
-                      readOnly
-                      placeholder="Auto-generated"
-                      value={formData.orderNo}
-                      className={`${premiumInput} pl-10 bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed`}
-                    />
-                  </div>
-                </div>
-
-                {/* --- Row 2 (4 items - 3 cols each) --- */}
-                <div className="space-y-1 lg:col-span-3">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Service <span className="text-red-500">*</span></label>
-                  <CustomSelect
-                    value={formData.serviceId || ''}
-                    onChange={(val) => {
-                      setFormData(p => ({ ...p, serviceId: val ? Number(val) : null }));
-                      setFieldErrors(p => { const n = { ...p }; delete n.serviceId; return n; });
-                    }}
-                    options={(Array.isArray(services) ? services : []).map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
-                    placeholder="Choose Service"
-                    error={fieldErrors.serviceId}
-                  />
-                </div>
-
-                <div className="space-y-1 lg:col-span-2">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate</label>
-                  <div className="relative group">
-                    <div className="absolute left-3.5 inset-y-0 flex items-center justify-center w-4">
-                      <span className="text-[13.5px] font-bold text-slate-400 group-focus-within:text-cyan-600 transition-colors mt-[0.5px]">
-                        {getCurrencySymbol(formData.currency)}
-                      </span>
+                {/* --- Row 1: Identity & Primary Info --- */}
+                {!isAdmin ? (
+                  <>
+                    <div className="space-y-1 lg:col-span-4">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Service <span className="text-red-500">*</span></label>
+                      <CustomSelect
+                        value={formData.serviceId || ''}
+                        onChange={(val) => {
+                          setFormData(p => ({ ...p, serviceId: val ? Number(val) : null }));
+                          setFieldErrors(p => { const n = { ...p }; delete n.serviceId; return n; });
+                        }}
+                        options={(Array.isArray(services) ? services : []).map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
+                        placeholder="Choose Service"
+                        error={fieldErrors.serviceId}
+                      />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="0.00"
-                      value={formData.amount}
-                      onChange={handleAmountChange}
-                      className={`${premiumInput} pl-10 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''}`}
+
+                    <div className="space-y-1 lg:col-span-4">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate</label>
+                      <div className="relative group">
+                        <div className="absolute left-3.5 inset-y-0 flex items-center justify-center w-4">
+                          <span className="text-[13.5px] font-bold text-slate-400 group-focus-within:text-cyan-600 transition-colors mt-[0.5px]">
+                            {getCurrencySymbol(formData.currency)}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="0.00"
+                          value={formData.amount}
+                          onChange={handleAmountChange}
+                          readOnly={!isAdmin}
+                          className={`${premiumInput} pl-10 pr-16 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''} ${!isAdmin ? 'bg-slate-50 border-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                        />
+                        {services.find(s => s.id === formData.serviceId)?.name?.toLowerCase().includes('digitizing') && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 border border-slate-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">/ 1000</span>
+                          </div>
+                        )}
+                      </div>
+                      {renderError('amount')}
+                    </div>
+
+                    <div className="space-y-1 lg:col-span-4">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order #</label>
+                      <div className="relative group">
+                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input
+                          type="text"
+                          readOnly
+                          placeholder="Auto-generated"
+                          value={formData.orderNo || ((formData.uniqueNo || (!isAdmin ? (user?.uniqueNo ?? (user as any)?.UniqueNo) : null)) ? 'Fetching...' : '')}
+                          className={`${premiumInput} pl-10 bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed`}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1 lg:col-span-4">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Full Name <span className="text-red-500">*</span></label>
+                      <CustomSelect
+                        value={formData.userId || ''}
+                        onChange={(val) => {
+                          const uId = val ? Number(val) : null;
+                          const selectedUser = users.find(u => u.id === uId);
+                          setFormData(p => ({ 
+                            ...p, 
+                            userId: uId,
+                            currency: selectedUser?.currency || p.currency || 'USD',
+                            workTitle: '',
+                            instructions: '',
+                            fileFormat: '',
+                            size: '',
+                            amount: '',
+                            externalLink: ''
+                          }));
+                          setFieldErrors(p => { const n = { ...p }; delete n.userId; return n; });
+                        }}
+                        options={(Array.isArray(users) ? users : []).map(u => {
+                          const fullName = [u.firstname, u.lastname].filter(Boolean).join(' ');
+                          return {
+                            value: u.id,
+                            label: fullName ? `${fullName} (${u.username})` : (u.username || '--')
+                          };
+                        })}
+                        placeholder="Choose Full Name"
+                        error={fieldErrors.userId}
+                        isDisabled={isEditMode}
+                      />
+                    </div>
+
+                    <div className="space-y-1 lg:col-span-4">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Company Name</label>
+                      <input
+                        type="text"
+                        readOnly
+                        placeholder="Auto-fills"
+                        value={formData.companyName}
+                        className={`${premiumInput} bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed`}
+                      />
+                    </div>
+
+                    <div className="space-y-1 lg:col-span-4">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order #</label>
+                      <div className="relative group">
+                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input
+                          type="text"
+                          readOnly
+                          placeholder="Auto-generated"
+                          value={formData.orderNo || (formData.uniqueNo ? 'Fetching...' : '')}
+                          className={`${premiumInput} pl-10 bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed`}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* --- Row 2 --- */}
+                {isAdmin && (
+                  <div className="space-y-1 lg:col-span-3">
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Service <span className="text-red-500">*</span></label>
+                    <CustomSelect
+                      value={formData.serviceId || ''}
+                      onChange={(val) => {
+                        setFormData(p => ({ ...p, serviceId: val ? Number(val) : null }));
+                        setFieldErrors(p => { const n = { ...p }; delete n.serviceId; return n; });
+                      }}
+                      options={(Array.isArray(services) ? services : []).map(s => ({ value: s.id, label: s.name || 'Unknown' }))}
+                      placeholder="Choose Service"
+                      error={fieldErrors.serviceId}
                     />
                   </div>
-                  {renderError('amount')}
-                </div>
+                )}
+
+                {isAdmin && (
+                  <div className="space-y-1 lg:col-span-2">
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate</label>
+                    <div className="relative group">
+                      <div className="absolute left-3.5 inset-y-0 flex items-center justify-center w-4">
+                        <span className="text-[13.5px] font-bold text-slate-400 group-focus-within:text-cyan-600 transition-colors mt-[0.5px]">
+                          {getCurrencySymbol(formData.currency)}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="0.00"
+                        value={formData.amount}
+                        onChange={handleAmountChange}
+                        readOnly={!isAdmin}
+                        className={`${premiumInput} pl-10 pr-16 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''} ${!isAdmin ? 'bg-slate-50 border-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                      />
+                      {services.find(s => s.id === formData.serviceId)?.name?.toLowerCase().includes('digitizing') && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 border border-slate-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
+                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">/ 1000</span>
+                        </div>
+                      )}
+                    </div>
+                    {renderError('amount')}
+                  </div>
+                )}
 
                 <div className="space-y-1 lg:col-span-4">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">PO / Artwork Name <span className="text-red-500">*</span></label>
@@ -532,78 +625,155 @@ export default function OrderForm() {
                   {renderError('fileFormat')}
                 </div>
 
-                {/* --- Row 3 (2 items - 6 cols each) --- */}
-                <div className="space-y-1 lg:col-span-6">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Size & Dimensions</label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1 group min-w-0">
-                      <Maximize2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={14} />
-                      <input
-                        type="text"
-                        placeholder="4.5x2.1"
-                        value={formData.size}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9.x*]/gi, '');
-                          setFormData(p => ({ ...p, size: val }));
-                          if (fieldErrors.size) setFieldErrors(p => { const n = { ...p }; delete n.size; return n; });
-                        }}
-                        onBlur={() => {
-                          if (formData.size) {
-                            // Standardize format: replace × with x, normalize spaces if it's a dual dimension
-                            let normalized = formData.size.replace(/×/g, 'x').trim();
-                            if (normalized.includes('x')) {
-                              normalized = normalized.replace(/\s*x\s*/i, ' x ');
-                            }
-                            setFormData(p => ({ ...p, size: normalized }));
-                          }
-                        }}
-                        className={`${premiumInput} pl-8 text-[13px] ${fieldErrors.size ? 'border-red-500 ring-red-500/10' : ''}`}
-                      />
+                {/* --- Row 3 (Email & Size) --- */}
+                {/* For Customer, Email is left of Size. For Admin, Size is left of Email. */}
+                {!isAdmin ? (
+                  <>
+                    <div className="space-y-1 lg:col-span-6">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Email <span className="text-red-500">*</span></label>
+                      <div className="relative group">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                        <input
+                          type="text"
+                          placeholder="name@domain.com"
+                          value={formData.email}
+                          onChange={(e) => {
+                            setFormData(p => ({ ...p, email: e.target.value }));
+                            if (fieldErrors.email) setFieldErrors(p => { const n = { ...p }; delete n.email; return n; });
+                          }}
+                          className={`${premiumInput} pl-10 ${fieldErrors.email ? 'border-red-500 ring-red-500/10' : ''}`}
+                        />
+                      </div>
+                      {renderError('email')}
                     </div>
-                    <div className="w-[120px] shrink-0">
-                      <CustomSelect
-                        value={formData.sizetype}
-                        onChange={(val) => setFormData(p => ({ ...p, sizetype: val }))}
-                        options={[
-                          { value: 'Inches', label: 'Inches' },
-                          { value: 'CM', label: 'CM' },
-                          { value: 'MM', label: 'MM' }
-                        ]}
-                      />
-                    </div>
-                  </div>
-                  {renderError('size')}
-                </div>
 
-                <div className="space-y-1 lg:col-span-6">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Email <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
-                    <input
-                      type="text"
-                      placeholder="name@domain.com"
-                      value={formData.email}
-                      onChange={(e) => {
-                        setFormData(p => ({ ...p, email: e.target.value }));
-                        if (fieldErrors.email) setFieldErrors(p => { const n = { ...p }; delete n.email; return n; });
-                      }}
-                      className={`${premiumInput} pl-10 ${fieldErrors.email ? 'border-red-500 ring-red-500/10' : ''}`}
-                    />
-                  </div>
-                  {renderError('email')}
-                </div>
+                    <div className="space-y-1 lg:col-span-6">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Size & Dimensions</label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1 group min-w-0">
+                          <Maximize2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={14} />
+                          <input
+                            type="text"
+                            placeholder="4.5x2.1"
+                            value={formData.size}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9.x*]/gi, '');
+                              setFormData(p => ({ ...p, size: val }));
+                              if (fieldErrors.size) setFieldErrors(p => { const n = { ...p }; delete n.size; return n; });
+                            }}
+                            onBlur={() => {
+                              if (formData.size) {
+                                let normalized = formData.size.replace(/×/g, 'x').trim();
+                                if (normalized.includes('x')) {
+                                  normalized = normalized.replace(/\s*x\s*/i, ' x ');
+                                }
+                                setFormData(p => ({ ...p, size: normalized }));
+                              }
+                            }}
+                            className={`${premiumInput} pl-8 text-[13px] ${fieldErrors.size ? 'border-red-500 ring-red-500/10' : ''}`}
+                          />
+                        </div>
+                        <div className="w-[120px] shrink-0">
+                          <CustomSelect
+                            value={formData.sizetype}
+                            onChange={(val) => setFormData(p => ({ ...p, sizetype: val }))}
+                            options={[
+                              { value: 'Inches', label: 'Inches' },
+                              { value: 'CM', label: 'CM' },
+                              { value: 'MM', label: 'MM' }
+                            ]}
+                          />
+                        </div>
+                      </div>
+                      {renderError('size')}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1 lg:col-span-6">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Size & Dimensions</label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1 group min-w-0">
+                          <Maximize2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={14} />
+                          <input
+                            type="text"
+                            placeholder="4.5x2.1"
+                            value={formData.size}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9.x*]/gi, '');
+                              setFormData(p => ({ ...p, size: val }));
+                              if (fieldErrors.size) setFieldErrors(p => { const n = { ...p }; delete n.size; return n; });
+                            }}
+                            onBlur={() => {
+                              if (formData.size) {
+                                let normalized = formData.size.replace(/×/g, 'x').trim();
+                                if (normalized.includes('x')) {
+                                  normalized = normalized.replace(/\s*x\s*/i, ' x ');
+                                }
+                                setFormData(p => ({ ...p, size: normalized }));
+                              }
+                            }}
+                            className={`${premiumInput} pl-8 text-[13px] ${fieldErrors.size ? 'border-red-500 ring-red-500/10' : ''}`}
+                          />
+                        </div>
+                        <div className="w-[120px] shrink-0">
+                          <CustomSelect
+                            value={formData.sizetype}
+                            onChange={(val) => setFormData(p => ({ ...p, sizetype: val }))}
+                            options={[
+                              { value: 'Inches', label: 'Inches' },
+                              { value: 'CM', label: 'CM' },
+                              { value: 'MM', label: 'MM' }
+                            ]}
+                          />
+                        </div>
+                      </div>
+                      {renderError('size')}
+                    </div>
+
+                    <div className="space-y-1 lg:col-span-6">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Email <span className="text-red-500">*</span></label>
+                      <div className="relative group">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
+                        <input
+                          type="text"
+                          placeholder="name@domain.com"
+                          value={formData.email}
+                          onChange={(e) => {
+                            setFormData(p => ({ ...p, email: e.target.value }));
+                            if (fieldErrors.email) setFieldErrors(p => { const n = { ...p }; delete n.email; return n; });
+                          }}
+                          className={`${premiumInput} pl-10 ${fieldErrors.email ? 'border-red-500 ring-red-500/10' : ''}`}
+                        />
+                      </div>
+                      {renderError('email')}
+                    </div>
+                  </>
+                )}
 
                 {/* --- Row 4: Order Status (Edit Mode Only, spanning full width or 6 cols) --- */}
-                {isEditMode && (
+                {isEditMode && isAdmin && (
                   <div className="space-y-1 lg:col-span-6">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Order Status</label>
                     <CustomSelect
                       value={formData.orderStatus}
                       onChange={(val) => setFormData(p => ({ ...p, orderStatus: val }))}
                       options={[
-                        { value: 'In Process', label: 'In Process' },
-                        { value: 'Cancelled', label: 'Cancelled' },
-                        { value: 'Completed', label: 'Completed' },
+                        { 
+                          value: 'In Process', 
+                          label: 'In Process',
+                          isDisabled: initialData?.orderStatus === 'Completed' || initialData?.orderStatus === 'Cancelled'
+                        },
+                        { 
+                          value: 'Cancelled', 
+                          label: 'Cancelled',
+                          isDisabled: initialData?.orderStatus === 'Completed'
+                        },
+                        { 
+                          value: 'Completed', 
+                          label: 'Completed',
+                          isDisabled: initialData?.orderStatus === 'Cancelled'
+                        },
                       ]}
                     />
                   </div>
@@ -807,7 +977,7 @@ export default function OrderForm() {
             <div className="bg-slate-50/80 p-5 sm:p-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
               <button
                 type="button"
-                onClick={() => navigate('/orders/summary')}
+                onClick={() => navigate(isAdmin ? '/admin/orders/history' : '/orders/history')}
                 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <ChevronLeft size={16} /> Cancel

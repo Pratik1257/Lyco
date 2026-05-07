@@ -41,6 +41,7 @@ public class UserRepository : IUserRepository
         // Step 1: Apply text search in SQL and include card details
         var query = _context.UserRegistrations
             .Include(u => u.CardDetails)
+            .Where(u => u.UserType != "Admin")
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))

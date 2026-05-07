@@ -40,6 +40,11 @@ export const cardsApi = {
     const response = await apiClient.get<CardDetail>(`/CardDetails/${id}`);
     return response.data;
   },
+  
+  getCardByUserId: async (userId: number) => {
+    const response = await apiClient.get<CardDetail>(`/CardDetails/user/${userId}`);
+    return response.data;
+  },
 
   createCard: async (data: Partial<CardDetail>) => {
     const response = await apiClient.post<CardDetail>('/CardDetails', data);

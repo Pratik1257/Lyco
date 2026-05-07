@@ -89,10 +89,11 @@ export const paymentsApi = {
     serviceId?: number,
     paymentStatus?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    uniqueNo?: number
   ): Promise<SummaryResponse> => {
     const response = await apiClient.get<SummaryResponse>('../admin/api/Payments/summary', {
-      params: { page, pageSize, search, serviceId, paymentStatus, startDate, endDate },
+      params: { page, pageSize, search, serviceId, paymentStatus, startDate, endDate, uniqueNo },
     });
     return response.data;
   },

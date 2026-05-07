@@ -228,7 +228,15 @@ export default function CustomerFormModal({ isOpen, onClose, customerToEdit }: C
               <div className="space-y-6">
                 <div>
                   <label className="block text-[13px] font-bold text-gray-700 ml-1 mb-1.5">Email</label>
-                  <input type="email" name="primaryEmail" placeholder="john@acme.com" value={formData.primaryEmail} onChange={handleInputChange} className={inputClass} />
+                  <input 
+                    type="email" 
+                    name="primaryEmail" 
+                    placeholder="john@acme.com" 
+                    value={formData.primaryEmail} 
+                    onChange={handleInputChange} 
+                    disabled={!!customerToEdit}
+                    className={`${inputClass} ${customerToEdit ? 'bg-gray-50 text-gray-500 cursor-not-allowed select-none' : ''}`} 
+                  />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
@@ -307,12 +315,23 @@ export default function CustomerFormModal({ isOpen, onClose, customerToEdit }: C
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
                     <label className="block text-[13px] font-bold text-gray-700 ml-1 mb-1.5">Username <span className="text-red-500">*</span></label>
-                    <input type="text" name="username" required value={formData.username} onChange={handleInputChange} className={`${inputClass} font-semibold text-gray-900 placeholder:text-gray-300`} placeholder="Choose a username" />
+                    <input 
+                      type="text" 
+                      name="username" 
+                      required 
+                      value={formData.username} 
+                      onChange={handleInputChange} 
+                      disabled={!!customerToEdit}
+                      className={`${inputClass} font-semibold text-gray-900 placeholder:text-gray-300 ${customerToEdit ? 'bg-gray-50 text-gray-500 cursor-not-allowed select-none' : ''}`} 
+                      placeholder="Choose a username" 
+                    />
                   </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-gray-700 ml-1 mb-1.5">Password</label>
-                    <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleInputChange} className={inputClass} />
-                  </div>
+                  {!customerToEdit && (
+                    <div>
+                      <label className="block text-[13px] font-bold text-gray-700 ml-1 mb-1.5">Password</label>
+                      <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleInputChange} className={inputClass} />
+                    </div>
+                  )}
                   <div>
                     <CustomSelect
                       label="Status"

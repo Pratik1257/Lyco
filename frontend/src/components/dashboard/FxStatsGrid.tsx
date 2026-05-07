@@ -11,14 +11,14 @@ function GlowCard({ children, gradient }: { children: React.ReactNode; gradient:
   );
 }
 
-export default function FxStatsGrid({ data, timeframe }: { data: DashboardData, timeframe: string }) {
+export default function FxStatsGrid({ data, timeframe, isAdmin = true }: { data: DashboardData, timeframe: string, isAdmin?: boolean }) {
   const { pendingPayments, totalUsers, totalOrders, inProcessOrders, monthOrders, monthInvoices, monthOrderValue, pendingMonth } = data;
   const labelPrefix = timeframe === 'Month' ? 'Month' : timeframe === 'Week' ? 'Week' : 'Year';
 
   return (
     <div className="space-y-4">
       {/* Row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
         {/* Pending Payments */}
         <div className="relative overflow-hidden rounded-2xl p-5 col-span-1"
           style={{ background: 'linear-gradient(135deg,#ff6b35 0%,#e05555 50%,#c0392b 100%)' }}>
@@ -39,19 +39,21 @@ export default function FxStatsGrid({ data, timeframe }: { data: DashboardData, 
           </div>
         </div>
 
-        {/* Total Users */}
-        <GlowCard gradient="bg-gradient-to-br from-sky-50 to-transparent">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-200">
-              <Users size={18} className="text-white" />
+        {/* Total Users - Admin Only */}
+        {isAdmin && (
+          <GlowCard gradient="bg-gradient-to-br from-sky-50 to-transparent">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-200">
+                <Users size={18} className="text-white" />
+              </div>
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
+                <TrendingUp size={9}/> +{totalUsers.changePercent}%
+              </span>
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
-              <TrendingUp size={9}/> +{totalUsers.changePercent}%
-            </span>
-          </div>
-          <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={totalUsers.count} /></p>
-          <p className="text-sm text-gray-400 mt-1">Total Users</p>
-        </GlowCard>
+            <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={totalUsers.count} /></p>
+            <p className="text-sm text-gray-400 mt-1">Total Users</p>
+          </GlowCard>
+        )}
 
         {/* Total Orders */}
         <GlowCard gradient="bg-gradient-to-br from-violet-50 to-transparent">
@@ -66,38 +68,56 @@ export default function FxStatsGrid({ data, timeframe }: { data: DashboardData, 
           <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={totalOrders.count} /></p>
           <p className="text-sm text-gray-400 mt-1">Total Orders</p>
         </GlowCard>
+
+        {/* In-Process - Promoted for Client */}
+        {!isAdmin && (
+          <GlowCard gradient="bg-gradient-to-br from-cyan-50 to-transparent">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-200">
+                <Clock size={18} className="text-white" />
+              </div>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-cyan-50 text-cyan-600 uppercase">
+                Active
+              </span>
+            </div>
+            <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={inProcessOrders} /></p>
+            <p className="text-sm text-gray-400 mt-1">In-Process Orders</p>
+          </GlowCard>
+        )}
       </div>
 
-      {/* Row 2 – Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {[
-          { label: 'In-Process', value: <CountUp end={inProcessOrders} />, badge: 'Active', icon: Clock, from: 'from-cyan-400', to: 'to-teal-500', shadow: 'shadow-cyan-200', change: null },
-          { label: `${labelPrefix} Orders`, value: <CountUp end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: `+${monthOrders.changePercent}%` },
-          { label: `${labelPrefix} Invoices`, value: <CountUp end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: `+${monthInvoices.changePercent}%` },
-          { label: `${labelPrefix} Value`, value: <CountUp prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: `+${monthOrderValue.changePercent}%` },
-          { label: `Pending ${labelPrefix}`, value: <CountUp prefix={data.currencySymbol} end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null },
-        ].map((m) => (
-          <div key={m.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.from} ${m.to} flex items-center justify-center shadow-lg ${m.shadow}`}>
-                <m.icon size={15} className="text-white" />
+      {/* Row 2 – Metrics (Admin Only) */}
+      {isAdmin && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[
+            { label: 'In-Process', value: <CountUp end={inProcessOrders} />, badge: 'Active', icon: Clock, from: 'from-cyan-400', to: 'to-teal-500', shadow: 'shadow-cyan-200', change: null },
+            { label: `${labelPrefix} Orders`, value: <CountUp end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: `+${monthOrders.changePercent}%` },
+            { label: `${labelPrefix} Invoices`, value: <CountUp end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: `+${monthInvoices.changePercent}%` },
+            { label: `${labelPrefix} Value`, value: <CountUp prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: `+${monthOrderValue.changePercent}%` },
+            { label: `Pending ${labelPrefix}`, value: <CountUp prefix={data.currencySymbol} end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null },
+          ].map((m) => (
+            <div key={m.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.from} ${m.to} flex items-center justify-center shadow-lg ${m.shadow}`}>
+                  <m.icon size={15} className="text-white" />
+                </div>
+                {m.badge && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge === 'Active' ? 'bg-cyan-50 text-cyan-600' : 'bg-green-50 text-green-600'}`}>
+                    {m.badge}
+                  </span>
+                )}
+                {m.change && (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    {m.change}
+                  </span>
+                )}
               </div>
-              {m.badge && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge === 'Active' ? 'bg-cyan-50 text-cyan-600' : 'bg-green-50 text-green-600'}`}>
-                  {m.badge}
-                </span>
-              )}
-              {m.change && (
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  {m.change}
-                </span>
-              )}
+              <p className="text-xl font-black text-gray-800">{m.value}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{m.label}</p>
             </div>
-            <p className="text-xl font-black text-gray-800">{m.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{m.label}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

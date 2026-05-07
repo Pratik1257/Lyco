@@ -38,7 +38,8 @@ export const invoicesApi = {
     search: string = '',
     status: string = '',
     startDate: string = '',
-    endDate: string = ''
+    endDate: string = '',
+    uniqueNo?: number
   ): Promise<InvoicesResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
@@ -47,6 +48,7 @@ export const invoicesApi = {
     if (status && status !== 'all') params.append('status', status);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (uniqueNo) params.append('uniqueNo', uniqueNo.toString());
     const res = await apiClient.get<InvoicesResponse>(`/Invoices?${params.toString()}`);
     return res.data;
   },

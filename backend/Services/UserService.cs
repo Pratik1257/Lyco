@@ -135,8 +135,16 @@ public class UserService : IUserService
 
         if (user.IsActive != "Y") return (null, "Your account is inactive. Please contact administrator.");
 
-        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.Password))
+        try 
+        {
+            if (!BCrypt.Net.BCrypt.Verify(req.Password, user.Password))
+                return (null, "Invalid username or password.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Login Error] Password verification failed for {user.Username}: {ex.Message}");
             return (null, "Invalid username or password.");
+        }
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured"));
@@ -160,7 +168,11 @@ public class UserService : IUserService
             user.Username ?? string.Empty,
             $"{user.Firstname} {user.Lastname}".Trim(),
             user.UserType ?? "Customer",
-            tokenHandler.WriteToken(token)
+            tokenHandler.WriteToken(token),
+            user.UniqueNo,
+            user.PrimaryEmail,
+            user.Currency,
+            user.Companyname
         );
 
         return (response, null);

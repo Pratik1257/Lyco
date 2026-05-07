@@ -97,6 +97,12 @@ public class CardDetailService : ICardDetailService
         return true;
     }
 
+    public async Task<CardDetailDto?> GetByUserIdAsync(long userId)
+    {
+        var card = await _cardRepository.GetByUserIdAsync(userId);
+        return card != null ? MapToDto(card) : null;
+    }
+
     private static CardDetailDto MapToDto(CardDetail c) => new(
         c.CardId,
         c.UserId,

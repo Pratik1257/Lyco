@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   ShoppingCart, FileText, CreditCard, Receipt,
-  Users, Tag, Megaphone, Lock, LayoutGrid, ChevronDown, type LucideIcon
+  Users, User, Tag, LayoutGrid, ChevronDown, LogOut, type LucideIcon
 } from 'lucide-react';
 import lycoLogo from '../../assets/LycoLogo.png';
 
@@ -14,65 +14,73 @@ interface NavItem {
   subItems?: { to: string; label: string }[];
 }
 
-const navSections: { label: string; items: NavItem[] }[] = [
+const adminNavSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'MAIN',
     items: [
-      { to: '/', icon: LayoutGrid, label: 'Dashboard' },
+      { to: '/admin/dashboard', icon: LayoutGrid, label: 'Dashboard' },
+      { to: '/admin/profile', icon: User, label: 'Manage Profile' },
     ],
   },
   {
     label: 'OPERATIONS',
     items: [
       { 
-        to: '/orders', 
+        to: '/admin/orders', 
         icon: ShoppingCart, 
         label: 'Manage Orders', 
         badge: 10,
         subItems: [
-          { to: '/orders/new', label: 'Place New Order' },
-          { to: '/orders/summary', label: 'Summary' },
-          { to: '/orders/complete', label: 'Complete an Order' },
-          { to: '/orders/remove', label: 'Remove an Order' },
+          { to: '/admin/orders/new', label: 'Place New Order' },
+          { to: '/admin/orders/history', label: 'Order History' },
+          { to: '/admin/orders/complete', label: 'Complete an Order' },
+          { to: '/admin/orders/remove', label: 'Remove an Order' },
         ]
       },
-      { to: '/quotes', icon: FileText, label: 'Manage Quote' },
       { 
-        to: '/payments', 
+        to: '/admin/quotes', 
+        icon: FileText, 
+        label: 'Manage Quote',
+        subItems: [
+          { to: '/admin/quotes/new', label: 'Create Quote' },
+          { to: '/admin/quotes', label: 'Quote Summary' },
+        ]
+      },
+      { 
+        to: '/admin/payments', 
         icon: CreditCard, 
         label: 'Manage Payment',
         subItems: [
           { to: '/admin/payments/make', label: 'Make Payment' },
-          { to: '/admin/payments/summary', label: 'Payment Summary' },
+          { to: '/admin/payments/history', label: 'Payment History' },
           { to: '/admin/payments/status', label: 'Payment Status' },
           { to: '/admin/payments/paypal-billing', label: 'Billing Account Details' },
           { to: '/admin/payments/remove-bad-debt', label: 'Remove From Bad Debt' },
         ]
       },
       { 
-        to: '/invoices', 
+        to: '/admin/invoices', 
         icon: Receipt, 
         label: 'Manage Invoice',
         subItems: [
-          { to: '/invoices/create', label: 'Create Invoice' },
-          { to: '/invoices/summary', label: 'Invoice Summary' },
-          { to: '/invoices/pending', label: 'Pending Invoice Summary' },
+          { to: '/admin/invoices/create', label: 'Create Invoice' },
+          { to: '/admin/invoices/summary', label: 'Invoice Summary' },
+          { to: '/admin/invoices/pending', label: 'Pending Invoice Summary' },
         ]
       },
-      { to: '/expenses', icon: Receipt, label: 'Manage Expenses' },
+      { to: '/admin/expenses', icon: Receipt, label: 'Manage Expenses' },
     ],
   },
   {
     label: 'PEOPLE',
     items: [
       { 
-        to: '/customers', 
+        to: '/admin/customers', 
         icon: Users, 
         label: 'Manage Customers',
         subItems: [
-          { to: '/customers/status', label: 'Customer Summary' },
-          { to: '/customers/card-summary', label: 'Card Summary' },
-          // { to: '/customers/card-details', label: 'Customer Card Details' }
+          { to: '/admin/customers/summary', label: 'Customer Summary' },
+          { to: '/admin/customers/card-summary', label: 'Card Summary' },
         ]
       },
     ],
@@ -80,15 +88,53 @@ const navSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'CATALOGUE',
     items: [
-       { to: '/services', icon: Tag, label: 'Manage Service' },
-      { to: '/prices', icon: Tag, label: 'Manage Price' },
-      { to: '/promotions', icon: Megaphone, label: 'Manage Promotion' },
+       { to: '/admin/services', icon: Tag, label: 'Manage Service' },
+      { to: '/admin/prices', icon: Tag, label: 'Manage Price' },
+    ],
+  },
+];
+
+const customerNavSections: { label: string; items: NavItem[] }[] = [
+  {
+    label: 'MAIN',
+    items: [
+      { to: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
     ],
   },
   {
-    label: 'ACCOUNT',
+    label: 'MY ACTIVITY',
     items: [
-      { to: '/change-password', icon: Lock, label: 'Change Password' },
+      { 
+        to: '/orders', 
+        icon: ShoppingCart, 
+        label: 'My Orders', 
+        subItems: [
+          { to: '/orders/new', label: 'Place New Order' },
+          { to: '/orders/history', label: 'Order History' },
+        ]
+      },
+      { 
+        to: '/quotes', 
+        icon: FileText, 
+        label: 'My Quotes',
+        subItems: [
+          { to: '/quotes/new', label: 'Request Quote' },
+        ]
+      },
+      { 
+        to: '/payments', 
+        icon: CreditCard, 
+        label: 'My Payments',
+        subItems: [
+          { to: '/payments/make', label: 'Make Payment' },
+          { to: '/payments/history', label: 'Payment History' },
+        ]
+      },
+      { 
+        to: '/profile', 
+        icon: User, 
+        label: 'Manage Profile',
+      },
     ],
   },
 ];
@@ -144,6 +190,7 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
               <NavLink
                 key={subItem.to}
                 to={subItem.to}
+                end
                 onClick={onClose}
                 className={({ isActive: subIsActive }) => `block px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   subIsActive ? 'text-[#06b6d4] bg-white/5' : 'text-[#8892b0] hover:text-white hover:bg-white/5'
@@ -196,7 +243,13 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
   );
 }
 
+import { useAuth } from '../../context/AuthContext';
+
 export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
+  const { user, logout } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
+  const navSections = isAdmin ? adminNavSections : customerNavSections;
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -215,7 +268,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
       {/* Logo */}
       <div className="relative h-[60px] flex items-center px-5 border-b border-white/[0.06] bg-[#10192a]">
         
-        <Link to="/" className="flex items-center px-1">
+        <Link to={isAdmin ? "/admin/dashboard" : "/dashboard"} className="flex items-center px-1">
           <img 
             src={lycoLogo} 
             alt="Lyco Designs" 
@@ -260,10 +313,16 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-semibold truncate">{user.fullname}</p>
-                <p className="text-[#3a4a6a] text-[10px]">{user.userType}</p>
+                <p className="text-white text-xs font-semibold truncate">{user?.fullname || 'Guest'}</p>
+                <p className="text-[#3a4a6a] text-[10px]">{user?.userType || 'User'}</p>
               </div>
-              <Lock size={13} className="text-[#3a4a6a] shrink-0" />
+              <button 
+                onClick={logout}
+                className="p-1.5 rounded-lg text-[#3a4a6a] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                title="Logout"
+              >
+                <LogOut size={14} />
+              </button>
             </div>
           );
         })()}

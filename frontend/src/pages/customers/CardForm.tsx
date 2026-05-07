@@ -14,12 +14,17 @@ import { pricesApi } from '../../api/pricesApi';
 import { Button } from '../../components/ui/Button';
 import CustomSelect from '../../components/ui/CustomSelect';
 import apiClient from '../../api/apiClient';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CardForm() {
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const cardId = searchParams.get('id');
+  const cardIdFromUrl = searchParams.get('id');
+  const [cardId, setCardId] = useState<string | null>(cardIdFromUrl);
   const isEdit = !!cardId;
 
   const [formData, setFormData] = useState<Partial<CardDetail>>({
@@ -69,8 +74,35 @@ export default function CardForm() {
   const { data: existingCard, isLoading: isCardLoading } = useQuery({
     queryKey: ['card', cardId],
     queryFn: () => cardsApi.getCardById(Number(cardId)),
-    enabled: isEdit,
+    enabled: !!cardId,
   });
+
+  // Fetch card by userId for customers on mount
+  useEffect(() => {
+    if (!isAdmin && user?.userId) {
+      cardsApi.getCardByUserId(user.userId)
+        .then(card => {
+          if (card) {
+            setCardId(card.cardId.toString());
+          }
+        })
+        .catch(() => {
+          // If no card exists, just pre-fill identity from profile
+          setFormData(prev => ({
+            ...prev,
+            userId: user.userId,
+            firstName: user.fullname.split(' ')[0] || '',
+            lastName: user.fullname.split(' ').slice(1).join(' ') || '',
+          }));
+        });
+    }
+  }, [isAdmin, user]);
+
+  useEffect(() => {
+    if (!isAdmin && user?.userId) {
+      setFormData(prev => ({ ...prev, userId: user.userId }));
+    }
+  }, [isAdmin, user]);
 
   useEffect(() => {
     if (existingCard) {
@@ -80,7 +112,7 @@ export default function CardForm() {
         cardNo: existingCard.cardNo ? existingCard.cardNo.match(/.{1,4}/g)?.join(' ') || existingCard.cardNo : ''
       };
       setFormData(formattedCard);
-      
+
       if (existingCard.expDate) {
         // Support both slash (new) and comma (legacy) formats
         const separator = existingCard.expDate.includes(',') ? ',' : '/';
@@ -105,7 +137,7 @@ export default function CardForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       toast.success(isEdit ? 'Customer card updated successfully' : 'Customer card saved successfully');
-      navigate('/customers/card-summary');
+      navigate(isAdmin ? '/admin/customers/card-summary' : '/dashboard');
     },
     onError: (err: any) => {
       const msg = err.response?.data?.error || err.message;
@@ -263,7 +295,7 @@ export default function CardForm() {
       setFormError('Validation Error: Please review required metrics.');
       return;
     }
-    
+
     // Clean spaces from card number before sending to API
     const cleanData = {
       ...formData,
@@ -359,71 +391,73 @@ export default function CardForm() {
               )}
 
               {/* Section 1 — Account Linkage */}
-              <section>
-                <h4 className={sectionLabel('text-cyan-800/50')}><User size={12} /> Account Association</h4>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4 items-end">
-                  <div className="md:col-span-5 space-y-1">
-                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Username <span className="text-red-500">*</span></label>
-                    <CustomSelect
-                      value={formData.userId || ''}
-                      onChange={(val) => {
-                        const userId = val ? Number(val) : null;
-                        if (!userId) {
-                          // User cleared the selection — reset everything
-                          setFormData(p => ({ ...p, userId: null }));
-                          return;
-                        }
-                        const user = users.find(u => u.id === userId);
-                        // If this user has an existing card (and it's not the one we're currently editing), navigate to it
-                        if (user?.cardId && user.cardId !== Number(cardId)) {
-                          toast.loading('Redirecting to existing card details...', { duration: 2000 });
-                          navigate(`/customers/card-details?id=${user.cardId}`);
-                          return;
-                        }
-                        // Reset the full form and pre-fill names from user profile
-                        setFormData({
-                          userId,
-                          cardType: 'Visa',
-                          cardNo: '',
-                          expDate: '',
-                          cvv: '',
-                          asRegistered: 'Y',
-                          firstName: user?.firstname || '',
-                          middlename: '',
-                          lastName: user?.lastname || '',
-                          address1: '',
-                          address2: '',
-                          city: '',
-                          state: '',
-                          postcode: '',
-                          countryId: null,
-                          currency: 'USD',
-                          comments: ''
-                        });
-                        setExpMonth('');
-                        setExpYear('');
-                      }}
-                      options={(Array.isArray(users) ? users : []).map(u => ({
-                        value: u.id,
-                        label: u.firstname && u.lastname ? `${u.firstname} ${u.lastname} (${u.username})` : u.username
-                      }))}
-                      placeholder="Select Username"
-                      error={fieldErrors.userId}
-                    />
-                  </div>
-                  <div className="md:col-span-7 flex items-center gap-3 py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl">
-                    <div className="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-600 shrink-0">
-                      <CheckCircle2 size={16} />
+              {isAdmin && (
+                <section>
+                  <h4 className={sectionLabel('text-cyan-800/50')}><User size={12} /> Account Association</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4 items-end">
+                    <div className="md:col-span-5 space-y-1">
+                      <label className="block text-[13px] font-semibold text-slate-900 ml-1">Username <span className="text-red-500">*</span></label>
+                      <CustomSelect
+                        value={formData.userId || ''}
+                        onChange={(val) => {
+                          const userId = val ? Number(val) : null;
+                          if (!userId) {
+                            // User cleared the selection — reset everything
+                            setFormData(p => ({ ...p, userId: null }));
+                            return;
+                          }
+                          const userObj = users.find(u => u.id === userId);
+                          // If this user has an existing card (and it's not the one we're currently editing), navigate to it
+                          if (userObj?.cardId && userObj.cardId !== Number(cardId)) {
+                            toast.loading('Redirecting to existing card details...', { duration: 2000 });
+                            navigate(isAdmin ? `/admin/customers/card-details?id=${userObj.cardId}` : `/customers/card-details?id=${userObj.cardId}`);
+                            return;
+                          }
+                          // Reset the full form and pre-fill names from user profile
+                          setFormData({
+                            userId,
+                            cardType: 'Visa',
+                            cardNo: '',
+                            expDate: '',
+                            cvv: '',
+                            asRegistered: 'Y',
+                            firstName: userObj?.firstname || '',
+                            middlename: '',
+                            lastName: userObj?.lastname || '',
+                            address1: '',
+                            address2: '',
+                            city: '',
+                            state: '',
+                            postcode: '',
+                            countryId: null,
+                            currency: 'USD',
+                            comments: ''
+                          });
+                          setExpMonth('');
+                          setExpYear('');
+                        }}
+                        options={(Array.isArray(users) ? users : []).map(u => ({
+                          value: u.id,
+                          label: u.firstname && u.lastname ? `${u.firstname} ${u.lastname} (${u.username})` : u.username
+                        }))}
+                        placeholder="Select Username"
+                        error={fieldErrors.userId}
+                      />
                     </div>
-                    <div>
-                      <p className="text-[11px] font-black uppercase text-slate-700">Financial Linkage Ready</p>
-                      <p className="text-[11px] text-slate-500 font-medium">Card telemetry will be bound to this verified identity.</p>
+                    <div className="md:col-span-7 flex items-center gap-3 py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl">
+                      <div className="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-600 shrink-0">
+                        <CheckCircle2 size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black uppercase text-slate-700">Financial Linkage Ready</p>
+                        <p className="text-[11px] text-slate-500 font-medium">Card telemetry will be bound to this verified identity.</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
 
-              <div className="h-px bg-slate-100" />
+              {isAdmin && <div className="h-px bg-slate-100" />}
 
               {/* Section 2 — Payment Matrix Configuration */}
               <section>
@@ -577,7 +611,7 @@ export default function CardForm() {
             <div className="bg-slate-50/50 p-6 sm:p-7 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
               <button
                 type="button"
-                onClick={() => navigate('/customers/card-summary')}
+                onClick={() => navigate(isAdmin ? '/admin/customers/card-summary' : '/dashboard')}
                 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <ChevronLeft size={16} /> Cancel
@@ -604,7 +638,7 @@ export default function CardForm() {
                   isLoading={mutation.isPending}
                 >
                   <span className="mt-[-1px]">
-                    {isEdit ? 'Update Profile' : 'Save Profile'}
+                    {isEdit ? 'Update Card' : 'Save Card'}
                   </span>
                 </Button>
               </div>

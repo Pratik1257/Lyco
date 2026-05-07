@@ -128,4 +128,22 @@ public class CardDetailRepository : ICardDetailRepository
 
     public Task<bool> ExistsForUserAsync(long userId) =>
         _context.CardDetails.AnyAsync(c => c.UserId == userId);
+
+    public async Task<CardDetail?> GetByUserIdAsync(long userId)
+    {
+        var card = await _context.CardDetails
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (card?.User?.UniqueNo != null)
+        {
+            card.LastOrderDate = await _context.OrderDetails
+                .Where(o => o.UniqueNo == card.User.UniqueNo)
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => o.OrderDate)
+                .FirstOrDefaultAsync();
+        }
+
+        return card;
+    }
 }

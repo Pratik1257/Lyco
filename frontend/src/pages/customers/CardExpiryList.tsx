@@ -4,6 +4,7 @@ import { Plus, Edit2, AlertCircle, Trash2, CreditCard, Search, Eye, EyeOff, X, U
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { cardsApi, type CardDetail } from '../../api/cardsApi';
+import { useAuth } from '../../context/AuthContext';
 
 import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/ui/SearchBar';
@@ -15,6 +16,8 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 export default function CardExpiryList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   // Search & Pagination State
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,7 +216,7 @@ export default function CardExpiryList() {
           </div>
           <Button
             variant="primary"
-            onClick={() => navigate('/customers/card-details')}
+            onClick={() => navigate(isAdmin ? '/admin/customers/card-details' : '/customers/card-details')}
           >
             <Plus size={18} />
             Add Card Details
@@ -267,7 +270,7 @@ export default function CardExpiryList() {
                         <Button
                           variant="ghost-cyan"
                           size="icon"
-                          onClick={() => navigate(`/customers/card-details?id=${card.cardId}`)}
+                          onClick={() => navigate(isAdmin ? `/admin/customers/card-details?id=${card.cardId}` : `/customers/card-details?id=${card.cardId}`)}
                           title="Edit Card"
                         >
                           <Edit2 size={16} />

@@ -11,10 +11,13 @@ import { SearchBar } from '../../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CustomerList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   // Search & Pagination State
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,11 +78,11 @@ export default function CustomerList() {
   };
 
   const handleAddCustomer = () => {
-    navigate('/customers/add-two');
+    navigate(isAdmin ? '/admin/customers/add-customer' : '/customers/add-two');
   };
 
   const handleEditCustomer = (customer: Customer) => {
-    navigate(`/customers/add-two?id=${customer.userId}`);
+    navigate(isAdmin ? `/admin/customers/add-customer?id=${customer.userId}` : `/customers/add-two?id=${customer.userId}`);
   };
 
   // Derived Values

@@ -74,6 +74,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const savedUser = localStorage.getItem('lyco_user');
   let user = { fullname: 'Guest', userType: 'User' };
   try { if (savedUser) user = JSON.parse(savedUser); } catch(e) {}
+  const isAdmin = user.userType === 'Admin';
 
   return (
     <div 
@@ -98,7 +99,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           label="My profile"
           subtext={`${user.fullname} · ${user.userType}`}
           onClick={() => {
-            navigate('/profile');
+            navigate(isAdmin ? '/admin/profile' : '/profile');
             onClose();
           }}
         />
@@ -106,7 +107,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           label="Change password"
           subtext="Last changed 30 days ago"
           onClick={() => {
-            navigate('/change-password');
+            navigate(isAdmin ? '/admin/change-password' : '/change-password');
             onClose();
           }}
         />

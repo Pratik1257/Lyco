@@ -9,4 +9,5 @@ public interface ICardDetailService
     Task<(CardDetailDto? Dto, string? Error)> CreateAsync(CreateCardRequest req);
     Task<(CardDetailDto? Dto, string? Error)> UpdateAsync(long id, UpdateCardRequest req);
     Task<bool> DeleteAsync(long id);
+    Task<CardDetailDto?> GetByUserIdAsync(long userId);
 }

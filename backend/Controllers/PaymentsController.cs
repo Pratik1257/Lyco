@@ -68,6 +68,7 @@ public class PaymentsController : ControllerBase
         [FromQuery] string? paymentStatus = null,
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null,
+        [FromQuery] long? uniqueNo = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
@@ -89,6 +90,7 @@ public class PaymentsController : ControllerBase
                         o.OrderStatus,
                         o.CompletedDate,
                         o.WorkTitle,
+                        o.UniqueNo,
                         Username = user != null ? user.Username : "N/A",
                         Fullname = user != null ? (user.Firstname + " " + user.Lastname).Trim() : "N/A",
                         CompanyName = user != null ? user.Companyname : "N/A",
@@ -97,6 +99,10 @@ public class PaymentsController : ControllerBase
                     };
 
         // Apply filters
+        if (uniqueNo.HasValue)
+        {
+            query = query.Where(o => o.UniqueNo == uniqueNo.Value);
+        }
         if (!string.IsNullOrEmpty(search))
         {
             query = query.Where(o => 

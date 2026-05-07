@@ -48,4 +48,8 @@ export interface DashboardData {
   revenueByService: { name: string; current: number; goal: number; color: string }[];
   topCustomers: { name: string; orders: number; color: string }[];
   serviceStats: { name: string; count: number; icon: string; color: string }[];
+  basicArtworkCount: number;
+  complexArtworkCount: number;
+  digitizingCount: number;
+  otherArtworkCount: number;
 }

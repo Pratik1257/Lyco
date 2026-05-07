@@ -8,6 +8,7 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { paymentsApi } from '../../api/paymentsApi';
 import { servicesApi } from '../../api/servicesApi';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
@@ -16,6 +17,10 @@ import DatePicker from '../../components/ui/DatePicker';
 import { TableSkeleton } from '../../components/ui/Skeleton';
 
 export default function PaymentSummary() {
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
+  const customerUniqueNo = isAdmin ? undefined : (user?.uniqueNo || (user as any)?.UniqueNo);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -34,9 +39,9 @@ export default function PaymentSummary() {
     }
   });
 
-  // Fetch Payment Summary data
+  // Fetch Payment History data
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['payment-summary', currentPage, itemsPerPage, searchQuery, serviceFilter, statusFilter, startDate, endDate],
+    queryKey: ['payment-summary', currentPage, itemsPerPage, searchQuery, serviceFilter, statusFilter, startDate, endDate, customerUniqueNo],
     queryFn: () => paymentsApi.getSummary(
       currentPage, 
       itemsPerPage, 
@@ -44,8 +49,10 @@ export default function PaymentSummary() {
       serviceFilter === 'all' ? undefined : Number(serviceFilter), 
       statusFilter, 
       startDate || undefined, 
-      endDate || undefined
-    )
+      endDate || undefined,
+      customerUniqueNo ? Number(customerUniqueNo) : undefined
+    ),
+    enabled: isAdmin || !!customerUniqueNo
   });
 
   const items = (data as any)?.items || (data as any)?.Items || [];
@@ -119,7 +126,7 @@ export default function PaymentSummary() {
       }
 
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Payment Summary');
+      const worksheet = workbook.addWorksheet('Payment History');
 
       worksheet.columns = [
         { header: 'Full Name', key: 'fullname', width: 25 },

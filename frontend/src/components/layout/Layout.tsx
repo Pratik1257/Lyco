@@ -6,7 +6,8 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/':             { title: 'Dashboard',      subtitle: 'statistics and more' },
   '/dashboard-fx': { title: 'Dashboard FX',   subtitle: 'futuristic view' },
   '/orders/new':   { title: 'Manage Orders',  subtitle: 'Place New Order' },
-  '/orders/summary':{ title: 'Manage Orders', subtitle: 'Order Summary' },
+  '/orders/history':{ title: 'Manage Orders', subtitle: 'Order History' },
+  '/admin/orders/history':{ title: 'Manage Orders', subtitle: 'Order History' },
   '/orders/complete':{ title: 'Manage Orders',subtitle: 'Complete an Order' },
   '/orders/remove': { title: 'Manage Orders', subtitle: 'Remove an Order' },
   '/orders':       { title: 'Manage Orders',  subtitle: 'view and manage orders' },
@@ -14,9 +15,11 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/payments':     { title: 'Manage Payments',subtitle: 'payment records' },
   '/invoices':     { title: 'Manage Invoice', subtitle: 'invoice history' },
   '/customers/status':       { title: 'Manage Customers', subtitle: 'Customer Status' },
+  '/admin/customers/summary': { title: 'Manage Customers', subtitle: 'Customer Status' },
   '/customers/card-summary': { title: 'Manage Customers', subtitle: 'Card Details (Duration - Next Six months)' },
   '/customers/card-details': { title: 'Manage Customers', subtitle: 'Add Customer Cards Details' },
   '/customers/add-two':      { title: 'Manage Customers', subtitle: 'Add Customer Details' },
+  '/admin/customers/add-customer': { title: 'Manage Customers', subtitle: 'Add Customer Details' },
   '/customers/add-three':    { title: 'Manage Customers', subtitle: 'Add Customer' },
   '/customers':    { title: 'Manage Customers', subtitle: 'manage customers' },
   '/employees':    { title: 'Manage Employee', subtitle: 'manage employees' },
@@ -28,10 +31,12 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/admin/payments/make':          { title: 'Manage Payment', subtitle: 'Make Payment for Customer' },
   '/admin/payments/status':        { title: 'Manage Payment', subtitle: 'Payment Status' },
   '/admin/payments/remove-bad-debt': { title: 'Manage Payment', subtitle: 'Remove from Bad Debt' },
-  '/admin/payments/summary':       { title: 'Manage Payment', subtitle: 'Payment Summary' },
+  '/admin/payments/history':       { title: 'Manage Payment', subtitle: 'Payment History' },
+  '/payments/history':             { title: 'Manage Payment', subtitle: 'Payment History' },
   '/invoices/create':   { title: 'Manage Invoice', subtitle: 'Create Invoice' },
   '/invoices/summary':  { title: 'Manage Invoice', subtitle: 'Invoice Summary' },
   '/invoices/pending':  { title: 'Manage Invoice', subtitle: 'Pending Invoice Summary' },
+  '/profile':          { title: 'Manage Profile', subtitle: 'Update account information' },
 };
 
 import { useState } from 'react';
@@ -50,10 +55,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #f0fdf4 50%, #fafafa 75%, #f5f3ff 100%)' }}>
-      {/* Subtle geometric decoration */}
-      <div className="fixed top-16 right-8 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl pointer-events-none z-0" />
-      <div className="fixed bottom-16 left-72 w-72 h-72 bg-violet-200/20 rounded-full blur-3xl pointer-events-none z-0" />
-
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <Header 
         title={meta.title} 

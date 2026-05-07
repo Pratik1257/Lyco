@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { ordersApi } from '../../api/ordersApi';
+import { useAuth } from '../../context/AuthContext';
 
 import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/ui/SearchBar';
@@ -12,6 +13,8 @@ import { OrderDetailsModal } from '../../components/ui/OrderDetailsModal';
 
 export default function CompleteOrderList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'Admin';
 
   // Search & Pagination State
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,7 +88,7 @@ export default function CompleteOrderList() {
 
           <Button
             variant="primary"
-            onClick={() => navigate('/orders/complete/manual')}
+            onClick={() => navigate(isAdmin ? '/admin/orders/complete/manual' : '/orders/complete/manual')}
             className="bg-slate-900 hover:bg-slate-800 text-white"
           >
             <CheckCircle2 size={18} />
