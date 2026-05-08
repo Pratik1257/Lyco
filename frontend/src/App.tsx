@@ -37,6 +37,8 @@ import RemoveBadDebt from './pages/payments/RemoveBadDebt';
 import PaymentSummary from './pages/payments/PaymentSummary';
 import ManagePayment from './pages/payments/ManagePayment';
 import PayPalBillingDetails from './pages/payments/PayPalBillingDetails';
+import PaymentSuccess from './pages/payments/PaymentSuccess';
+import PaymentCancel from './pages/payments/PaymentCancel';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -153,6 +155,13 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              {/* Public PayPal redirect pages — no auth required */}
+              <Route path="/payment/success" element={<Layout />}>
+                <Route index element={<PaymentSuccess />} />
+              </Route>
+              <Route path="/payment/cancel" element={<Layout />}>
+                <Route index element={<PaymentCancel />} />
+              </Route>
             </Routes>
           </AuthProvider>
         </BrowserRouter>

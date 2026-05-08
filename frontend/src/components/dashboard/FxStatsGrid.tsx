@@ -1,4 +1,5 @@
 import { CreditCard, Users, ShoppingCart, Clock, BarChart2, FileText, DollarSign, CheckCircle, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { DashboardData } from '../../types/dashboard';
 import CountUp from '../ui/CountUp';
 
@@ -11,16 +12,58 @@ function GlowCard({ children, gradient }: { children: React.ReactNode; gradient:
   );
 }
 
-export default function FxStatsGrid({ data, timeframe, isAdmin = true }: { data: DashboardData, timeframe: string, isAdmin?: boolean }) {
+export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true }: { data: DashboardData, timeframe: string, currency: string, isAdmin?: boolean }) {
+  const navigate = useNavigate();
   const { pendingPayments, totalUsers, totalOrders, inProcessOrders, monthOrders, monthInvoices, monthOrderValue, pendingMonth } = data;
   const labelPrefix = timeframe === 'Month' ? 'Month' : timeframe === 'Week' ? 'Week' : 'Year';
+
+  const formatChange = (val: number | string) => {
+    const num = Number(val);
+    return num > 0 ? `+${num}%` : `${num}%`;
+  };
+
+  // Get current date in Eastern Time (America/New_York)
+  const now = new Date();
+  const etString = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).format(now); // format: "M/D/YYYY"
+
+  const [m, d, y] = etString.split('/');
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+
+  const formatDate = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  let firstDay = '';
+  let lastDay = '';
+
+  if (timeframe === 'Week') {
+    const etDate = new Date(year, month - 1, day);
+    const dayOfWeek = etDate.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    firstDay = formatDate(new Date(year, month - 1, day + diffToMonday));
+    lastDay = formatDate(new Date(year, month - 1, day + diffToMonday + 6));
+  } else if (timeframe === 'Year') {
+    firstDay = formatDate(new Date(year, 0, 1));
+    lastDay = formatDate(new Date(year, 11, 31));
+  } else {
+    firstDay = formatDate(new Date(year, month - 1, 1));
+    lastDay = formatDate(new Date(year, month, 0));
+  }
 
   return (
     <div className="space-y-4">
       {/* Row 1 */}
       <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
         {/* Pending Payments */}
-        <div className="relative overflow-hidden rounded-2xl p-5 col-span-1"
+        <div className="relative overflow-hidden rounded-2xl p-5 col-span-1 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group"
+          onClick={() => navigate(isAdmin ? '/admin/orders/history?paymentStatus=Pending' : '/orders/history?paymentStatus=Pending')}
           style={{ background: 'linear-gradient(135deg,#ff6b35 0%,#e05555 50%,#c0392b 100%)' }}>
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-xl" />
           <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-lg" />
@@ -33,7 +76,7 @@ export default function FxStatsGrid({ data, timeframe, isAdmin = true }: { data:
                 Needs attention
               </span>
             </div>
-            <p className="text-3xl font-black text-white tracking-tight"><CountUp prefix={data.currencySymbol} end={pendingPayments.amount} decimals={0} /></p>
+            <p className="text-3xl font-black text-white tracking-tight"><CountUp id="pending-payments" prefix={data.currencySymbol} end={pendingPayments.amount} decimals={0} /></p>
             <p className="text-white/80 text-sm font-semibold mt-1">Pending Payments</p>
             <p className="text-white/50 text-xs mt-0.5">Across {pendingPayments.openOrders} open orders</p>
           </div>
@@ -41,48 +84,54 @@ export default function FxStatsGrid({ data, timeframe, isAdmin = true }: { data:
 
         {/* Total Users - Admin Only */}
         {isAdmin && (
-          <GlowCard gradient="bg-gradient-to-br from-sky-50 to-transparent">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-200">
-                <Users size={18} className="text-white" />
+          <div onClick={() => navigate('/admin/customers/summary')} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+            <GlowCard gradient="bg-gradient-to-br from-sky-50 to-transparent">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-200">
+                  <Users size={18} className="text-white" />
+                </div>
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
+                  <TrendingUp size={9}/> {formatChange(totalUsers.changePercent)}
+                </span>
               </div>
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
-                <TrendingUp size={9}/> +{totalUsers.changePercent}%
-              </span>
-            </div>
-            <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={totalUsers.count} /></p>
-            <p className="text-sm text-gray-400 mt-1">Total Users</p>
-          </GlowCard>
+              <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp id="total-users" end={totalUsers.count} /></p>
+              <p className="text-sm text-gray-400 mt-1">Total Users</p>
+            </GlowCard>
+          </div>
         )}
 
         {/* Total Orders */}
-        <GlowCard gradient="bg-gradient-to-br from-violet-50 to-transparent">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
-              <ShoppingCart size={18} className="text-white" />
+        <div onClick={() => navigate(isAdmin ? `/admin/orders/history?currency=${currency}` : `/orders/history?currency=${currency}`)} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+          <GlowCard gradient="bg-gradient-to-br from-violet-50 to-transparent">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
+                <ShoppingCart size={18} className="text-white" />
+              </div>
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
+                <TrendingUp size={9}/> {formatChange(totalOrders.changePercent)}
+              </span>
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
-              <TrendingUp size={9}/> +{totalOrders.changePercent}%
-            </span>
-          </div>
-          <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={totalOrders.count} /></p>
-          <p className="text-sm text-gray-400 mt-1">Total Orders</p>
-        </GlowCard>
+            <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp id="total-orders" end={totalOrders.count} /></p>
+            <p className="text-sm text-gray-400 mt-1">Total Orders</p>
+          </GlowCard>
+        </div>
 
         {/* In-Process - Promoted for Client */}
         {!isAdmin && (
-          <GlowCard gradient="bg-gradient-to-br from-cyan-50 to-transparent">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-200">
-                <Clock size={18} className="text-white" />
+          <div onClick={() => navigate(`/orders/history?status=In Process&currency=${currency}`)} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+            <GlowCard gradient="bg-gradient-to-br from-cyan-50 to-transparent">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-200">
+                  <Clock size={18} className="text-white" />
+                </div>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-cyan-50 text-cyan-600 uppercase">
+                  Active
+                </span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-cyan-50 text-cyan-600 uppercase">
-                Active
-              </span>
-            </div>
-            <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp end={inProcessOrders} /></p>
-            <p className="text-sm text-gray-400 mt-1">In-Process Orders</p>
-          </GlowCard>
+              <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp id="in-process" end={inProcessOrders} /></p>
+              <p className="text-sm text-gray-400 mt-1">In-Process Orders</p>
+            </GlowCard>
+          </div>
         )}
       </div>
 
@@ -90,13 +139,15 @@ export default function FxStatsGrid({ data, timeframe, isAdmin = true }: { data:
       {isAdmin && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
-            { label: 'In-Process', value: <CountUp end={inProcessOrders} />, badge: 'Active', icon: Clock, from: 'from-cyan-400', to: 'to-teal-500', shadow: 'shadow-cyan-200', change: null },
-            { label: `${labelPrefix} Orders`, value: <CountUp end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: `+${monthOrders.changePercent}%` },
-            { label: `${labelPrefix} Invoices`, value: <CountUp end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: `+${monthInvoices.changePercent}%` },
-            { label: `${labelPrefix} Value`, value: <CountUp prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: `+${monthOrderValue.changePercent}%` },
-            { label: `Pending ${labelPrefix}`, value: <CountUp prefix={data.currencySymbol} end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null },
+            { label: 'In-Process', value: <CountUp id="metric-in-process" end={inProcessOrders} />, badge: 'Active', icon: Clock, from: 'from-cyan-400', to: 'to-teal-500', shadow: 'shadow-cyan-200', change: null, path: `/admin/orders/history?status=In Process&currency=${currency}` },
+            { label: `${labelPrefix} Orders`, value: <CountUp id="metric-month-orders" end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: formatChange(monthOrders.changePercent), path: `/admin/orders/history?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
+            { label: `${labelPrefix} Invoices`, value: <CountUp id="metric-month-invoices" end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: formatChange(monthInvoices.changePercent), path: `/admin/invoices/summary?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
+            { label: `${labelPrefix} Value`, value: <CountUp id="metric-month-value" prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: formatChange(monthOrderValue.changePercent), path: `/admin/orders/history?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
+            { label: `Pending ${labelPrefix}`, value: <CountUp id="metric-pending-month" prefix={data.currencySymbol} end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null, path: `/admin/orders/history?paymentStatus=Pending&startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
           ].map((m) => (
-            <div key={m.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            <div key={m.label} 
+              onClick={() => navigate(m.path)}
+              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group">
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.from} ${m.to} flex items-center justify-center shadow-lg ${m.shadow}`}>
                   <m.icon size={15} className="text-white" />

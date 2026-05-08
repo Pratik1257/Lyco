@@ -14,7 +14,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState('Month');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState(() => localStorage.getItem('dashboard_currency') || 'USD');
+
+  const handleCurrencyChange = (val: string) => {
+    setCurrency(val);
+    localStorage.setItem('dashboard_currency', val);
+  };
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -58,9 +63,9 @@ export default function Dashboard() {
         timeframe={timeframe} 
         setTimeframe={setTimeframe} 
         currency={currency} 
-        setCurrency={setCurrency} 
+        setCurrency={handleCurrencyChange} 
       />
-      <FxStatsGrid data={data} timeframe={timeframe} />
+      <FxStatsGrid data={data} timeframe={timeframe} currency={currency} />
       <FxCharts data={data} timeframe={timeframe} />
       <FxMiddleRow data={data} />
       <FxBottomRow data={data} />

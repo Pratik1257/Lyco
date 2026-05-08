@@ -36,7 +36,7 @@ export default function CreateInvoice() {
   // Fetch COMPLETED orders for selected user using uniqueNo
   const { data: ordersData } = useQuery({
     queryKey: ['user-orders-completed', selectedUniqueNo],
-    queryFn: () => ordersApi.getOrders(1, 100, '', 'Completed', undefined, selectedUniqueNo ?? undefined),
+    queryFn: () => ordersApi.getOrders(1, 100, '', 'Completed', 'all', undefined, selectedUniqueNo ?? undefined),
     enabled: !!selectedUniqueNo
   });
   const orders = (ordersData?.items || []).map(o => ({

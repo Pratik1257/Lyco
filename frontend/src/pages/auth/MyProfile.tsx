@@ -11,7 +11,7 @@ import { customersApi, type Customer, type Country } from '../../api/customersAp
 
 export default function MyProfile() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const isAdmin = user?.userType === 'Admin';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,12 +72,10 @@ export default function MyProfile() {
 
       const updated = await customersApi.updateCustomer(userId, profile);
 
-      // Update local storage if name changed
-      const currentLocal = JSON.parse(savedUser);
-      localStorage.setItem('lyco_user', JSON.stringify({
-        ...currentLocal,
-        fullname: `${updated.firstname} ${updated.lastname}`.trim()
-      }));
+      updateUser({
+        fullname: `${updated.firstname} ${updated.lastname}`.trim(),
+        currency: updated.currency
+      });
 
       toast.dismiss(loadingToast);
       toast.success('Profile updated successfully');
@@ -239,9 +237,14 @@ export default function MyProfile() {
                     <label className={labelCls}>Preferred Currency</label>
                     <div className="relative">
                       <DollarSign size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <select name="currency" value={profile.currency} onChange={handleInput} className={inp}>
+                      <select 
+                        name="currency" 
+                        value={profile.currency} 
+                        onChange={handleInput} 
+                        className={inp}
+                      >
                         <option value="USD">USD - US Dollar</option>
-                        <option value="CAD">CAD - Canadian Dollar</option>
+                        <option value="AUD">AUD - Australian Dollar</option>
                         <option value="GBP">GBP - British Pound</option>
                         <option value="EUR">EUR - Euro</option>
                       </select>

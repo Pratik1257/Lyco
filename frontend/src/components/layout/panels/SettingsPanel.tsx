@@ -58,9 +58,6 @@ interface SettingsPanelProps {
 }
 
 export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
-  const [emailNotif, setEmailNotif] = useState(true);
-  const [quoteAlert, setQuoteAlert] = useState(true);
-  const [paymentRemind, setPaymentRemind] = useState(false);
   const navigate = useNavigate();
 
   if (!isOpen) return null;
@@ -84,16 +81,13 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       {/* Header */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-black/[0.08]">
         <h3 className="text-[13px] font-semibold text-gray-900">Settings</h3>
-        <button className="text-[12px] font-medium text-[#1D9E75] hover:underline transition-all">
-          Save changes
-        </button>
       </div>
 
       {/* Content */}
       <div className="max-h-[450px] overflow-y-auto overflow-x-hidden">
         {/* PROFILE Section */}
         <div className="bg-gray-50/50 px-4 py-2">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.5px]">Profile</span>
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.5px]">Account</span>
         </div>
         <SettingsRow 
           label="My profile"
@@ -105,53 +99,16 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         />
         <SettingsRow 
           label="Change password"
-          subtext="Last changed 30 days ago"
+          subtext="Update security"
           onClick={() => {
             navigate(isAdmin ? '/admin/change-password' : '/change-password');
             onClose();
           }}
         />
 
-        {/* NOTIFICATIONS Section */}
-        <div className="bg-gray-50/50 px-4 py-2">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.5px]">Notifications</span>
-        </div>
-        <Toggle 
-          label="Email notifications"
-          subtext="Orders, payments & invoices"
-          isChecked={emailNotif}
-          onChange={setEmailNotif}
-        />
-        <Toggle 
-          label="Quote alerts"
-          subtext="Notify when quote awaits review"
-          isChecked={quoteAlert}
-          onChange={setQuoteAlert}
-        />
-        <Toggle 
-          label="Payment reminders"
-          subtext="Alert on overdue payments"
-          isChecked={paymentRemind}
-          onChange={setPaymentRemind}
-        />
-
-        {/* APPEARANCE Section */}
-        <div className="bg-gray-50/50 px-4 py-2">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.5px]">Appearance</span>
-        </div>
-        
-        <SettingsRow 
-          label="Language & region"
-          subtext="English · India (IST)"
-        />
-
-        {/* ACCOUNT Section */}
-        <div className="bg-gray-50/50 px-4 py-2">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.5px]">Account</span>
-        </div>
         <SettingsRow 
           label="Log out"
-          subtext="End your current session"
+          subtext="End session"
           isDanger={true}
           showChevron={false}
           onClick={handleLogout}

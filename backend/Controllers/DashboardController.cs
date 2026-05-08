@@ -59,6 +59,7 @@ public class DashboardController : ControllerBase
             .ToListAsync();
         var allInvoices = await _context.InvoiceMsts.AsNoTracking()
             .Where(i => !filteredUserId.HasValue || i.UserId == filteredUserId.Value)
+            .Where(i => string.IsNullOrEmpty(currency) || i.OrderDetails.Any(od => od.Currency == currency))
             .ToListAsync();
         var allQuotes = await _context.Quotes.AsNoTracking()
             .Where(q => (string.IsNullOrEmpty(currency) || q.Currency == currency) && (!uniqueNo.HasValue || q.UniqueNo == uniqueNo.Value))
@@ -348,8 +349,8 @@ public class DashboardController : ControllerBase
             TodayOrders = new MetricValueCount { Count = todayOrdersList.Count, ChangeFromAvg = Math.Round((decimal)todayOrdersChange, 1) },
             PendingPayments = new PendingPaymentsMetrics { Amount = pendingPaymentsAmount, OpenOrders = pendingPaymentsOrders.Count },
             TotalUsers = new MetricValueCount { Count = usersCount, ChangePercent = 0 },
-            TotalOrders = new MetricValueCount { Count = filteredOrders.Count, ChangePercent = 0 },
-            InProcessOrders = filteredOrders.Count(o => o.OrderStatus == "In Process"),
+            TotalOrders = new MetricValueCount { Count = allOrders.Count, ChangePercent = 0 },
+            InProcessOrders = allOrders.Count(o => o.OrderStatus == "In Process"),
             MonthOrders = new MetricValueCount { Count = periodOrders.Count, ChangePercent = Math.Round(periodOrderChange, 1) },
             MonthInvoices = new MetricValueCount { Count = periodInvoices.Count, ChangePercent = Math.Round(periodInvoiceChange, 1) },
             MonthOrderValue = new MetricValueAmount { Amount = periodRevenue, ChangePercent = Math.Round(revenueChange, 1) },

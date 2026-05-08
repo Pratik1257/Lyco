@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Search, Download, CheckCircle2, Clock, XCircle, AlertCircle, ShoppingBag
+  Search, Download, CheckCircle2, Clock, XCircle, AlertCircle, ShoppingBag, Receipt
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ExcelJS from 'exceljs';
@@ -61,8 +61,8 @@ export default function PaymentSummary() {
 
   const getPaymentStatusStyle = (status: string | null) => {
     const s = (status || '').toLowerCase();
-    if (s === 'completed') return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-    if (s === 'bad debt') return 'bg-rose-50 text-rose-700 border-rose-100';
+    if (s === 'completed' || s === 'paid') return 'bg-green-50 text-green-700 border-green-100';
+    if (s.includes('bad')) return 'bg-red-50 text-red-700 border-red-100';
     return 'bg-amber-50 text-amber-700 border-amber-100';
   };
 
@@ -72,6 +72,7 @@ export default function PaymentSummary() {
     if (s.includes('process')) return 'bg-blue-50 text-blue-700 border-blue-100';
     if (s.includes('cancel')) return 'bg-red-50 text-red-700 border-red-100';
     if (s.includes('pending')) return 'bg-amber-50 text-amber-700 border-amber-100';
+    if (s.includes('invoice')) return 'bg-purple-50 text-purple-700 border-purple-100';
     return 'bg-slate-50 text-slate-700 border-slate-100';
   };
 
@@ -80,12 +81,13 @@ export default function PaymentSummary() {
     if (s.includes('complete')) return <CheckCircle2 size={12} />;
     if (s.includes('process')) return <Clock size={12} />;
     if (s.includes('cancel')) return <AlertCircle size={12} />;
+    if (s.includes('invoice')) return <Receipt size={12} />;
     return <Clock size={12} />;
   };
 
   const getPaymentStatusIcon = (status: string | null) => {
     const s = (status || '').toLowerCase();
-    if (s === 'completed') return <CheckCircle2 size={12} />;
+    if (s === 'completed' || s === 'paid') return <CheckCircle2 size={12} />;
     if (s === 'bad debt') return <XCircle size={12} />;
     return <Clock size={12} />;
   };

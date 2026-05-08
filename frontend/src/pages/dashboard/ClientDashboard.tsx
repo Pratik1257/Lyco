@@ -8,16 +8,37 @@ import FxStatsGrid from '../../components/dashboard/FxStatsGrid';
 import FxCharts from '../../components/dashboard/FxCharts';
 import FxMiddleRow from '../../components/dashboard/FxMiddleRow';
 import FxBottomRow from '../../components/dashboard/FxBottomRow';
+import { customersApi } from '../../api/customersApi';
 import DashboardSkeleton from '../../components/dashboard/DashboardSkeleton';
 
 export default function ClientDashboard() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState('Month');
-  const [currency, setCurrency] = useState((user as any)?.currency || 'USD');
+  const [currency, setCurrency] = useState(() => {
+    return (user as any)?.currency || (user as any)?.Currency || 'USD';
+  });
+
+  const handleCurrencyChange = (val: string) => {
+    setCurrency(val);
+    localStorage.setItem('dashboard_currency', val);
+  };
   const uniqueNo = (user as any)?.uniqueNo;
+
+  // Sync with latest profile on mount to catch Admin changes
+  useEffect(() => {
+    if (user?.userId) {
+      customersApi.getCustomerById(user.userId).then(latest => {
+        const latestCurrency = latest.currency || (latest as any).Currency;
+        if (latestCurrency && latestCurrency !== user.currency) {
+          updateUser({ currency: latestCurrency });
+          setCurrency(latestCurrency);
+        }
+      }).catch(console.error);
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     if (!uniqueNo) return;
@@ -62,10 +83,10 @@ export default function ClientDashboard() {
         timeframe={timeframe} 
         setTimeframe={setTimeframe} 
         currency={currency} 
-        setCurrency={setCurrency} 
+        setCurrency={handleCurrencyChange} 
         isAdmin={false}
       />
-      <FxStatsGrid data={data} timeframe={timeframe} isAdmin={false} />
+      <FxStatsGrid data={data} timeframe={timeframe} currency={currency} isAdmin={false} />
       <FxCharts data={data} timeframe={timeframe} isAdmin={false} />
       <FxMiddleRow data={data} isAdmin={false} />
     </div>

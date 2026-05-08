@@ -37,9 +37,10 @@ export const invoicesApi = {
     pageSize: number = 10,
     search: string = '',
     status: string = '',
+    uniqueNo?: number,
     startDate: string = '',
     endDate: string = '',
-    uniqueNo?: number
+    currency?: string
   ): Promise<InvoicesResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
@@ -49,6 +50,7 @@ export const invoicesApi = {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     if (uniqueNo) params.append('uniqueNo', uniqueNo.toString());
+    if (currency) params.append('currency', currency);
     const res = await apiClient.get<InvoicesResponse>(`/Invoices?${params.toString()}`);
     return res.data;
   },

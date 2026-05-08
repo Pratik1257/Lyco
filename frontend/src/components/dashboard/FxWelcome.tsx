@@ -8,6 +8,11 @@ export default function FxWelcome({ data, timeframe, isAdmin = true }: { data: D
   const hour = new Date().getHours();
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
+  const formatChange = (val: number | string, suffix: string = '') => {
+    const num = Number(val);
+    return num > 0 ? `+${num}${suffix}` : `${num}${suffix}`;
+  };
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0d1525] via-[#0c2340] to-[#0d2545] p-6 shadow-xl">
       {/* Background decoration */}
@@ -38,8 +43,8 @@ export default function FxWelcome({ data, timeframe, isAdmin = true }: { data: D
 
         <div className="flex flex-wrap gap-4 w-full md:w-auto md:ml-8">
           {[
-            { label: "TODAY'S REVENUE", value: <CountUp prefix={data.currencySymbol} end={todayRevenue.amount} decimals={0} />, change: `+${todayRevenue.changePercent}% vs yesterday` },
-            { label: "TODAY'S ORDERS", value: <CountUp end={todayOrders.count} />, change: `+${todayOrders.changeFromAvg} more than avg` },
+            { label: "TODAY'S REVENUE", value: <CountUp prefix={data.currencySymbol} end={todayRevenue.amount} decimals={0} />, change: formatChange(todayRevenue.changePercent, '% vs yesterday') },
+            { label: "TODAY'S ORDERS", value: <CountUp end={todayOrders.count} />, change: formatChange(todayOrders.changeFromAvg, ' more than avg') },
           ].map((s) => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-right min-w-[140px] backdrop-blur-sm">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{s.label}</p>

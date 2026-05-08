@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Lyco.Api.Data;
 using Lyco.Api.Models;
+using System.Net.Http;
+using System.Text;
 
 namespace Lyco.Api.Controllers;
 
@@ -10,10 +12,14 @@ namespace Lyco.Api.Controllers;
 public class PaymentsController : ControllerBase
 {
     private readonly LycoDbContext _context;
+    private readonly IConfiguration _config;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public PaymentsController(LycoDbContext context)
+    public PaymentsController(LycoDbContext context, IConfiguration config, IHttpClientFactory httpClientFactory)
     {
         _context = context;
+        _config = config;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet("pending-for-status")]
@@ -21,7 +27,7 @@ public class PaymentsController : ControllerBase
     {
         var query = from o in _context.OrderDetails
                     join u in _context.UserRegistrations on o.UniqueNo equals u.UniqueNo
-                    where o.OrderStatus == "Completed" 
+                    where (o.OrderStatus == "Completed" || o.OrderStatus == "Invoiced") 
                           && (o.PaymentStatus == "Pending" || string.IsNullOrEmpty(o.PaymentStatus))
                           && (o.Ordertype == "Order" || string.IsNullOrEmpty(o.Ordertype))
                           && o.UniqueNo == uniqueNo
@@ -44,7 +50,7 @@ public class PaymentsController : ControllerBase
     {
         var query = from o in _context.OrderDetails
                     join u in _context.UserRegistrations on o.UniqueNo equals u.UniqueNo
-                    where o.OrderStatus == "Completed" 
+                    where (o.OrderStatus == "Completed" || o.OrderStatus == "Invoiced") 
                           && o.PaymentStatus == "Bad Debt" 
                           && o.UniqueNo == uniqueNo
                     select new 
@@ -197,7 +203,7 @@ public class PaymentsController : ControllerBase
                     from user in userGroup.DefaultIfEmpty()
                     join s in _context.ServiceMsts on o.ServiceId equals s.ServiceId into serviceGroup
                     from service in serviceGroup.DefaultIfEmpty()
-                    where o.OrderStatus == "Completed"
+                    where (o.OrderStatus == "Completed" || o.OrderStatus == "Invoiced")
                           && (o.PaymentStatus == "Pending" || string.IsNullOrEmpty(o.PaymentStatus))
                           && (o.Ordertype == "Order" || string.IsNullOrEmpty(o.Ordertype))
                     select new
@@ -240,7 +246,7 @@ public class PaymentsController : ControllerBase
         var orders = await _context.OrderDetails
             .Where(o => request.OrderIds.Contains(o.OrderId)
                         && (o.PaymentStatus == "Pending" || string.IsNullOrEmpty(o.PaymentStatus))
-                        && o.OrderStatus == "Completed")
+                        && (o.OrderStatus == "Completed" || o.OrderStatus == "Invoiced"))
             .ToListAsync();
 
         if (orders.Count != request.OrderIds.Count)
@@ -255,6 +261,19 @@ public class PaymentsController : ControllerBase
             return BadRequest(new { error = "All selected orders must have the same currency for a single PayPal transaction." });
 
         var currency = firstOrder.Currency ?? "USD";
+
+        // Normalize currency to PayPal ISO 4217 codes
+        var currencyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["USD"]  = "USD",
+            ["EURO"] = "EUR",
+            ["EUR"]  = "EUR",
+            ["GBP"]  = "GBP",
+            ["AUD"]  = "AUD",
+            ["INR"]  = "INR",
+            ["CAD"]  = "CAD",
+        };
+        currency = currencyMap.TryGetValue(currency, out var mapped) ? mapped : "USD";
 
         // Compute total
         var total = orders.Sum(o => decimal.TryParse(o.Amount, out var a) ? a : 0m);
@@ -274,6 +293,16 @@ public class PaymentsController : ControllerBase
         var paypalEmail = paypalRecord?.Email ?? string.Empty;
 
         // Build PayPal URL
+        // Build PayPal URL from config
+        var isSandbox = _config.GetValue<bool>("PayPal:IsSandbox", true);
+        var paypalBase = isSandbox
+            ? _config["PayPal:SandboxUrl"] ?? "https://www.sandbox.paypal.com/cgi-bin/webscr"
+            : _config["PayPal:LiveUrl"] ?? "https://www.paypal.com/cgi-bin/webscr";
+
+        var returnUrl = _config["PayPal:ReturnUrl"] ?? "http://localhost:5173/payment/success";
+        var cancelUrl = _config["PayPal:CancelUrl"] ?? "http://localhost:5173/payment/cancel";
+        var notifyUrl = _config["PayPal:NotifyUrl"] ?? "";
+
         var paypalParams = new Dictionary<string, string>
         {
             ["cmd"]           = "_xclick",
@@ -284,13 +313,18 @@ public class PaymentsController : ControllerBase
             ["custom"]        = transactionNumber,
             ["no_shipping"]   = "1",
             ["no_note"]       = "1",
-            ["rm"]            = "2"
+            ["rm"]            = "2",
+            ["return"]        = returnUrl,
+            ["cancel_return"] = cancelUrl
         };
+
+        if (!string.IsNullOrEmpty(notifyUrl))
+            paypalParams["notify_url"] = notifyUrl;
 
         var queryString = string.Join("&", paypalParams.Select(kv =>
             $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
 
-        var paypalUrl = $"https://www.paypal.com/cgi-bin/webscr?{queryString}";
+        var paypalUrl = $"{paypalBase}?{queryString}";
 
         return Ok(new { paypalUrl, transactionNumber });
     }
@@ -307,7 +341,7 @@ public class PaymentsController : ControllerBase
         public string Email { get; set; } = string.Empty;
     }
 
-    // ── PUT /admin/api/Payments/paypal-config/{id} ───────────────────────────
+    // ── POST /admin/api/Payments/paypal-config/{id} ───────────────────────────
     [HttpPut("paypal-config/{id}")]
     public async Task<IActionResult> UpdatePaypalConfig(long id, [FromBody] PaypalConfigRequest request)
     {
@@ -322,5 +356,103 @@ public class PaymentsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { Message = "PayPal email updated successfully." });
+    }
+}
+
+// ── Separate public controller for PayPal IPN (no admin prefix) ────────────────
+[Route("api/Payments")]
+[ApiController]
+public class PaymentsPublicController : ControllerBase
+{
+    private readonly LycoDbContext _context;
+    private readonly IConfiguration _config;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public PaymentsPublicController(LycoDbContext context, IConfiguration config, IHttpClientFactory httpClientFactory)
+    {
+        _context = context;
+        _config = config;
+        _httpClientFactory = httpClientFactory;
+    }
+
+    // ── POST /api/Payments/webhook/paypal ─────────────────────────────────────
+    // This is a PUBLIC endpoint — PayPal calls it directly (no auth required)
+    [HttpPost("webhook/paypal")]
+    public async Task<IActionResult> PayPalIpn()
+    {
+        // 1. Read the raw IPN body
+        string rawBody;
+        using (var reader = new StreamReader(Request.Body, Encoding.ASCII))
+        {
+            rawBody = await reader.ReadToEndAsync();
+        }
+
+        if (string.IsNullOrEmpty(rawBody))
+            return Ok(); // Always return 200 to PayPal
+
+        // 2. Re-POST to PayPal for verification
+        var isSandbox = _config.GetValue<bool>("PayPal:IsSandbox", true);
+        var paypalVerifyUrl = isSandbox
+            ? "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr"
+            : "https://ipnpb.paypal.com/cgi-bin/webscr";
+
+        var verifyBody = "cmd=_notify-validate&" + rawBody;
+        string verifyResponse;
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            var content = new StringContent(verifyBody, Encoding.ASCII, "application/x-www-form-urlencoded");
+            var response = await client.PostAsync(paypalVerifyUrl, content);
+            verifyResponse = await response.Content.ReadAsStringAsync();
+        }
+        catch
+        {
+            // If we can't reach PayPal, return 200 but do nothing (PayPal will retry)
+            return Ok();
+        }
+
+        // 3. Parse the IPN fields
+        var fields = rawBody.Split('&')
+            .Select(kv => kv.Split('=', 2))
+            .Where(p => p.Length == 2)
+            .ToDictionary(
+                p => Uri.UnescapeDataString(p[0]),
+                p => Uri.UnescapeDataString(p[1].Replace('+', ' '))
+            );
+
+        fields.TryGetValue("payment_status", out var paymentStatus);
+        fields.TryGetValue("custom", out var transactionNumber); // The GUID we set before redirect
+        fields.TryGetValue("txn_id", out var txnId);             // PayPal's real transaction ID
+        fields.TryGetValue("payment_date", out var paymentDateStr);
+
+        // 4. Process only VERIFIED + Completed
+        if (verifyResponse == "VERIFIED" &&
+            string.Equals(paymentStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrEmpty(transactionNumber))
+        {
+            var ordersToUpdate = await _context.OrderDetails
+                .Where(o => o.TransactionNo == transactionNumber)
+                .ToListAsync();
+
+            if (ordersToUpdate.Any())
+            {
+                var paymentDate = DateTime.TryParse(paymentDateStr, out var pd) ? pd : DateTime.Now;
+
+                foreach (var order in ordersToUpdate)
+                {
+                    order.PaymentStatus = "Completed";
+                    order.PaymentDate = paymentDate;
+                    // Store PayPal txn_id in TransactionNo, keep GUID in a separate field if available
+                    if (!string.IsNullOrEmpty(txnId))
+                        order.TransactionNo = txnId;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        // Always return 200 — PayPal will retry if it doesn't receive 200
+        return Ok();
     }
 }

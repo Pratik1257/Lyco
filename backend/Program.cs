@@ -39,6 +39,7 @@ builder.Services.AddScoped<ICardDetailService, CardDetailService>();
 builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IInvoicePdfService, InvoicePdfService>();
+builder.Services.AddHttpClient(); // For PayPal IPN verification
 
 // ── JWT Authentication ───────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt");

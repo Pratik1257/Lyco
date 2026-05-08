@@ -32,7 +32,8 @@ public class OrdersController : ControllerBase
         [FromQuery] long? serviceId = null,
         [FromQuery] long? uniqueNo = null,
         [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] string? currency = null)
     {
         var query = _context.OrderDetails
             .Include(o => o.Service)
@@ -51,6 +52,11 @@ public class OrdersController : ControllerBase
                                  (user != null && user.Lastname != null && user.Lastname.Contains(search)) ||
                                  (user != null && (user.Firstname + " " + user.Lastname).Contains(search))
                            select new { o, user };
+
+        if (!string.IsNullOrEmpty(currency))
+        {
+            filteredQuery = filteredQuery.Where(x => x.o.Currency == currency);
+        }
 
         // Project
         var joinedQuery = filteredQuery.Select(x => new

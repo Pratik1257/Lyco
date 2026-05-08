@@ -35,7 +35,8 @@ public class InvoicesController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] string? status = null,
         [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] string? currency = null)
     {
         var query = _context.InvoiceMsts
             .Include(i => i.User)
@@ -62,9 +63,13 @@ public class InvoicesController : ControllerBase
 
         if (endDate.HasValue)
         {
-            // Use strict less than next day to include all records on the selected end date
-            var nextDay = endDate.Value.Date.AddDays(1);
-            query = query.Where(i => i.InvoiceDate < nextDay);
+            var end = endDate.Value.Date.AddDays(1);
+            query = query.Where(i => i.InvoiceDate < end);
+        }
+
+        if (!string.IsNullOrEmpty(currency))
+        {
+            query = query.Where(i => i.OrderDetails.Any(od => od.Currency == currency));
         }
 
         if (!string.IsNullOrEmpty(status) && status != "all")
@@ -188,6 +193,7 @@ public class InvoicesController : ControllerBase
 
                 // Update order
                 order.PaymentStatus = "Pending";
+                order.OrderStatus = "Invoiced";
                 order.InvoiceId = invoice.InvoiceId;
                 order.InvoiceNo = invoice.InvoiceNo;
 
@@ -240,6 +246,7 @@ public class InvoicesController : ControllerBase
                 });
 
                 order.PaymentStatus = "Pending";
+                order.OrderStatus = "Invoiced";
                 order.InvoiceId = invoice.InvoiceId;
                 order.InvoiceNo = invoice.InvoiceNo;
             }

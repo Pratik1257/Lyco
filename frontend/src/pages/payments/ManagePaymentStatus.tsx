@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   User, CheckCircle2, AlertCircle, Loader2,
-  Calendar, DollarSign, Clock, Building2, ChevronLeft, CheckSquare
+  Calendar, DollarSign, Clock, Building2, ChevronLeft, CheckSquare, Receipt
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';

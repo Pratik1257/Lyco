@@ -45,7 +45,8 @@ export const ordersApi = {
     serviceId?: number,
     uniqueNo?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    currency?: string
   ): Promise<OrdersResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
@@ -57,6 +58,7 @@ export const ordersApi = {
     if (uniqueNo) params.append('uniqueNo', uniqueNo.toString());
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (currency) params.append('currency', currency);
 
     const res = await apiClient.get<OrdersResponse>(`/Orders?${params.toString()}`);
     return res.data;

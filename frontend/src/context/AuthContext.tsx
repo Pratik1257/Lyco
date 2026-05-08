@@ -5,6 +5,7 @@ interface AuthContextType {
   user: LoginResponse | null;
   login: (userData: LoginResponse) => void;
   logout: () => void;
+  updateUser: (userData: Partial<LoginResponse>) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -35,10 +36,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('lyco_user');
+    
+    // Reset dashboard animations on logout
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('countup_done_') || key === 'countup_global_done') {
+        sessionStorage.removeItem(key);
+      }
+    });
+  };
+
+  const updateUser = (userData: Partial<LoginResponse>) => {
+    if (!user) return;
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    localStorage.setItem('lyco_user', JSON.stringify(updatedUser));
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated: !!user, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

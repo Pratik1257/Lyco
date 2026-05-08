@@ -19,16 +19,15 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
     label: 'MAIN',
     items: [
       { to: '/admin/dashboard', icon: LayoutGrid, label: 'Dashboard' },
-      { to: '/admin/profile', icon: User, label: 'Manage Profile' },
     ],
   },
   {
     label: 'OPERATIONS',
     items: [
-      { 
-        to: '/admin/orders', 
-        icon: ShoppingCart, 
-        label: 'Manage Orders', 
+      {
+        to: '/admin/orders',
+        icon: ShoppingCart,
+        label: 'Manage Orders',
         badge: 10,
         subItems: [
           { to: '/admin/orders/new', label: 'Place New Order' },
@@ -37,35 +36,33 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
           { to: '/admin/orders/remove', label: 'Remove an Order' },
         ]
       },
-      { 
-        to: '/admin/quotes', 
-        icon: FileText, 
+      {
+        to: '/admin/quotes',
+        icon: FileText,
         label: 'Manage Quote',
         subItems: [
           { to: '/admin/quotes/new', label: 'Create Quote' },
-          { to: '/admin/quotes', label: 'Quote Summary' },
+          { to: '/admin/quotes', label: 'Quote History' },
         ]
       },
-      { 
-        to: '/admin/payments', 
-        icon: CreditCard, 
+      {
+        to: '/admin/payments',
+        icon: CreditCard,
         label: 'Manage Payment',
         subItems: [
-          { to: '/admin/payments/make', label: 'Make Payment' },
-          { to: '/admin/payments/history', label: 'Payment History' },
           { to: '/admin/payments/status', label: 'Payment Status' },
           { to: '/admin/payments/paypal-billing', label: 'Billing Account Details' },
           { to: '/admin/payments/remove-bad-debt', label: 'Remove From Bad Debt' },
         ]
       },
-      { 
-        to: '/admin/invoices', 
-        icon: Receipt, 
+      {
+        to: '/admin/invoices',
+        icon: Receipt,
         label: 'Manage Invoice',
         subItems: [
           { to: '/admin/invoices/create', label: 'Create Invoice' },
-          { to: '/admin/invoices/summary', label: 'Invoice Summary' },
-          { to: '/admin/invoices/pending', label: 'Pending Invoice Summary' },
+          { to: '/admin/invoices/summary', label: 'Invoice History' },
+          { to: '/admin/invoices/pending', label: 'Pending Invoice History' },
         ]
       },
       { to: '/admin/expenses', icon: Receipt, label: 'Manage Expenses' },
@@ -74,12 +71,12 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'PEOPLE',
     items: [
-      { 
-        to: '/admin/customers', 
-        icon: Users, 
+      {
+        to: '/admin/customers',
+        icon: Users,
         label: 'Manage Customers',
         subItems: [
-          { to: '/admin/customers/summary', label: 'Customer Summary' },
+          { to: '/admin/customers/summary', label: 'Customer History' },
           { to: '/admin/customers/card-summary', label: 'Card Summary' },
         ]
       },
@@ -88,7 +85,7 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'CATALOGUE',
     items: [
-       { to: '/admin/services', icon: Tag, label: 'Manage Service' },
+      { to: '/admin/services', icon: Tag, label: 'Manage Service' },
       { to: '/admin/prices', icon: Tag, label: 'Manage Price' },
     ],
   },
@@ -104,36 +101,24 @@ const customerNavSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'MY ACTIVITY',
     items: [
-      { 
-        to: '/orders', 
-        icon: ShoppingCart, 
-        label: 'My Orders', 
+      {
+        to: '/orders',
+        icon: ShoppingCart,
+        label: 'My Orders',
         subItems: [
           { to: '/orders/new', label: 'Place New Order' },
           { to: '/orders/history', label: 'Order History' },
         ]
       },
-      { 
-        to: '/quotes', 
-        icon: FileText, 
-        label: 'My Quotes',
-        subItems: [
-          { to: '/quotes/new', label: 'Request Quote' },
-        ]
+      {
+        to: '/quotes/new',
+        icon: FileText,
+        label: 'Request Quote',
       },
-      { 
-        to: '/payments', 
-        icon: CreditCard, 
-        label: 'My Payments',
-        subItems: [
-          { to: '/payments/make', label: 'Make Payment' },
-          { to: '/payments/history', label: 'Payment History' },
-        ]
-      },
-      { 
-        to: '/profile', 
-        icon: User, 
-        label: 'Manage Profile',
+      {
+        to: '/profile',
+        icon: User,
+        label: 'Edit Profile',
       },
     ],
   },
@@ -142,7 +127,7 @@ const customerNavSections: { label: string; items: NavItem[] }[] = [
 function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const isExactActive = item.to === '/' ? location.pathname === '/' : location.pathname === item.to;
   const isSubActive = item.subItems?.some(s => location.pathname.startsWith(s.to)) || false;
   const isActive = isExactActive || isSubActive || (item.to !== '/' && location.pathname.startsWith(item.to) && !item.subItems);
@@ -151,11 +136,10 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
     // If it has subItems, we show a button instead of a direct link, which toggles the submenu
     return (
       <div className="mb-0.5">
-        <button 
+        <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-[13px] font-medium group ${
-            isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
-          }`}
+          className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-[13px] font-medium group ${isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
+            }`}
         >
           {isActive && (
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#0891b2]/25 via-[#06b6d4]/15 to-transparent" />
@@ -166,21 +150,20 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
           {!isActive && (
             <div className="absolute inset-0 rounded-xl bg-white/0 group-hover:bg-white/5 transition-colors" />
           )}
-          
+
           <div className="flex items-center gap-3 relative z-10">
-            <div className={`relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-              isActive
-                ? 'bg-gradient-to-br from-[#0891b2] to-[#06b6d4] shadow-lg shadow-cyan-500/30'
-                : 'bg-white/5 group-hover:bg-white/10'
-            }`}>
+            <div className={`relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${isActive
+              ? 'bg-gradient-to-br from-[#0891b2] to-[#06b6d4] shadow-lg shadow-cyan-500/30'
+              : 'bg-white/5 group-hover:bg-white/10'
+              }`}>
               <item.icon size={14} className={isActive ? 'text-white' : 'text-[#8892b0] group-hover:text-white'} />
             </div>
             <span>{item.label}</span>
           </div>
 
-          <ChevronDown 
-            size={14} 
-            className={`relative z-10 transition-transform duration-200 text-[#8892b0] group-hover:text-white ${isOpen ? 'rotate-180' : ''}`} 
+          <ChevronDown
+            size={14}
+            className={`relative z-10 transition-transform duration-200 text-[#8892b0] group-hover:text-white ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
@@ -192,9 +175,8 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
                 to={subItem.to}
                 end
                 onClick={onClose}
-                className={({ isActive: subIsActive }) => `block px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                  subIsActive ? 'text-[#06b6d4] bg-white/5' : 'text-[#8892b0] hover:text-white hover:bg-white/5'
-                }`}
+                className={({ isActive: subIsActive }) => `block px-3 py-2 rounded-lg text-xs font-medium transition-colors ${subIsActive ? 'text-[#06b6d4] bg-white/5' : 'text-[#8892b0] hover:text-white hover:bg-white/5'
+                  }`}
               >
                 {subItem.label}
               </NavLink>
@@ -207,9 +189,8 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
 
   return (
     <NavLink to={item.to} className="block" onClick={onClose}>
-      <div className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5 transition-all duration-200 text-[13px] font-medium group ${
-        isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
-      }`}>
+      <div className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5 transition-all duration-200 text-[13px] font-medium group ${isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
+        }`}>
         {/* Active gradient background */}
         {isActive && (
           <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#0891b2]/25 via-[#06b6d4]/15 to-transparent" />
@@ -223,11 +204,10 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
           <div className="absolute inset-0 rounded-xl bg-white/0 group-hover:bg-white/5 transition-colors" />
         )}
 
-        <div className={`relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-          isActive
-            ? 'bg-gradient-to-br from-[#0891b2] to-[#06b6d4] shadow-lg shadow-cyan-500/30'
-            : 'bg-white/5 group-hover:bg-white/10'
-        }`}>
+        <div className={`relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${isActive
+          ? 'bg-gradient-to-br from-[#0891b2] to-[#06b6d4] shadow-lg shadow-cyan-500/30'
+          : 'bg-white/5 group-hover:bg-white/10'
+          }`}>
           <item.icon size={14} className={isActive ? 'text-white' : 'text-[#8892b0] group-hover:text-white'} />
         </div>
 
@@ -254,7 +234,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
     <>
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-[#0d1525]/80 backdrop-blur-sm z-40 lg:hidden transition-opacity"
           onClick={onClose}
         />
@@ -262,72 +242,72 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
 
       {/* Main Sidebar Wrapper */}
       <aside className={`fixed top-0 left-0 h-screen w-[260px] flex flex-col z-50 bg-[#0d1525] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0d1f35]/80 via-transparent to-[#0a0f1e]/60 pointer-events-none" />
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1f35]/80 via-transparent to-[#0a0f1e]/60 pointer-events-none" />
 
-      {/* Logo */}
-      <div className="relative h-[60px] flex items-center px-5 border-b border-white/[0.06] bg-[#10192a]">
-        
-        <Link to={isAdmin ? "/admin/dashboard" : "/dashboard"} className="flex items-center px-1">
-          <img 
-            src={lycoLogo} 
-            alt="Lyco Designs" 
-            className="h-[44px] w-auto object-contain drop-shadow-md mix-blend-lighten" 
-          />
-        </Link>
-      </div>
+        {/* Logo */}
+        <div className="relative h-[60px] flex items-center px-5 border-b border-white/[0.06] bg-[#10192a]">
 
-      {/* Navigation */}
-      <nav className="relative flex-1 overflow-y-auto py-4 px-3 space-y-1 sidebar-scrollbar">
-        {navSections.map((section) => (
-          <div key={section.label} className="mb-3">
-            <div className="flex items-center gap-2 px-3 mb-2">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              <p className="text-[9px] font-bold text-[#3a4a6a] uppercase tracking-widest shrink-0">
-                {section.label}
-              </p>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <Link to={isAdmin ? "/admin/dashboard" : "/dashboard"} className="flex items-center px-1">
+            <img
+              src={lycoLogo}
+              alt="Lyco Designs"
+              className="h-[44px] w-auto object-contain drop-shadow-md mix-blend-lighten"
+            />
+          </Link>
+        </div>
+
+        {/* Navigation */}
+        <nav className="relative flex-1 overflow-y-auto py-4 px-3 space-y-1 sidebar-scrollbar">
+          {navSections.map((section) => (
+            <div key={section.label} className="mb-3">
+              <div className="flex items-center gap-2 px-3 mb-2">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <p className="text-[9px] font-bold text-[#3a4a6a] uppercase tracking-widest shrink-0">
+                  {section.label}
+                </p>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              </div>
+              {section.items.map((item) => (
+                <SidebarItem key={item.to} item={item} onClose={onClose} />
+              ))}
             </div>
-            {section.items.map((item) => (
-              <SidebarItem key={item.to} item={item} onClose={onClose} />
-            ))}
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
 
-      {/* User */}
-      <div className="relative border-t border-white/[0.06] p-4">
-        {(() => {
-          const savedUser = localStorage.getItem('lyco_user');
-          let user = { fullname: 'Guest', userType: 'User' };
-          try { if (savedUser) user = JSON.parse(savedUser); } catch(e) {}
-          
-          const initials = user.fullname.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        {/* User */}
+        <div className="relative border-t border-white/[0.06] p-4">
+          {(() => {
+            const savedUser = localStorage.getItem('lyco_user');
+            let user = { fullname: 'Guest', userType: 'User' };
+            try { if (savedUser) user = JSON.parse(savedUser); } catch (e) { }
 
-          return (
-            <div className="flex items-center gap-3 px-1">
-              <div className="relative shrink-0">
-                <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-sm" />
-                <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-cyan-500/30">
-                  {initials || '??'}
+            const initials = user.fullname.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+            return (
+              <div className="flex items-center gap-3 px-1">
+                <div className="relative shrink-0">
+                  <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-sm" />
+                  <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-[#0891b2] to-[#06b6d4] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-cyan-500/30">
+                    {initials || '??'}
+                  </div>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-xs font-semibold truncate">{user?.fullname || 'Guest'}</p>
+                  <p className="text-[#3a4a6a] text-[10px]">{user?.userType || 'User'}</p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-1.5 rounded-lg text-[#3a4a6a] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut size={14} />
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-semibold truncate">{user?.fullname || 'Guest'}</p>
-                <p className="text-[#3a4a6a] text-[10px]">{user?.userType || 'User'}</p>
-              </div>
-              <button 
-                onClick={logout}
-                className="p-1.5 rounded-lg text-[#3a4a6a] hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                title="Logout"
-              >
-                <LogOut size={14} />
-              </button>
-            </div>
-          );
-        })()}
-      </div>
-    </aside>
+            );
+          })()}
+        </div>
+      </aside>
     </>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Settings, Menu } from 'lucide-react';
-import NotificationPanel from './panels/NotificationPanel';
+import { Settings, Menu } from 'lucide-react';
 import SettingsPanel from './panels/SettingsPanel';
 
 interface HeaderProps {
@@ -10,18 +9,13 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle, onMenuToggle }: HeaderProps) {
-  const [activePanel, setActivePanel] = useState<'notifications' | 'settings' | null>(null);
-  const [hasUnread, setHasUnread] = useState(true);
+  const [activePanel, setActivePanel] = useState<'settings' | null>(null);
 
   const bellRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
-  const togglePanel = (panel: 'notifications' | 'settings') => {
+  const togglePanel = (panel: 'settings') => {
     setActivePanel(prev => prev === panel ? null : panel);
-  };
-
-  const handleMarkAllRead = () => {
-    setHasUnread(false);
   };
 
   // Close on outside click
@@ -63,25 +57,6 @@ export default function Header({ title, subtitle, onMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Notifications Icon & Panel */}
-        <div className="relative" ref={bellRef}>
-          <button
-            onClick={() => togglePanel('notifications')}
-            className={`p-2 rounded-lg transition-colors ${activePanel === 'notifications' ? 'bg-gray-100' : 'hover:bg-gray-100'
-              }`}
-          >
-            <Bell size={18} className={activePanel === 'notifications' ? 'text-[#1D9E75]' : 'text-gray-500'} />
-            {hasUnread && (
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            )}
-          </button>
-
-          <NotificationPanel
-            isOpen={activePanel === 'notifications'}
-            onMarkAllRead={handleMarkAllRead}
-          />
-        </div>
-
         {/* Settings Icon & Panel */}
         <div className="relative" ref={settingsRef}>
           <button

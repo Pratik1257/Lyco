@@ -9,6 +9,8 @@ interface DatePickerProps {
   className?: string;
   direction?: 'up' | 'down';
   align?: 'left' | 'right';
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const MONTH_NAMES = [
@@ -24,11 +26,17 @@ function toDateStr(y: number, m: number, d: number) {
   return `${y}-${pad(m + 1)}-${pad(d)}`;
 }
 
-export default function DatePicker({ value, onChange, placeholder = 'Select date', error, className = '', direction = 'down', align = 'left' }: DatePickerProps) {
+export default function DatePicker({ value, onChange, placeholder = 'Select date', error, className = '', direction = 'down', align = 'left', isOpen, onOpenChange }: DatePickerProps) {
   const today = useMemo(() => new Date(), []);
   const parsed = useMemo(() => (value ? new Date(value + 'T00:00:00') : null), [value]);
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isOpen !== undefined ? isOpen : internalOpen;
+  
+  const setOpen = useCallback((val: boolean) => {
+    setInternalOpen(val);
+    if (onOpenChange) onOpenChange(val);
+  }, [onOpenChange]);
   const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? today.getFullYear());
   const [viewMonth, setViewMonth] = useState(parsed?.getMonth() ?? today.getMonth());
   const [showYearGrid, setShowYearGrid] = useState(false);
@@ -144,7 +152,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Select date
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => { setOpen(o => !o); setShowYearGrid(false); }}
+        onClick={() => { setOpen(!open); setShowYearGrid(false); }}
         className={`w-full h-10 px-4 bg-white border rounded-xl text-sm font-medium text-left flex items-center gap-3 transition-all outline-none
           ${error ? 'border-red-500 ring-4 ring-red-500/5' : 'border-slate-200 hover:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500'}
           ${open ? 'ring-4 ring-cyan-500/10 border-cyan-500' : ''}`}

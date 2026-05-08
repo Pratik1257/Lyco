@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, Download, Plus, Eye,
@@ -19,15 +19,91 @@ export default function InvoiceList() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.userType === 'Admin';
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'all';
+  const initialStartDate = searchParams.get('startDate') || '';
+  const initialEndDate = searchParams.get('endDate') || '';
+  const initialCurrency = searchParams.get('currency') || '';
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [currencyFilter, setCurrencyFilter] = useState(initialCurrency);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+  const [timeframeFilter, setTimeframeFilter] = useState(
+    (initialStartDate && initialEndDate) ? 'Custom' : ''
+  );
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+
+  const handleTimeframeChange = (val: string) => {
+    setTimeframeFilter(val);
+    if (!val || val === 'Custom') {
+      setStartDate('');
+      setEndDate('');
+      if (val === 'Custom') {
+        setTimeout(() => setIsStartDateOpen(true), 0);
+      }
+      setCurrentPage(1);
+      return;
+    }
+    
+    const now = new Date();
+    const etString = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).format(now);
+    
+    const [m, d, y] = etString.split('/');
+    const year = Number(y);
+    const month = Number(m);
+    const day = Number(d);
+    
+    const formatDate = (date: Date) => {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    if (val === 'This Week') {
+      const etDate = new Date(year, month - 1, day);
+      const dayOfWeek = etDate.getDay();
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const startOfWeek = new Date(year, month - 1, day + diffToMonday);
+      const endOfWeek = new Date(year, month - 1, day + diffToMonday + 6);
+      setStartDate(formatDate(startOfWeek));
+      setEndDate(formatDate(endOfWeek));
+    } else if (val === 'This Month') {
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0);
+      setStartDate(formatDate(startOfMonth));
+      setEndDate(formatDate(endOfMonth));
+    } else if (val === 'This Year') {
+      const startOfYear = new Date(year, 0, 1);
+      const endOfYear = new Date(year, 11, 31);
+      setStartDate(formatDate(startOfYear));
+      setEndDate(formatDate(endOfYear));
+    }
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    const timeframe = searchParams.get('timeframe');
+    const currency = searchParams.get('currency');
+
+    if (status) setStatusFilter(status);
+    if (start) setStartDate(start);
+    if (end) setEndDate(end);
+    if (timeframe) setTimeframeFilter(timeframe);
+    if (currency) setCurrencyFilter(currency);
+  }, [searchParams]);
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate, (user as any)?.uniqueNo],
-    queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter, startDate, endDate, isAdmin ? undefined : (user as any)?.uniqueNo)
+    queryKey: ['invoices', currentPage, itemsPerPage, searchQuery, statusFilter, currencyFilter, startDate, endDate, (user as any)?.uniqueNo],
+    queryFn: () => invoicesApi.getInvoices(currentPage, itemsPerPage, searchQuery, statusFilter, isAdmin ? undefined : (user as any)?.uniqueNo, startDate, endDate, currencyFilter),
   });
 
   const invoices = data?.items || [];
@@ -73,63 +149,71 @@ export default function InvoiceList() {
     <div className="relative animate-in fade-in duration-500 space-y-4">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {/* Header & Filter */}
-        <div className="p-4 sm:px-6 border-b border-slate-100 bg-slate-50/30">
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        <div className="p-4 sm:px-6 border-b border-slate-100 bg-slate-50/30 space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             {/* Search Bar */}
-            <div className="flex-1 min-w-[200px] max-w-md xl:max-w-[290px] relative group">
+            <div className="flex-1 min-w-[200px] max-w-md relative group">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors" size={16} />
               <input
                 type="text"
                 placeholder={isAdmin ? "Search by Name, Invoice no." : "Search by Invoice no."}
-                className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all"
+                className="w-full h-11 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-cyan-500/5 focus:border-cyan-500 transition-all shadow-sm"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               />
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3 flex-1 xl:justify-end">
-              <div className="w-full sm:w-32">
-                <CustomSelect
-                  value={statusFilter}
-                  onChange={(val) => { setStatusFilter(val as string); setCurrentPage(1); }}
-                  options={[
-                    { value: 'all', label: 'All Status' },
-                    { value: 'Completed', label: 'Completed' },
-                    { value: 'Pending', label: 'Pending' },
-                  ]}
-                  placeholder="Status"
-                />
-              </div>
-              <div className="w-full sm:w-40">
-                <DatePicker
-                  value={startDate}
-                  onChange={(val) => { setStartDate(val); setCurrentPage(1); }}
-                  placeholder="From Date"
-                />
-              </div>
-              <div className="w-full sm:w-40">
-                <DatePicker
-                  value={endDate}
-                  onChange={(val) => { setEndDate(val); setCurrentPage(1); }}
-                  placeholder="To Date"
-                  align="right"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button variant="secondary" onClick={handleExport}
-                  className="h-11 flex-1 sm:flex-none px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-2 shadow-none whitespace-nowrap">
-                  <Download size={16} /> Export
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={handleExport}
+                className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold flex items-center gap-2 shadow-sm whitespace-nowrap hover:bg-slate-50">
+                <Download size={16} /> Export
+              </Button>
+              {isAdmin && (
+                <Button variant="primary" onClick={() => navigate(isAdmin ? '/admin/invoices/create' : '/invoices/create')}
+                  className="h-11 bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 px-5 rounded-xl text-xs whitespace-nowrap">
+                  <Plus size={16} /> Create
                 </Button>
-                {isAdmin && (
-                  <Button variant="primary" onClick={() => navigate(isAdmin ? '/admin/invoices/create' : '/invoices/create')}
-                    className="h-11 flex-1 sm:flex-none bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 px-5 rounded-xl text-xs whitespace-nowrap">
-                    <Plus size={16} /> Create
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
+          </div>
+
+          {/* Bottom Row: Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => { setStatusFilter(val as string); setCurrentPage(1); }}
+              options={[
+                { value: 'all', label: 'All Status' },
+                { value: 'Completed', label: 'Completed' },
+                { value: 'Pending', label: 'Pending' },
+              ]}
+              placeholder="Status"
+            />
+            <CustomSelect
+              value={timeframeFilter}
+              onChange={handleTimeframeChange}
+              options={[
+                { value: '', label: 'All Time' },
+                { value: 'This Week', label: 'This Week' },
+                { value: 'This Month', label: 'This Month' },
+                { value: 'This Year', label: 'This Year' },
+                { value: 'Custom', label: 'Custom' }
+              ]}
+              placeholder="Timeframe"
+            />
+            <DatePicker
+              value={startDate}
+              isOpen={isStartDateOpen}
+              onOpenChange={setIsStartDateOpen}
+              onChange={(val) => { setStartDate(val); setTimeframeFilter(val || endDate ? 'Custom' : ''); setCurrentPage(1); }}
+              placeholder="From Date"
+            />
+            <DatePicker
+              value={endDate}
+              onChange={(val) => { setEndDate(val); setTimeframeFilter(startDate || val ? 'Custom' : ''); setCurrentPage(1); }}
+              placeholder="To Date"
+              align="right"
+            />
           </div>
         </div>
 
@@ -214,7 +298,7 @@ export default function InvoiceList() {
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${getStatusStyle(invoice.status)}`}
                       >
                         {getStatusIcon(invoice.status)}
-                        {invoice.status || 'Unpaid'}
+                        {invoice.status || 'Pending'}
                       </div>
                     </TableCell>
                     <TableCell className="px-6 text-right whitespace-nowrap">

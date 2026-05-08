@@ -1,18 +1,10 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, ShoppingCart } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { DashboardData } from '../../types/dashboard';
 import CountUp from '../ui/CountUp';
 
-const statusStyle: Record<string, { bg: string; text: string; dot: string }> = {
-  'New':        { bg: 'bg-indigo-50',  text: 'text-indigo-600', dot: 'bg-indigo-500' },
-  'Pending':    { bg: 'bg-amber-50',   text: 'text-amber-600',  dot: 'bg-amber-500' },
-  'Completed':  { bg: 'bg-emerald-50', text: 'text-emerald-600',dot: 'bg-emerald-500' },
-  'Done':       { bg: 'bg-emerald-50', text: 'text-emerald-600',dot: 'bg-emerald-500' },
-  'In Process': { bg: 'bg-sky-50',     text: 'text-sky-600',    dot: 'bg-sky-500' },
-  'In-Process': { bg: 'bg-sky-50',     text: 'text-sky-600',    dot: 'bg-sky-500' },
-  'Invoiced':   { bg: 'bg-purple-50',  text: 'text-purple-600', dot: 'bg-purple-500' },
-};
+
 
 const serviceColor: Record<string, string> = {
   'Mock-Up / Virtual': 'text-purple-600', Others: 'text-gray-500',
@@ -29,6 +21,7 @@ function GradientBar({ pct, colors }: { pct: number; colors: string }) {
 }
 
 export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardData, isAdmin?: boolean }) {
+  const navigate = useNavigate();
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Service Breakdown */}
@@ -38,14 +31,14 @@ export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardD
         <div className="min-h-[170px] w-full">
           <ResponsiveContainer width="100%" height={170}>
             <PieChart>
-              <Pie 
-                data={data.serviceBreakdown} 
-                cx="50%" 
-                cy="50%" 
-                innerRadius={50} 
+              <Pie
+                data={data.serviceBreakdown}
+                cx="50%"
+                cy="50%"
+                innerRadius={50}
                 outerRadius={80}
-                dataKey="count" 
-                nameKey="name" 
+                dataKey="count"
+                nameKey="name"
                 paddingAngle={4}
                 isAnimationActive={false}
               >
@@ -69,7 +62,10 @@ export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardD
       </div>
 
       {/* Order Status */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <div 
+        onClick={() => navigate(isAdmin ? '/admin/orders/history' : '/orders/history')}
+        className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all group"
+      >
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-sm font-bold text-gray-800">Order Status</h3>
@@ -82,12 +78,12 @@ export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardD
 
         <div className="space-y-4">
           {[
-            { label: 'Completed', ...data.orderStatus.completed, colors: 'from-emerald-400 to-teal-500' },
-            { label: 'New Orders', ...data.orderStatus.newOrders, colors: 'from-blue-400 to-cyan-500' },
-            { label: 'Pending', ...data.orderStatus.pending, colors: 'from-amber-400 to-orange-500' },
-            { label: 'In-Process', ...data.orderStatus.inProcess, colors: 'from-cyan-400 to-teal-500' },
+            { label: 'Completed', ...data.orderStatus.completed, colors: 'from-emerald-400 to-teal-500', path: isAdmin ? '/admin/orders/history?status=Completed' : '/orders/history?status=Completed' },
+            { label: 'New Orders', ...data.orderStatus.newOrders, colors: 'from-blue-400 to-cyan-500', path: isAdmin ? '/admin/orders/history' : '/orders/history' },
+            { label: 'Pending', ...data.orderStatus.pending, colors: 'from-amber-400 to-orange-500', path: isAdmin ? '/admin/orders/history' : '/orders/history' },
+            { label: 'In-Process', ...data.orderStatus.inProcess, colors: 'from-cyan-400 to-teal-500', path: isAdmin ? '/admin/orders/history?status=In Process' : '/orders/history?status=In Process' },
           ].map((s) => (
-            <div key={s.label}>
+            <div key={s.label} onClick={(e) => { e.stopPropagation(); navigate(s.path); }}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full bg-gradient-to-br ${s.colors}`} />

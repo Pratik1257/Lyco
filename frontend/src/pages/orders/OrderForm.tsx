@@ -40,13 +40,14 @@ const getCurrencySymbol = (currency: string | null) => {
     case 'EURO':
     case 'EUR': return '€';
     case 'AUD': return 'A$';
+    case 'CAD': return 'C$';
     case 'INR': return '₹';
     default: return '$';
   }
 };
 
 export default function OrderForm() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const isAdmin = user?.userType === 'Admin';
 
   const queryClient = useQueryClient();
@@ -64,7 +65,9 @@ export default function OrderForm() {
     size: '',
     sizetype: 'Inches',
     amount: '',
-    currency: 'USD',
+    currency: (user as any)?.userType !== 'Admin' 
+      ? ((user as any)?.currency || (user as any)?.Currency || 'USD') 
+      : (localStorage.getItem('dashboard_currency') || (user as any)?.currency || (user as any)?.Currency || 'USD'),
     email: '',
     companyName: '',
     orderNo: '',
@@ -98,30 +101,37 @@ export default function OrderForm() {
     if (isEditMode) return;
 
     if (!isAdmin && user) {
-      const uId = user.userId;
-      const uNo = user.uniqueNo ?? (user as any).UniqueNo ?? null;
-      const uEmail = user.email || '';
-      const uCompany = (user as any).companyname || (user as any).Companyname || '';
-      const uCurrency = user.currency || 'USD';
+      customersApi.getCustomerById(user.userId).then(u => {
+        const uId = u.userId;
+        const uNo = u.uniqueNo ?? (u as any).UniqueNo ?? null;
+        const uEmail = u.primaryEmail || (u as any).PrimaryEmail || '';
+        const uCompany = u.companyname || (u as any).Companyname || '';
+        const latestCurrency = u.currency || (u as any).Currency;
+        
+        // Sync AuthContext if changed
+        if (latestCurrency && latestCurrency !== user.currency) {
+          updateUser({ currency: latestCurrency });
+        }
 
-      // Set identity all at once to prevent effect race conditions
-      setFormData(prev => ({
-        ...prev,
-        userId: uId,
-        uniqueNo: uNo,
-        email: uEmail,
-        companyName: uCompany,
-        currency: uCurrency
-      }));
+        const uCurrency = latestCurrency || 'USD';
 
-      // Immediately trigger Order # fetch if we have a uniqueNo
-      if (uNo) {
-        ordersApi.getNextOrderNumber(uNo).then(no => {
-          setFormData(prev => ({ ...prev, orderNo: no }));
-        });
-      }
+        setFormData(prev => ({
+          ...prev,
+          userId: uId,
+          uniqueNo: uNo,
+          email: uEmail,
+          companyName: uCompany,
+          currency: uCurrency
+        }));
+
+        if (uNo) {
+          ordersApi.getNextOrderNumber(uNo).then(no => {
+            setFormData(prev => ({ ...prev, orderNo: no }));
+          });
+        }
+      }).catch(console.error);
     }
-  }, [user, isAdmin, isEditMode]);
+  }, [user?.userId, isAdmin, isEditMode]);
 
   // Handle Admin User details fetch
   useEffect(() => {
@@ -133,7 +143,7 @@ export default function OrderForm() {
         email: u.primaryEmail || (u as any).PrimaryEmail || '',
         companyName: u.companyname || (u as any).Companyname || '',
         uniqueNo: u.uniqueNo ?? (u as any).UniqueNo ?? null,
-        currency: u.currency || (u as any).Currency || 'USD'
+        currency: localStorage.getItem('dashboard_currency') || u.currency || (u as any).Currency || 'USD'
       }));
     });
   }, [formData.userId, isAdmin, isEditMode]);
@@ -191,7 +201,9 @@ export default function OrderForm() {
         size: '',
         sizetype: 'Inches',
         amount: '',
-        currency: 'USD',
+        currency: (user as any)?.userType !== 'Admin' 
+          ? ((user as any)?.currency || (user as any)?.Currency || 'USD') 
+          : (localStorage.getItem('dashboard_currency') || (user as any)?.currency || (user as any)?.Currency || 'USD'),
         email: '',
         companyName: '',
         orderNo: '',
