@@ -326,6 +326,11 @@ public class PaymentsController : ControllerBase
 
         var paypalUrl = $"{paypalBase}?{queryString}";
 
+        // DEBUG: Log the URL so we can inspect parameters
+        Console.WriteLine($"[PayPal DEBUG] Currency in DB: '{firstOrder.Currency}' → Mapped: '{currency}'");
+        Console.WriteLine($"[PayPal DEBUG] Business Email: '{paypalEmail}'");
+        Console.WriteLine($"[PayPal DEBUG] Amount: {total:F2}, URL: {paypalUrl}");
+
         return Ok(new { paypalUrl, transactionNumber });
     }
     // ── GET /admin/api/Payments/paypal-config ──────────────────────────────
