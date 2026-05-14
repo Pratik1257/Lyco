@@ -10,6 +10,8 @@ import { SearchBar } from '../../components/ui/SearchBar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
 import { OrderDetailsModal } from '../../components/ui/OrderDetailsModal';
+import CompleteOrderModal from './CompleteOrderModal';
+import { CheckCircle } from 'lucide-react';
 
 export default function CompleteOrderList() {
   const navigate = useNavigate();
@@ -23,13 +25,15 @@ export default function CompleteOrderList() {
 
   // Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [orderToView, setOrderToView] = useState<any>(null);
+  const [orderToComplete, setOrderToComplete] = useState<any>(null);
 
-  // Fetch Orders (Filtered by Completed status)
+  // Fetch Orders (Filtered by In Process status)
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['orders', 'completed', currentPage, itemsPerPage, searchQuery],
-    queryFn: () => ordersApi.getOrders(currentPage, itemsPerPage, searchQuery, 'Completed'),
+    queryKey: ['orders', 'in-process', currentPage, itemsPerPage, searchQuery],
+    queryFn: () => ordersApi.getOrders(currentPage, itemsPerPage, searchQuery, 'In Process'),
   });
 
   // Derived Values
@@ -106,6 +110,7 @@ export default function CompleteOrderList() {
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order Date</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO No.</TableHead>
                 <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Service</TableHead>
+                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -138,12 +143,26 @@ export default function CompleteOrderList() {
                         {order.serviceName}
                       </span>
                     </TableCell>
+                    <TableCell className="text-right pr-6 whitespace-nowrap">
+                      <Button
+                        variant="ghost-green"
+                        size="sm"
+                        className="h-8 px-3 text-xs font-bold gap-1.5 hover:bg-emerald-50 text-emerald-600"
+                        onClick={() => {
+                          setOrderToComplete(order);
+                          setIsCompleteModalOpen(true);
+                        }}
+                      >
+                        <CheckCircle size={14} />
+                        Complete
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="py-12 text-center text-sm text-gray-500">
-                    No completed orders found.
+                    No orders ready to complete found.
                   </TableCell>
                 </TableRow>
               )}
@@ -176,6 +195,14 @@ export default function CompleteOrderList() {
         }}
         orderId={selectedOrderId}
         initialOrderData={orderToView}
+      />
+      <CompleteOrderModal
+        isOpen={isCompleteModalOpen}
+        onClose={() => {
+          setIsCompleteModalOpen(false);
+          setOrderToComplete(null);
+        }}
+        order={orderToComplete}
       />
     </div>
   );

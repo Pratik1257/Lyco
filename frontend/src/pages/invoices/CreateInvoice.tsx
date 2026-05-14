@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, CheckCircle2, Mail, Building2, DollarSign, Clock, User, CheckSquare, Receipt, FileText
@@ -15,8 +15,9 @@ import { useAuth } from '../../context/AuthContext';
 
 
 export default function CreateInvoice() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+   const navigate = useNavigate();
+   const queryClient = useQueryClient();
+   const { user } = useAuth();
   const isAdmin = user?.userType === 'Admin';
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -102,16 +103,17 @@ export default function CreateInvoice() {
   };
 
   const getCurrencySymbol = (currency: string) => {
-    switch (currency) {
+    switch (currency?.toUpperCase()) {
       case 'GBP': return '£';
-      case 'EURO': return '€';
+      case 'EURO':
+      case 'EUR': return '€';
       case 'AUD': return 'A$';
+      case 'INR': return '₹';
       default: return '$';
     }
   };
 
   const currencyCode = customerDetails?.currency || 'USD';
-  const currencySymbol = getCurrencySymbol(currencyCode);
 
   const handleSubmit = async (type: string) => {
     if (!selectedUserId) {
@@ -154,7 +156,11 @@ export default function CreateInvoice() {
         }
       });
 
-      navigate(isAdmin ? '/admin/invoices/summary' : '/invoices/summary');
+      // Reset selection and refresh data instead of navigating away
+      queryClient.invalidateQueries({ queryKey: ['user-orders-completed', selectedUniqueNo] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      setSelectedOrderIds([]);
+      // navigate(isAdmin ? '/admin/invoices/summary' : '/invoices/summary');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create invoice');
     } finally {
@@ -262,7 +268,7 @@ export default function CreateInvoice() {
                   <button
                     type="button"
                     onClick={selectedOrderIds.length === uninvoicedOrders.length && uninvoicedOrders.length > 0 ? handleUnselectAll : handleSelectAll}
-                    className="text-[10px] font-black uppercase text-cyan-600 hover:text-cyan-700 tracking-widest transition-colors"
+                    className="text-[10px] font-black uppercase text-cyan-600 hover:text-cyan-700 tracking-widest transition-colors cursor-pointer"
                   >
                     {selectedOrderIds.length === uninvoicedOrders.length && uninvoicedOrders.length > 0 ? 'Unselect All' : 'Select All'}
                   </button>
@@ -317,7 +323,7 @@ export default function CreateInvoice() {
 
                                 {/* Amount */}
                                 <span className={`text-xs font-black mt-0.5 ${isSelected ? 'text-cyan-600' : 'text-slate-700'}`}>
-                                  {currencySymbol}{Number(order.amount || 0).toFixed(2)}
+                                  {getCurrencySymbol(order.currency || 'USD')}{Number(order.amount || 0).toFixed(2)}
                                 </span>
                               </label>
                             );
@@ -334,7 +340,7 @@ export default function CreateInvoice() {
                           <button
                             type="button"
                             onClick={handleUnselectAll}
-                            className="text-[10px] font-black text-cyan-400 hover:text-cyan-600 uppercase tracking-widest transition-colors"
+                            className="text-[10px] font-black text-cyan-400 hover:text-cyan-600 uppercase tracking-widest transition-colors cursor-pointer"
                           >
                             Clear
                           </button>
@@ -387,41 +393,45 @@ export default function CreateInvoice() {
                 <div className="flex flex-wrap items-center justify-center gap-4 w-full px-4">
                   <Button
                     onClick={() => handleSubmit('Individual')}
-                    disabled={isSubmitting}
+                    isLoading={submittingAction === 'Individual'}
+                    disabled={isSubmitting && submittingAction !== 'Individual'}
                     variant="unstyled"
-                    className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
+                    className={`flex-1 sm:flex-initial min-w-[200px] h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 focus:outline-none cursor-pointer ${isSubmitting && submittingAction !== 'Individual' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <Receipt size={16} />
+                    {!submittingAction && <Receipt size={16} />}
                     {submittingAction === 'Individual' ? 'Generating...' : 'Individual Invoice'}
                   </Button>
 
                   <Button
                     onClick={() => handleSubmit('Combined')}
-                    disabled={isSubmitting}
+                    isLoading={submittingAction === 'Combined'}
+                    disabled={isSubmitting && submittingAction !== 'Combined'}
                     variant="unstyled"
-                    className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-600/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
+                    className={`flex-1 sm:flex-initial min-w-[200px] h-12 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 focus:outline-none cursor-pointer ${isSubmitting && submittingAction !== 'Combined' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <Receipt size={16} className="rotate-90" />
+                    {!submittingAction && <Receipt size={16} className="rotate-90" />}
                     {submittingAction === 'Combined' ? 'Generating...' : 'Combined Invoice'}
                   </Button>
 
                   <Button
                     onClick={() => handleSubmit('Paypal')}
-                    disabled={isSubmitting}
+                    isLoading={submittingAction === 'Paypal'}
+                    disabled={isSubmitting && submittingAction !== 'Paypal'}
                     variant="unstyled"
-                    className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-rose-500 hover:bg-rose-600 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-rose-500/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
+                    className={`flex-1 sm:flex-initial min-w-[200px] h-12 bg-rose-500 hover:bg-rose-600 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-rose-500/10 transition-all active:scale-95 flex items-center justify-center gap-2 focus:outline-none cursor-pointer ${isSubmitting && submittingAction !== 'Paypal' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <Mail size={16} />
+                    {!submittingAction && <Mail size={16} />}
                     {submittingAction === 'Paypal' ? 'Generating...' : 'Send Paypal Link'}
                   </Button>
 
                   <Button
                     onClick={handleDownloadDraft}
+                    isLoading={isSubmitting && !submittingAction} // Assuming draft doesn't have a 'submittingAction' string yet, or we can just use isSubmitting if it's separate
                     disabled={isSubmitting}
                     variant="unstyled"
-                    className="flex-1 sm:flex-initial min-w-[200px] h-12 bg-amber-400 hover:bg-amber-500 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-amber-400/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none"
+                    className={`flex-1 sm:flex-initial min-w-[200px] h-12 bg-amber-400 hover:bg-amber-500 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-lg shadow-amber-400/10 transition-all active:scale-95 flex items-center justify-center gap-2 focus:outline-none cursor-pointer ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <FileText size={16} />
+                    {(!isSubmitting || submittingAction) && <FileText size={16} />}
                     Download Draft
                   </Button>
                 </div>
@@ -434,7 +444,7 @@ export default function CreateInvoice() {
               <button
                 type="button"
                 onClick={() => navigate(isAdmin ? '/admin/invoices/summary' : '/invoices/summary')}
-                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 <ChevronLeft size={16} /> Cancel
               </button>

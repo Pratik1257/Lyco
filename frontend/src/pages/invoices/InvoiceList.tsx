@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, Download, Plus, Eye,
-  CheckCircle2, Clock, Receipt, RefreshCw
+  CheckCircle2, Clock, Receipt
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -48,7 +48,7 @@ export default function InvoiceList() {
       setCurrentPage(1);
       return;
     }
-    
+
     const now = new Date();
     const etString = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
@@ -56,12 +56,12 @@ export default function InvoiceList() {
       month: 'numeric',
       day: 'numeric',
     }).format(now);
-    
+
     const [m, d, y] = etString.split('/');
     const year = Number(y);
     const month = Number(m);
     const day = Number(d);
-    
+
     const formatDate = (date: Date) => {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     };
@@ -171,7 +171,7 @@ export default function InvoiceList() {
               {isAdmin && (
                 <Button variant="primary" onClick={() => navigate(isAdmin ? '/admin/invoices/create' : '/invoices/create')}
                   className="h-11 bg-gradient-to-r from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/20 px-5 rounded-xl text-xs whitespace-nowrap">
-                  <Plus size={16} /> Create
+                  <Plus size={16} /> Create Invoice
                 </Button>
               )}
             </div>
@@ -222,117 +222,117 @@ export default function InvoiceList() {
           {isLoading ? (
             <TableSkeleton rows={itemsPerPage} cols={8} />
           ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/50">
-                {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>}
-                <TableHead className={`font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>Invoice #</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Invoice Date</TableHead>
-                {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Customer ID</TableHead>}
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order No.</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Amount</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Status</TableHead>
-                <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.length > 0 ? (
-                invoices.map((invoice: Invoice) => (
-                  <TableRow key={invoice.invoiceId} className="group hover:bg-slate-50/50 transition-colors">
-                    {isAdmin && (
-                      <TableCell className="pl-6 whitespace-nowrap">
-                        <span className="font-medium text-slate-800 text-sm">{invoice.fullname}</span>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50">
+                  {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-6 whitespace-nowrap">Full Name</TableHead>}
+                  <TableHead className={`font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>Invoice #</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Invoice Date</TableHead>
+                  {isAdmin && <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Customer ID</TableHead>}
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Order No.</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">PO</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Amount</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap">Status</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right pr-6 whitespace-nowrap">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.length > 0 ? (
+                  invoices.map((invoice: Invoice) => (
+                    <TableRow key={invoice.invoiceId} className="group hover:bg-slate-50/50 transition-colors">
+                      {isAdmin && (
+                        <TableCell className="pl-6 whitespace-nowrap">
+                          <span className="font-medium text-slate-800 text-sm">{invoice.fullname}</span>
+                        </TableCell>
+                      )}
+                      <TableCell className={`whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>
+                        <span className="font-black text-slate-900 text-sm text-cyan-600 transition-colors">
+                          {invoice.pdfUrl ? (
+                            <a
+                              href={`http://localhost:5193${invoice.pdfUrl}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hover:text-cyan-700 hover:underline cursor-pointer"
+                              title="View Invoice PDF"
+                            >
+                              {invoice.invoiceNo}
+                            </a>
+                          ) : (
+                            <span
+                              className="text-slate-400 cursor-help"
+                              onClick={() => toast.error('PDF not available for this invoice')}
+                              title="PDF not available"
+                            >
+                              {invoice.invoiceNo}
+                            </span>
+                          )}
+                        </span>
                       </TableCell>
-                    )}
-                    <TableCell className={`whitespace-nowrap ${!isAdmin ? 'pl-6' : ''}`}>
-                      <span className="font-black text-slate-900 text-sm text-cyan-600 transition-colors">
-                        {invoice.pdfUrl ? (
-                          <a
-                            href={`http://localhost:5193${invoice.pdfUrl}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:text-cyan-700 hover:underline cursor-pointer"
-                            title="View Invoice PDF"
-                          >
-                            {invoice.invoiceNo}
-                          </a>
-                        ) : (
-                          <span
-                            className="text-slate-400 cursor-help"
-                            onClick={() => toast.error('PDF not available for this invoice')}
-                            title="PDF not available"
-                          >
-                            {invoice.invoiceNo}
-                          </span>
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">
-                      {formatDate(invoice.invoiceDate)}
-                    </TableCell>
-                    {isAdmin && (
+                      <TableCell className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                        {formatDate(invoice.invoiceDate)}
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
+                          {invoice.customerId}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-xs text-cyan-600 font-bold whitespace-nowrap">
+                        {invoice.orderNos || '--'}
+                      </TableCell>
                       <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
-                        {invoice.customerId}
+                        {invoice.po || '--'}
                       </TableCell>
-                    )}
-                    <TableCell className="text-xs text-cyan-600 font-bold whitespace-nowrap">
-                      {invoice.orderNos || '--'}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500 font-bold whitespace-nowrap">
-                      {invoice.po || '--'}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-bold ${getTypeStyle(invoice.invoiceType)}`}>
-                        {invoice.invoiceType || '--'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <span className="font-black text-slate-900 text-sm">
-                        {formatPrice(invoice.amount, invoice.currency)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${getStatusStyle(invoice.status)}`}
-                      >
-                        {getStatusIcon(invoice.status)}
-                        {invoice.status || 'Pending'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1">
-                        {invoice.pdfUrl && (
-                          <Button
-                            variant="ghost-cyan"
-                            size="icon"
-                            className="w-7 h-7 rounded-lg hover:bg-cyan-50 text-cyan-600"
-                            title="View / Download PDF"
-                            onClick={() => window.open(`http://localhost:5193${invoice.pdfUrl}`, '_blank')}
-                          >
-                            <Eye size={14} />
-                          </Button>
-                        )}
+                      <TableCell className="whitespace-nowrap">
+                        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-bold ${getTypeStyle(invoice.invoiceType)}`}>
+                          {invoice.invoiceType || '--'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <span className="font-black text-slate-900 text-sm">
+                          {formatPrice(invoice.amount, invoice.currency)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${getStatusStyle(invoice.status)}`}
+                        >
+                          {getStatusIcon(invoice.status)}
+                          {invoice.status || 'Pending'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          {invoice.pdfUrl && (
+                            <Button
+                              variant="ghost-cyan"
+                              size="icon"
+                              className="w-7 h-7 rounded-lg hover:bg-cyan-50 text-cyan-600"
+                              title="View / Download PDF"
+                              onClick={() => window.open(`http://localhost:5193${invoice.pdfUrl}`, '_blank')}
+                            >
+                              <Eye size={14} />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-24 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                          <Receipt size={32} className="text-slate-200" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">No invoices found</h3>
+                        <p className="text-sm text-slate-400 mt-1">Try adjusting your filters or search query.</p>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-24 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                        <Receipt size={32} className="text-slate-200" />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900">No invoices found</h3>
-                      <p className="text-sm text-slate-400 mt-1">Try adjusting your filters or search query.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
           )}
         </div>
 

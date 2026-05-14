@@ -7,6 +7,9 @@ interface Option {
   value: string | number;
   label: string;
   isDisabled?: boolean;
+  code?: string;
+  symbol?: string;
+  name?: string;
 }
 
 interface CustomProps {
@@ -16,6 +19,7 @@ interface CustomProps {
   menuAlign?: 'left' | 'right';
   setMenuIsOpen: (val: boolean) => void;
   menuIsOpen: boolean;
+  prefixIcon?: React.ReactNode;
 }
 
 // Extend react-select's props to include customProps
@@ -35,10 +39,29 @@ interface CustomSelectProps {
   menuAlign?: 'left' | 'right';
   error?: string;
   isDisabled?: boolean;
+  className?: string;
+  prefixIcon?: React.ReactNode;
 }
 
 // Custom Selected Value rendering (collapsed state)
 const CustomSingleValue = (props: any) => {
+  const { prefixIcon } = props.selectProps.customProps;
+  const data = props.data;
+  
+  // If we have a prefix icon AND a specific code (like for Currencies), use the code logic
+  if (prefixIcon && data.code) {
+    return (
+      <components.SingleValue {...props}>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-gray-900 text-sm tracking-tight">{data.code}</span>
+          {data.name && (
+            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider hidden sm:inline">— {data.name}</span>
+          )}
+        </div>
+      </components.SingleValue>
+    );
+  }
+
   const parts = props.data.label.split(', ');
   if (parts.length >= 3) {
     const [symbol, code, name] = parts;
@@ -161,7 +184,7 @@ const CustomMenu = (props: MenuProps<Option, false>) => {
 
 // Custom Control to handle reliable toggling
 const CustomControl = (props: any) => {
-  const { setMenuIsOpen, menuIsOpen } = props.selectProps.customProps;
+  const { setMenuIsOpen, menuIsOpen, prefixIcon } = props.selectProps.customProps;
   
   const handleMouseDown = (e: React.MouseEvent) => {
     if (menuIsOpen) {
@@ -169,7 +192,6 @@ const CustomControl = (props: any) => {
       e.stopPropagation();
       setMenuIsOpen(false);
     } else {
-      // Let react-select handle opening
       if (props.innerProps.onMouseDown) {
         props.innerProps.onMouseDown(e);
       }
@@ -177,13 +199,24 @@ const CustomControl = (props: any) => {
   };
 
   return (
-    <components.Control
-      {...props}
-      innerProps={{
-        ...props.innerProps,
-        onMouseDown: handleMouseDown
-      }}
-    />
+    <div className="relative flex items-center w-full">
+      {prefixIcon && (
+        <div className="absolute left-2.5 z-20 pointer-events-none flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+            {prefixIcon}
+          </div>
+        </div>
+      )}
+      <div className="flex-1">
+        <components.Control
+          {...props}
+          innerProps={{
+            ...props.innerProps,
+            onMouseDown: handleMouseDown
+          }}
+        />
+      </div>
+    </div>
   );
 };
 
@@ -198,7 +231,9 @@ export default function CustomSelect({
   menuPlacement = 'auto',
   menuAlign = 'left',
   error,
-  isDisabled = false
+  isDisabled = false,
+  className = '',
+  prefixIcon
 }: CustomSelectProps) {
   const [searchText, setSearchText] = useState('');
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -210,25 +245,16 @@ export default function CustomSelect({
     [options, value]
   );
 
-  const filteredOptions = useMemo(
-    () =>
-      options.filter((opt) =>
-        (opt.label || '').toLowerCase().includes(searchText.toLowerCase())
-      ),
-    [options, searchText]
-  );
-
   useEffect(() => {
     if (!menuIsOpen) return;
 
     const handleOutsideClick = (event: MouseEvent) => {
-      // If clicking inside the container, do nothing (Control handles it)
+      // If clicking inside the container, do nothing
       if (containerRef.current?.contains(event.target as Node)) {
         return;
       }
 
       // If clicking inside the portaled menu, do nothing
-      // We check if the target is inside a div with the react-select portal class
       const target = event.target as HTMLElement;
       if (target.closest('.react-select__menu-portal')) {
         return;
@@ -238,7 +264,16 @@ export default function CustomSelect({
     };
 
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    
+    // Focus search input
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 50);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      clearTimeout(timer);
+    };
   }, [menuIsOpen]);
 
   const customStyles: StylesConfig<Option, false> = {
@@ -270,7 +305,7 @@ export default function CustomSelect({
     }),
     valueContainer: (base) => ({
       ...base,
-      padding: '0px 10px',
+      padding: prefixIcon ? '0px 10px 0px 38px' : '0px 10px',
       height: '100%',
     }),
     placeholder: (base) => ({
@@ -361,7 +396,7 @@ export default function CustomSelect({
   const ExtendedSelect = Select as unknown as React.ComponentType<ExtendedSelectProps>;
 
   return (
-    <div className="space-y-1" ref={containerRef}>
+    <div className={`space-y-1 ${className}`} ref={containerRef}>
       {label && (
         <label className="block text-[13px] font-semibold text-slate-900 ml-1">
           {label} {required && <span className="text-red-500">*</span>}
@@ -369,7 +404,7 @@ export default function CustomSelect({
       )}
       <div className={error ? 'animate-shake' : ''}>
         <ExtendedSelect
-          options={filteredOptions}
+          options={options}
           value={selectedOption}
           classNamePrefix="react-select"
           onChange={(option) => {
@@ -383,7 +418,10 @@ export default function CustomSelect({
           isDisabled={isDisabled}
           menuIsOpen={menuIsOpen}
           maxMenuHeight={maxMenuHeight}
-          filterOption={null}
+          filterOption={(candidate) => {
+            if (!searchText) return true;
+            return (candidate.label || '').toLowerCase().includes(searchText.toLowerCase());
+          }}
           onMenuOpen={() => {
             setMenuIsOpen(true);
             setSearchText('');
@@ -392,7 +430,7 @@ export default function CustomSelect({
           onMenuClose={() => {
              // We handle closing via handleClickOutside and Control click
           }}
-          customProps={{ searchText, setSearchText, searchInputRef, menuAlign, setMenuIsOpen, menuIsOpen }}
+          customProps={{ searchText, setSearchText, searchInputRef, menuAlign, setMenuIsOpen, menuIsOpen, prefixIcon }}
           components={{ 
             Menu: CustomMenu, 
             Option: CustomOption, 

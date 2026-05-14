@@ -95,14 +95,21 @@ public class UserRepository : IUserRepository
         if (user != null)
         {
             var hasOrders = await _context.OrderDetails.AnyAsync(o => o.UniqueNo == user.UniqueNo);
-            if (hasOrders)
+            var hasQuotes = await _context.Quotes.AnyAsync(q => q.UniqueNo == user.UniqueNo);
+            var hasInvoices = await _context.InvoiceMsts.AnyAsync(i => i.UserId == user.UserId);
+
+            if (hasOrders || hasQuotes || hasInvoices)
             {
-                return (false, "Cannot remove this user. There are orders under this user.");
+                return (false, "Cannot remove this user. There are active orders, quotes, or invoices linked to this account.");
             }
 
             // Remove associated UserPriceMst records to avoid foreign key conflicts
             var userPrices = await _context.UserPriceMsts.Where(up => up.UserId == user.UserId).ToListAsync();
             _context.UserPriceMsts.RemoveRange(userPrices);
+
+            // Remove associated CardDetails to avoid foreign key conflicts
+            var cardDetails = await _context.CardDetails.Where(cd => cd.UserId == user.UserId).ToListAsync();
+            _context.CardDetails.RemoveRange(cardDetails);
 
             _context.UserRegistrations.Remove(user);
             await _context.SaveChangesAsync();

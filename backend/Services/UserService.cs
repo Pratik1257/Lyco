@@ -13,13 +13,16 @@ public class UserService : IUserService
     private readonly IUserRepository _repo;
     private readonly ICardDetailRepository _cardRepo;
     private readonly IConfiguration _config;
+    private readonly IEmailService _email;
     private static readonly HashSet<int> AllowedPageSizes = [10, 20, 50, 100];
 
-    public UserService(IUserRepository repo, ICardDetailRepository cardRepo, IConfiguration config)
+    public UserService(IUserRepository repo, ICardDetailRepository cardRepo,
+        IConfiguration config, IEmailService email)
     {
         _repo = repo;
         _cardRepo = cardRepo;
         _config = config;
+        _email = email;
     }
 
     public async Task<PagedResult<UserRegistrationDto>> GetPagedAsync(string? search, string? status, int page, int pageSize)
@@ -156,7 +159,7 @@ public class UserService : IUserService
                 new Claim(ClaimTypes.Name, user.Username ?? string.Empty),
                 new Claim(ClaimTypes.Role, user.UserType ?? "Customer")
             }),
-            Expires = DateTime.UtcNow.AddHours(2),
+            Expires = DateTime.UtcNow.AddHours(24),
             Issuer = _config["Jwt:Issuer"],
             Audience = _config["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -207,6 +210,7 @@ public class UserService : IUserService
             UserType = "Customer",
             IsSecondary = "N",
             UniqueNo = await _repo.GetNextUniqueNoAsync(),
+            VerifyCode = req.Email,
             CreatedDate = DateTime.UtcNow
         };
 
@@ -237,7 +241,35 @@ public class UserService : IUserService
             await _cardRepo.CreateAsync(card);
         }
 
+        // Send welcome email (fire-and-forget)
+        var emailTo = created.PrimaryEmail;
+        var emailUser = created.Username;
+        var emailId = created.UniqueNo ?? 0;
+        Console.WriteLine($"[Registration] Sending welcome email to: '{emailTo}' for user '{emailUser}' (ID: {emailId})");
+        if (string.IsNullOrWhiteSpace(emailTo))
+        {
+            Console.WriteLine("[Registration] WARNING: PrimaryEmail is null/empty — skipping welcome email.");
+        }
+        else
+        {
+            _ = _email.SendRegistrationWelcomeAsync(emailTo, emailUser!, emailId);
+        }
+
         return (MapToDto(created), null);
+    }
+
+    public async Task<(bool Success, string? Code, string? Error)> SendVerificationCodeAsync(string emailAddress)
+    {
+        if (string.IsNullOrWhiteSpace(emailAddress)) return (false, null, "Email is required.");
+
+        // Generate a 6-digit code and send it via Mailgun
+        var code = new Random().Next(100000, 999999).ToString();
+        Console.WriteLine($"[Verification] Generated code for {emailAddress}: {code}");
+
+        // Fire-and-forget – don't block the HTTP response
+        _ = _email.SendVerificationCodeAsync(emailAddress, code);
+
+        return (true, code, null);
     }
 
     public async Task<(string? Email, string? Error)> ForgotPasswordAsync(string username)
@@ -251,7 +283,22 @@ public class UserService : IUserService
             return (null, "Invalid username. This account does not exist.");
         }
 
+        if (string.IsNullOrWhiteSpace(user.PrimaryEmail))
+        {
+            Console.WriteLine($"[UserService] User '{username}' has no primary email.");
+            return (null, "No email address found for this user. Please contact support.");
+        }
+
         Console.WriteLine($"[UserService] Found user: {user.Username}, Email: {user.PrimaryEmail}");
+
+        // For now, using a simple timestamp-based token for parity with frontend expectation
+        var token = Guid.NewGuid().ToString("N");
+        var baseUrl = "http://localhost:5173"; // Should ideally come from config
+        var resetUrl = $"{baseUrl}/reset-password?username={user.Username}&token={token}";
+
+        // Send reset email (fire-and-forget)
+        _ = _email.SendPasswordResetLinkAsync(user.PrimaryEmail, user.Username!, resetUrl);
+
         return (user.PrimaryEmail, null);
     }
 
@@ -260,10 +307,32 @@ public class UserService : IUserService
         var user = await _repo.GetByUsernameAsync(req.Username);
         if (user == null) return (false, "User not found.");
 
+        if (BCrypt.Net.BCrypt.Verify(req.NewPassword, user.Password))
+            return (false, "New password cannot be the same as your current password.");
+
         user.Password = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
         await _repo.UpdateAsync(user);
 
+        // Notify the user that their password was changed (fire-and-forget)
+        if (!string.IsNullOrWhiteSpace(user.PrimaryEmail))
+            _ = _email.SendPasswordResetAsync(user.PrimaryEmail, user.Firstname ?? user.Username ?? "", "[set by user]");
+
         return (true, null);
+    }
+
+    public async Task<bool> UsernameExistsAsync(string username)
+    {
+        return !await _repo.IsUsernameUniqueAsync(username);
+    }
+
+    public async Task<bool> EmailExistsAsync(string email)
+    {
+        return !await _repo.IsEmailUniqueAsync(email);
+    }
+
+    public async Task<bool> CardExistsAsync(string cardNo)
+    {
+        return !await _cardRepo.IsCardNoUniqueAsync(cardNo);
     }
 
     // Handles both "MM/YYYY" and ISO "YYYY-MM-DD" formats stored in the DB

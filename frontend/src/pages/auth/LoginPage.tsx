@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, User, Lock, Shield, CheckCircle, Mail, X } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Shield, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import lycoLogoImg from '../../assets/LycoLogo.png';
@@ -19,8 +19,6 @@ export default function LoginPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showResetEmail, setShowResetEmail] = useState(false);
-  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleForgotPassword = async () => {
@@ -32,16 +30,15 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const result = await authApi.forgotPassword(form.username);
-      setRecoveryEmail(result.email);
-      setShowResetEmail(true);
+      await authApi.forgotPassword(form.username);
+      toast.success('Password reset link has been sent to your registered email.');
     } catch (error: any) {
       console.error('Forgot password error details:', error.response);
       const data = error.response?.data;
       const status = error.response?.status;
-      
+
       const msg = data?.Message || data?.message || (data?.errors ? Object.values(data.errors).flat()[0] : null);
-      
+
       if (msg) {
         toast.error(msg as string);
       } else if (status === 404) {
@@ -85,7 +82,7 @@ export default function LoginPage() {
     try {
       const userData = await authApi.login(form);
       login(userData);
-      
+
       if (remember) {
         localStorage.setItem('lyco_remembered_user', JSON.stringify({
           username: form.username,
@@ -124,7 +121,7 @@ export default function LoginPage() {
               <p className="text-slate-400 text-xs">Sign in to your dashboard</p>
             </div>
             <ul className="mt-8 space-y-4">
-              {['Secure and reliable platform', 'Manage your business with ease', 'Real-time insights and analytics'].map(t => (
+              {['Creative Graphic Design Solutions', 'Modern Web & App Development', 'Digital Marketing That Grows Brands'].map(t => (
                 <li key={t} className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0">
                     <CheckCircle size={16} className="text-cyan-400" />
@@ -180,7 +177,7 @@ export default function LoginPage() {
                       if (fieldErrors.password) setFieldErrors(p => { const n = { ...p }; delete n.password; return n; });
                     }} />
                   <button type="button" onClick={() => setShowPwd(!showPwd)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
                     {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
@@ -193,63 +190,17 @@ export default function LoginPage() {
                     className="w-3.5 h-3.5 rounded accent-cyan-500" />
                   <span className="text-xs text-slate-600">Remember me</span>
                 </label>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={handleForgotPassword}
-                  className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 transition-colors"
+                  className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 transition-colors cursor-pointer"
                 >
                   Forgot password?
                 </button>
               </div>
 
-              {showResetEmail && (
-                <div className="fixed bottom-6 right-6 w-[380px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-[100] animate-in slide-in-from-right-10 duration-500">
-                  <div className="p-4 bg-slate-900 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-cyan-500 rounded flex items-center justify-center">
-                        <Mail size={14} className="text-white" />
-                      </div>
-                      <span className="text-[11px] font-black text-white uppercase tracking-wider">Simulated Inbox</span>
-                    </div>
-                    <button onClick={() => setShowResetEmail(false)} className="text-slate-400 hover:text-white transition-colors">
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="p-6">
-                    <div className="mb-6">
-                      <h3 className="text-lg font-black text-slate-900 mb-1">Reset Your Password</h3>
-                      <p className="text-slate-500 text-[11px] font-bold">To: <span className="text-slate-900">{recoveryEmail}</span></p>
-                    </div>
-                    
-                    <p className="text-[11px] text-slate-600 leading-relaxed mb-6">
-                      Hello {form.username},<br/><br/>
-                      A password reset was requested for your account. Please click the button below to set a new password. This link will expire in 1 hour.
-                    </p>
-
-                    <button 
-                      onClick={() => {
-                        setShowResetEmail(false);
-                        navigate(`/reset-password?username=${form.username}&token=simulated-token-${Date.now()}`);
-                      }}
-                      className="w-full py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-sm rounded-lg shadow-lg shadow-indigo-100 transition-all mb-6"
-                    >
-                      Reset Password
-                    </button>
-
-                    <div className="pt-4 border-t border-slate-50">
-                      <p className="text-[9px] text-slate-400 mb-2 leading-relaxed">
-                        If the button above doesn't work, copy and paste this link into your browser:
-                      </p>
-                      <p className="text-[9px] text-indigo-500 break-all font-mono leading-tight">
-                        http://localhost:5173/reset-password?username={form.username}&token=e72851ecefff4930a5864dab8bb13458
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <button type="submit" disabled={loading}
-                className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-cyan-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed uppercase tracking-widest">
+                className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-cyan-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed uppercase tracking-widest cursor-pointer">
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
@@ -264,7 +215,7 @@ export default function LoginPage() {
                 <p className="text-sm text-slate-500">
                   Don't have an account?{' '}
                   <button onClick={() => navigate('/register')}
-                    className="font-bold text-cyan-600 hover:text-cyan-700 transition-colors">
+                    className="font-bold text-cyan-600 hover:text-cyan-700 transition-colors cursor-pointer">
                     Create one
                   </button>
                 </p>

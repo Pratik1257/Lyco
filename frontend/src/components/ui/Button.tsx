@@ -16,7 +16,7 @@ export function Button({
   ...props 
 }: ButtonProps) {
   
-  const baseClasses = "inline-flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus:outline-none";
+  const baseClasses = `inline-flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:active:scale-100 focus:outline-none ${!isLoading ? 'disabled:opacity-50' : ''}`;
   
   const variants = {
     primary: "bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white shadow-md shadow-cyan-200",

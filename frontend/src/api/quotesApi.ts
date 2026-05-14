@@ -101,8 +101,8 @@ export const quotesApi = {
     return res.data;
   },
 
-  convertToOrder: async (id: number) => {
-    const res = await apiClient.post(`/Quotes/${id}/convert`);
+  convertToOrder: async (id: number, amount?: string, currency?: string) => {
+    const res = await apiClient.post(`/Quotes/${id}/convert`, { amount, currency });
     return res.data;
   },
 

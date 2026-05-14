@@ -12,4 +12,5 @@ public interface ICardDetailRepository
     Task<bool> ExistsAsync(long id);
     Task<bool> ExistsForUserAsync(long userId);
     Task<CardDetail?> GetByUserIdAsync(long userId);
+    Task<bool> IsCardNoUniqueAsync(string cardNo);
 }

@@ -1,0 +1,34 @@
+# Source Control Ignore File
+
+# .NET / C#
+bin/
+obj/
+Debug/
+Release/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Development Settings (Contains Secrets)
+appsettings.Development.json
+
+# Node / React
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

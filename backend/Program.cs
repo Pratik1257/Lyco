@@ -39,7 +39,8 @@ builder.Services.AddScoped<ICardDetailService, CardDetailService>();
 builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IInvoicePdfService, InvoicePdfService>();
-builder.Services.AddHttpClient(); // For PayPal IPN verification
+builder.Services.AddHttpClient(); // For PayPal IPN verification + Mailgun
+builder.Services.AddSingleton<IEmailService, MailgunEmailService>();
 
 // ── JWT Authentication ───────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -70,10 +71,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("LycoCors", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",   // Vite dev server
-                "http://localhost:5174"    // fallback Vite port
-            )
+            .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader();
     });

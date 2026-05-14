@@ -171,7 +171,7 @@ export default function ManagePayment() {
         orderIds: selectedOrderIds,
       });
       toast.success('Payment initiated! Opening PayPal...');
-      window.open(result.paypalUrl, '_blank', 'noopener,noreferrer');
+      window.location.href = result.paypalUrl;
 
       const refreshed = await paymentsApi.getPendingForPayment(selectedUserId);
       setOrders(refreshed);

@@ -273,7 +273,10 @@ export default function PriceManagement() {
     }
   };
 
-  const allPricesFilled = selectedCurrencies.length > 0 && selectedCurrencies.every(c => formCurrencyPrices[c] !== '' && formCurrencyPrices[c] !== undefined);
+  const allPricesFilled = selectedCurrencies.length > 0 && selectedCurrencies.every(c => {
+    const val = formCurrencyPrices[c];
+    return val !== '' && val !== undefined && Number(val) > 0;
+  });
 
   const handleSavePrice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,7 +442,7 @@ export default function PriceManagement() {
       <div className="flex space-x-1 p-1 bg-gray-100/80 rounded-2xl max-w-sm">
         <button
           onClick={() => handleTabChange('general')}
-          className={`flex-1 py-2.5 px-4 text-sm font-bold rounded-xl transition-all duration-200 ${activeTab === 'general'
+          className={`flex-1 py-2.5 px-4 text-sm font-bold rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'general'
             ? 'bg-white text-cyan-700 shadow-sm ring-1 ring-gray-900/5'
             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
@@ -448,7 +451,7 @@ export default function PriceManagement() {
         </button>
         <button
           onClick={() => handleTabChange('userwise')}
-          className={`flex-1 py-2.5 px-4 text-sm font-bold rounded-xl transition-all duration-200 ${activeTab === 'userwise'
+          className={`flex-1 py-2.5 px-4 text-sm font-bold rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'userwise'
             ? 'bg-white text-cyan-700 shadow-sm ring-1 ring-gray-900/5'
             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
@@ -661,7 +664,7 @@ export default function PriceManagement() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto pt-10 sm:pt-4">
           <div
             className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
             onClick={closeModal}
@@ -674,7 +677,7 @@ export default function PriceManagement() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors text-white"
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors text-white cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -750,7 +753,7 @@ export default function PriceManagement() {
                           return (
                             <div
                               key={c.code}
-                              className={`flex items-center gap-4 px-5 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${hasValue ? 'bg-cyan-50/40' : 'hover:bg-gray-50/50'
+                              className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${hasValue ? 'bg-cyan-50/40' : 'hover:bg-gray-50/50'
                                 }`}
                             >
                               {/* Currency Details */}
@@ -765,9 +768,9 @@ export default function PriceManagement() {
                               </div>
 
                               {/* Inline price input */}
-                              <div className="ml-auto w-[164px] flex flex-col shrink-0 relative">
-                                <div className="flex items-center shadow-sm rounded-lg overflow-hidden group">
-                                  <div className={`flex items-center justify-center w-8 h-9 bg-teal-50 border ${fieldErrors[`price_${c.code}`] ? 'border-red-300' : 'border-[#1ab3c8]/30'} border-r-0 transition-colors group-hover:bg-teal-100/50`}>
+                              <div className="sm:ml-auto w-full sm:w-[164px] flex flex-col shrink-0 relative">
+                                <div className="flex items-center shadow-sm rounded-lg overflow-hidden group border border-gray-200 focus-within:ring-2 focus-within:ring-cyan-500/20 focus-within:border-cyan-500 transition-all">
+                                  <div className={`flex items-center justify-center w-12 h-9 bg-teal-50 border-r ${fieldErrors[`price_${c.code}`] ? 'border-red-300' : 'border-[#1ab3c8]/30'} transition-colors group-hover:bg-teal-100/50 shrink-0`}>
                                     <span className="text-sm font-bold text-[#1ab3c8]">
                                       {c.symbol}
                                     </span>
@@ -786,7 +789,7 @@ export default function PriceManagement() {
                                       if (typeof val === 'number' && val < 0) return;
                                       setCurrencyPrice(c.code, val);
                                     }}
-                                    className={`w-[132px] h-9 px-3 bg-white border ${fieldErrors[`price_${c.code}`] ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-200 focus:ring-cyan-500/20 focus:border-cyan-500'} text-sm focus:outline-none focus:ring-2 transition-all font-bold text-gray-800`}
+                                    className={`flex-1 h-9 px-3 bg-white border-0 text-sm focus:outline-none transition-all font-bold text-gray-800`}
                                   />
                                 </div>
                                 {fieldErrors[`price_${c.code}`] && (
@@ -799,9 +802,9 @@ export default function PriceManagement() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-start gap-4 pt-1">
+                    <div className="flex flex-col sm:flex-row items-start gap-4 pt-1">
                       {/* Left: User Price Entry */}
-                      <div className="flex-[0.4]">
+                      <div className="w-full sm:flex-[0.4]">
                         <label className="block text-xs font-medium text-gray-600 mb-2 ml-1">
                           Price <span className="text-red-500">*</span>
                         </label>
@@ -835,7 +838,7 @@ export default function PriceManagement() {
                       </div>
 
                       {/* Right: General Price Reference */}
-                      <div className="flex-[0.6]">
+                      <div className="w-full sm:flex-[0.6]">
                         <label className="block text-xs font-medium text-gray-600 mb-2 ml-1">
                           General price <span className="text-red-500">*</span>
                         </label>

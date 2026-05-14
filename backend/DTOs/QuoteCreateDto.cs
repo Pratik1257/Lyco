@@ -23,7 +23,6 @@ public class QuoteCreateDto
 
     public string? Sizetype { get; set; }
 
-    [Required]
     public string? Amount { get; set; }
 
     public string? Currency { get; set; }

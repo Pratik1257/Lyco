@@ -80,6 +80,10 @@ function Step1({ data, setData, countries, onNext }: any) {
   const [showPwd, setShowPwd] = useState(false);
   const [showCPwd, setShowCPwd] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
 
   const nameRegex = /^[a-zA-Z\s'-]*$/;
   const alphaNumRegex = /^[a-zA-Z0-9][a-zA-Z0-9._]*$/;
@@ -89,7 +93,13 @@ function Step1({ data, setData, countries, onNext }: any) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let { name, value } = e.target;
     if (['firstName', 'lastName', 'city', 'state'].includes(name)) value = value.replace(/[^a-zA-Z\s'-]/g, '');
-    if (name === 'username') value = value.replace(/[^a-zA-Z0-9._]/g, '');
+    if (name === 'username') {
+      value = value.replace(/[^a-zA-Z0-9._]/g, '');
+      setUsernameAvailable(null);
+    }
+    if (name === 'email') {
+      setEmailAvailable(null);
+    }
     if (name === 'company') value = value.replace(/[^a-zA-Z0-9\s&.,'-]/g, '');
     if (name === 'zipcode') value = value.replace(/[^0-9-]/g, '');
     setData((p: any) => ({ ...p, [name]: value }));
@@ -102,6 +112,42 @@ function Step1({ data, setData, countries, onNext }: any) {
       if (/^([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i.test(url)) {
         setData((p: any) => ({ ...p, website: `https://${url}` }));
       }
+    }
+  };
+
+  const handleUsernameBlur = async () => {
+    const val = data.username?.trim();
+    if (!val || val.length < 3) return;
+
+    try {
+      setIsCheckingUsername(true);
+      const { available } = await authApi.checkUsername(val);
+      setUsernameAvailable(available);
+      if (!available) {
+        setFieldErrors(prev => ({ ...prev, username: 'Username is already taken' }));
+      }
+    } catch (err) {
+      console.error('Failed to check username', err);
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    const val = data.email?.trim();
+    if (!val || !emailRegex.test(val)) return;
+
+    try {
+      setIsCheckingEmail(true);
+      const { available } = await authApi.checkEmail(val);
+      setEmailAvailable(available);
+      if (!available) {
+        setFieldErrors(prev => ({ ...prev, email: 'Email is already registered' }));
+      }
+    } catch (err) {
+      console.error('Failed to check email', err);
+    } finally {
+      setIsCheckingEmail(false);
     }
   };
 
@@ -120,6 +166,7 @@ function Step1({ data, setData, countries, onNext }: any) {
 
     if (!data.email) errors.email = 'Email is required';
     else if (!emailRegex.test(data.email) || data.email.length > 150) errors.email = 'Please enter a valid email';
+    else if (emailAvailable === false) errors.email = 'Email is already registered';
     else { const domain = data.email.split('@')[1]?.toLowerCase(); if (domainMap[domain]) errors.email = `Typo detected? Did you mean @${domainMap[domain]}?`; }
 
     if (!data.telephone || data.telephone === '+') errors.telephone = 'Telephone is required';
@@ -130,6 +177,7 @@ function Step1({ data, setData, countries, onNext }: any) {
     else if (data.username.length > 50) errors.username = 'Username cannot exceed 50 characters';
     else if (!alphaNumRegex.test(data.username)) errors.username = 'Only letters, numbers, dots, underscores allowed';
     else if (data.username.includes('__')) errors.username = 'Double underscores are not allowed';
+    else if (usernameAvailable === false) errors.username = 'Username is already taken';
 
     if (!data.password) errors.password = 'requirements_not_met';
     else { const p = data.password; if (!(p.length >= 8 && p.length <= 100 && /[A-Z]/.test(p) && /[0-9]/.test(p) && /[@#$%^&*]/.test(p))) errors.password = 'requirements_not_met'; }
@@ -182,7 +230,45 @@ function Step1({ data, setData, countries, onNext }: any) {
     return <p className="text-[11px] font-medium text-red-500 mt-1 animate-in fade-in duration-200">{fieldErrors[name]}</p>;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // If username hasn't been checked yet, check it now
+    if (data.username && data.username.length >= 3 && usernameAvailable === null) {
+      setIsCheckingUsername(true);
+      try {
+        const { available } = await authApi.checkUsername(data.username);
+        setUsernameAvailable(available);
+        if (!available) {
+          setFieldErrors(prev => ({ ...prev, username: 'Username is already taken' }));
+          toast.error('Username is already taken');
+          setIsCheckingUsername(false);
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }
+
+    // If email hasn't been checked yet, check it now
+    if (data.email && emailRegex.test(data.email) && emailAvailable === null) {
+      setIsCheckingEmail(true);
+      try {
+        const { available } = await authApi.checkEmail(data.email);
+        setEmailAvailable(available);
+        if (!available) {
+          setFieldErrors(prev => ({ ...prev, email: 'Email is already registered' }));
+          toast.error('Email is already registered');
+          setIsCheckingEmail(false);
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsCheckingEmail(false);
+      }
+    }
+
     if (!validateStep1()) {
       toast.error('Please fix the errors before continuing.');
       return;
@@ -198,7 +284,7 @@ function Step1({ data, setData, countries, onNext }: any) {
       <p className="text-slate-400 text-xs mb-1">Step 1 of 4</p>
       <ProgressBar step={1} />
 
-      <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
         <div>
           <label className={labelStyle}>First Name <span className="text-red-500">*</span></label>
           <div className="relative"><User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -230,7 +316,17 @@ function Step1({ data, setData, countries, onNext }: any) {
         <div>
           <label className={labelStyle}>Email Address <span className="text-red-500">*</span></label>
           <div className="relative"><Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input name="email" className={inpCls('email')} type="email" placeholder="name@domain.com" value={data.email} onChange={handleInputChange} />
+            <input name="email" className={inpCls('email')} type="email" placeholder="name@domain.com" value={data.email} onChange={handleInputChange} onBlur={handleEmailBlur} />
+            {isCheckingEmail && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            {!isCheckingEmail && emailAvailable === true && emailRegex.test(data.email) && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <CheckCircle size={13} className="text-emerald-500" />
+              </div>
+            )}
           </div>
           {renderError('email')}
         </div>
@@ -256,7 +352,17 @@ function Step1({ data, setData, countries, onNext }: any) {
         <div>
           <label className={labelStyle}>Username <span className="text-red-500">*</span></label>
           <div className="relative"><User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input name="username" className={inpCls('username')} placeholder="m2web" value={data.username} onChange={handleInputChange} />
+            <input name="username" className={inpCls('username')} placeholder="m2web" value={data.username} onChange={handleInputChange} onBlur={handleUsernameBlur} />
+            {isCheckingUsername && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            {!isCheckingUsername && usernameAvailable === true && data.username.length >= 3 && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <CheckCircle size={13} className="text-emerald-500" />
+              </div>
+            )}
           </div>
           {renderError('username')}
         </div>
@@ -264,7 +370,7 @@ function Step1({ data, setData, countries, onNext }: any) {
           <label className={labelStyle}>Password <span className="text-red-500">*</span></label>
           <div className="relative"><Lock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input name="password" className={`${inpCls('password')} pr-8`} type={showPwd ? 'text' : 'password'} placeholder="••••••••" value={data.password} onChange={handleInputChange} />
-            <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
               {showPwd ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
           </div>
@@ -274,7 +380,7 @@ function Step1({ data, setData, countries, onNext }: any) {
           <label className={labelStyle}>Confirm Password <span className="text-red-500">*</span></label>
           <div className="relative"><Lock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input name="confirmPassword" className={`${inpCls('confirmPassword')} pr-8`} type={showCPwd ? 'text' : 'password'} placeholder="••••••••" value={data.confirmPassword} onChange={handleInputChange} />
-            <button type="button" onClick={() => setShowCPwd(!showCPwd)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <button type="button" onClick={() => setShowCPwd(!showCPwd)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
               {showCPwd ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
           </div>
@@ -329,19 +435,19 @@ function Step1({ data, setData, countries, onNext }: any) {
               <option value="USD">USD</option>
               <option value="GBP">GBP</option>
               <option value="EUR">EUR</option>
-              <option value="INR">INR</option>
+              <option value="AUD">AUD</option>
             </select>
           </div>
         </div>
-        <div className="col-span-2 mt-5 px-4 bg-cyan-50/50 rounded-lg border border-cyan-100 flex items-center gap-3 transition-colors hover:bg-cyan-50 h-[38px]">
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2 mt-5 px-4 bg-cyan-50/50 rounded-lg border border-cyan-100 flex items-center gap-3 transition-colors hover:bg-cyan-50 h-[38px]">
           <input type="checkbox" id="sameAsBilling" className="w-4 h-4 rounded border-cyan-300 text-cyan-500 focus:ring-cyan-500/30 transition-all cursor-pointer" checked={data.useSameAddressForBilling || false} onChange={e => setData((p: any) => ({ ...p, useSameAddressForBilling: e.target.checked }))} />
           <label htmlFor="sameAsBilling" className="text-xs font-semibold text-slate-700 cursor-pointer select-none pt-[1px]">Use this address for <span className="text-cyan-700 font-bold">Billing Setup</span></label>
         </div>
       </div>
 
-      <div className="mt-5 flex justify-between">
-        <button onClick={() => window.history.back()} className="px-6 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all">Go to Login</button>
-        <button onClick={handleNext} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-lg transition-all shadow-md shadow-cyan-200 active:scale-[0.98]">Go to Next Step</button>
+      <div className="mt-5 flex justify-between gap-3">
+        <button onClick={() => window.history.back()} className="px-6 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all cursor-pointer">Go to Login</button>
+        <button onClick={handleNext} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-lg transition-all shadow-md shadow-cyan-200 active:scale-[0.98] cursor-pointer">Go to Next Step</button>
       </div>
     </div>
   );
@@ -350,20 +456,62 @@ function Step1({ data, setData, countries, onNext }: any) {
 
 
 // ── Step 2: Verify Email ─────────────────────────────────────────────────────
-function Step2VerifyEmail({ data, onNext, onBack }: any) {
+function Step2VerifyEmail({ data, onNext, onBack, cooldown, setCooldown }: any) {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [expectedCode, setExpectedCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const hasSentRef = useRef(false);
 
-  // Simulate sending an email and print the code to the console for testing
+  // Timer logic
   useEffect(() => {
-    const testCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setExpectedCode(testCode);
-    console.log('----------------------------------------');
-    console.log(`📧 NEW EMAIL to ${data.email || 'your email'}`);
-    console.log(`Your Lyco Verification Code is: ${testCode}`);
-    console.log('----------------------------------------');
-  }, [data.email]);
+    let timer: any;
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Send verification email
+  useEffect(() => {
+    if (hasSentRef.current) return;
+
+    const now = Date.now();
+    const isSameEmail = cooldown?.email === data.email;
+    const elapsed = isSameEmail ? Math.floor((now - cooldown.sentAt) / 1000) : 999;
+
+    // If same email and within 30s, just restore the timer
+    if (isSameEmail && elapsed < 30) {
+      setCountdown(30 - elapsed);
+      hasSentRef.current = true;
+      return;
+    }
+
+    // Otherwise, send new email
+    if (data.email) {
+      hasSentRef.current = true;
+      setCountdown(30);
+      setCooldown({ email: data.email, sentAt: now });
+
+      authApi.sendVerification(data.email)
+        .then((res) => {
+          if (res.code) {
+            setExpectedCode(res.code);
+            console.log('----------------------------------------');
+            console.log(`📧 VERIFICATION SENT to ${data.email}`);
+            console.log(`Code: ${res.code}`);
+            console.log('----------------------------------------');
+          }
+        })
+        .catch(err => {
+          hasSentRef.current = false;
+          console.error('Failed to send verification email', err);
+          toast.error('Failed to initiate email verification');
+        });
+    }
+  }, [data.email, cooldown, setCooldown]);
 
 
 
@@ -372,7 +520,7 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
     const newCode = [...code];
     newCode[index] = value.slice(-1);
     setCode(newCode);
-    
+
     // Auto-verify when 6th digit is entered
     if (value && index === 5) {
       const fullCode = newCode.join('');
@@ -405,7 +553,7 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
         if (i < 6) newCode[i] = char;
       });
       setCode(newCode);
-      
+
       if (pastedData.length === 6) {
         if (pastedData === expectedCode) {
           toast.success('Email verified successfully!');
@@ -423,16 +571,30 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
   };
 
   const handleResend = () => {
-    const newTestCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setExpectedCode(newTestCode);
+    if (countdown > 0) return;
+
+    setCountdown(30);
+    setCooldown({ email: data.email, sentAt: Date.now() });
     setCode(['', '', '', '', '', '']);
     if (inputRefs.current[0]) inputRefs.current[0].focus();
-    
-    console.log('----------------------------------------');
-    console.log(`📧 RESENDING EMAIL to ${data.email || 'your email'}`);
-    console.log(`Your NEW Lyco Verification Code is: ${newTestCode}`);
-    console.log('----------------------------------------');
-    toast.success('A new code has been sent to your email');
+
+    // Call backend
+    if (data.email) {
+      authApi.sendVerification(data.email)
+        .then((res) => {
+          if (res.code) {
+            setExpectedCode(res.code);
+            console.log('----------------------------------------');
+            console.log(`📧 RESENDING EMAIL to ${data.email}`);
+            console.log(`Your NEW Lyco Verification Code is: ${res.code}`);
+            console.log('----------------------------------------');
+            toast.success('A new code has been sent to your email');
+          }
+        })
+        .catch(() => {
+          toast.error('Failed to resend code');
+        });
+    }
   };
 
   return (
@@ -440,7 +602,7 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
       <h1 className="text-xl font-black text-slate-900">Verify Email</h1>
       <p className="text-slate-400 text-xs mb-1">Step 2 of 4</p>
       <ProgressBar step={2} />
-      
+
       <div className="py-2 flex flex-col items-center justify-center text-center max-w-sm mx-auto animate-in fade-in zoom-in-95 duration-500">
         <div className="relative mb-4 mt-2">
           <div className="absolute inset-0 bg-cyan-200 rounded-full blur-xl opacity-50 animate-pulse"></div>
@@ -448,14 +610,14 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
             <Mail size={28} className="text-cyan-600 -rotate-3" strokeWidth={1.5} />
           </div>
         </div>
-        
+
         <h3 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Check your inbox</h3>
         <p className="text-xs text-slate-500 mb-6 leading-relaxed px-4">
-          We've sent a 6-digit security code to <br/>
+          We've sent a 6-digit security code to <br />
           <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md mt-1 inline-block">{data.email || 'your email address'}</span>
         </p>
-        
-        <div className="flex gap-2 mb-6 w-full justify-center" onPaste={handlePaste}>
+
+        <div className="flex gap-1.5 sm:gap-2 mb-6 w-full justify-center" onPaste={handlePaste}>
           {code.map((digit, idx) => (
             <input
               key={idx}
@@ -466,19 +628,27 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
               value={digit}
               onChange={e => handleChange(idx, e.target.value)}
               onKeyDown={e => handleKeyDown(idx, e)}
-              className="w-11 h-12 text-center text-xl font-black text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 focus:outline-none transition-all shadow-sm placeholder:text-slate-300"
+              className="w-9 sm:w-11 h-10 sm:h-12 text-center text-lg sm:text-xl font-black text-slate-800 bg-white border-2 border-slate-200 rounded-lg sm:rounded-xl focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 focus:outline-none transition-all shadow-sm placeholder:text-slate-300"
               placeholder="-"
             />
           ))}
         </div>
-        
+
         <div className="flex flex-col items-center gap-2">
           <p className="text-[11px] font-semibold text-slate-500">Didn't receive the code?</p>
           <div className="flex gap-4">
-            <button type="button" onClick={handleResend} className="text-xs font-bold text-cyan-600 hover:text-cyan-700 hover:underline underline-offset-4 transition-all">
-              Resend Code
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={countdown > 0}
+              className={`text-xs font-bold transition-all ${countdown > 0
+                  ? 'text-slate-400 cursor-not-allowed'
+                  : 'text-cyan-600 hover:text-cyan-700 hover:underline underline-offset-4 cursor-pointer'
+                }`}
+            >
+              Resend Code {countdown > 0 ? `(${countdown}s)` : ''}
             </button>
-            <button type="button" onClick={onBack} className="text-xs font-bold text-slate-500 hover:text-slate-700 hover:underline underline-offset-4 transition-all">
+            <button type="button" onClick={onBack} className="text-xs font-bold text-slate-500 hover:text-slate-700 hover:underline underline-offset-4 transition-all cursor-pointer">
               Change Email
             </button>
           </div>
@@ -492,6 +662,8 @@ function Step2VerifyEmail({ data, onNext, onBack }: any) {
 function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
   const [showCvv, setShowCvv] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isCheckingCard, setIsCheckingCard] = useState(false);
+  const [cardAvailable, setCardAvailable] = useState<boolean | null>(null);
 
   const validateLuhn = (number: string) => {
     let sum = 0, shouldDouble = false;
@@ -505,9 +677,20 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
 
   const handleCardInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let { name, value } = e.target;
-    if (name === 'cardNumber' || name === 'cvv') value = value.replace(/\D/g, '');
+
+    if (name === 'cardNumber') {
+      // Remove all non-digits
+      const raw = value.replace(/\D/g, '');
+      // Add space every 4 digits
+      value = raw.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+      setCardAvailable(null);
+    } else if (name === 'cvv') {
+      value = value.replace(/\D/g, '');
+    }
+
     if (['city', 'state'].includes(name)) value = value.replace(/[^a-zA-Z\s'-]/g, '');
     if (name === 'zipcode') value = value.replace(/[^0-9-]/g, '');
+
     setData((p: any) => ({ ...p, [name]: value }));
     if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
   };
@@ -515,14 +698,14 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value.replace(/\D/g, '');
     if (val.length > 2) val = val.slice(0, 2);
-    
+
     const num = parseInt(val);
     if (val.length === 1 && parseInt(val) > 1 && parseInt(val) <= 9) {
       val = '0' + val;
     } else if (val.length === 2 && (num < 1 || num > 12)) {
       return; // Block invalid month
     }
-    
+
     setData((p: any) => ({ ...p, expiryMonth: val }));
     if (fieldErrors.expiry) setFieldErrors(p => { const n = { ...p }; delete n.expiry; return n; });
   };
@@ -533,12 +716,31 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
     if (fieldErrors.expiry) setFieldErrors(p => { const n = { ...p }; delete n.expiry; return n; });
   };
 
+  const handleCardBlur = async () => {
+    const raw = (data.cardNumber || '').replace(/\s/g, '');
+    if (!raw || raw.length < 13) return;
+
+    try {
+      setIsCheckingCard(true);
+      const { available } = await authApi.checkCard(raw);
+      setCardAvailable(available);
+      if (!available) {
+        setFieldErrors(prev => ({ ...prev, cardNumber: 'This card is already registered' }));
+      }
+    } catch (err) {
+      console.error('Failed to check card', err);
+    } finally {
+      setIsCheckingCard(false);
+    }
+  };
+
   const validateBilling = () => {
     const errors: Record<string, string> = {};
     const cardNo = (data.cardNumber || '').replace(/\s/g, '');
     if (!cardNo) errors.cardNumber = 'Card number is required';
     else if (cardNo.length < 13 || cardNo.length > 19) errors.cardNumber = 'Card number must be 13-19 digits';
     else if (!validateLuhn(cardNo)) errors.cardNumber = 'Invalid card number';
+    else if (cardAvailable === false) errors.cardNumber = 'This card is already registered';
 
     if (!data.expiryMonth || !data.expiryYear) errors.expiry = 'Expiry date is required';
     else {
@@ -580,7 +782,26 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
 
   const inpCls = (name: string) => `${inp} ${fieldErrors[name] ? 'border-red-400 ring-2 ring-red-400/20' : ''}`;
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    const raw = (data.cardNumber || '').replace(/\s/g, '');
+    if (raw && raw.length >= 13 && cardAvailable === null) {
+      setIsCheckingCard(true);
+      try {
+        const { available } = await authApi.checkCard(raw);
+        setCardAvailable(available);
+        if (!available) {
+          setFieldErrors(prev => ({ ...prev, cardNumber: 'This card is already registered' }));
+          toast.error('This card is already registered');
+          setIsCheckingCard(false);
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsCheckingCard(false);
+      }
+    }
+
     if (!validateBilling()) { toast.error('Please fix the billing errors before continuing.'); return; }
     onNext();
   };
@@ -591,7 +812,7 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
       <p className="text-slate-400 text-xs mb-1">Step 3 of 4</p>
       <ProgressBar step={3} />
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelStyle}>Card Type <span className="text-red-500">*</span></label>
             <select className={inpFull} value={data.cardType} onChange={e => setData((p: any) => ({ ...p, cardType: e.target.value }))}>
@@ -601,7 +822,17 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
           <div>
             <label className={labelStyle}>Card Number <span className="text-red-500">*</span></label>
             <div className="relative"><CreditCard size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input name="cardNumber" maxLength={19} className={inpCls('cardNumber')} placeholder="4242 4242 4242 4242" value={data.cardNumber} onChange={handleCardInput} />
+              <input name="cardNumber" maxLength={19} className={inpCls('cardNumber')} placeholder="4242 4242 4242 4242" value={data.cardNumber} onChange={handleCardInput} onBlur={handleCardBlur} />
+              {isCheckingCard && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              {!isCheckingCard && cardAvailable === true && (data.cardNumber || '').replace(/\s/g, '').length >= 13 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <CheckCircle size={13} className="text-emerald-500" />
+                </div>
+              )}
             </div>
             {renderError('cardNumber')}
           </div>
@@ -618,7 +849,7 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
             <label className={labelStyle}>CVV <span className="text-red-500">*</span></label>
             <div className="relative">
               <input name="cvv" type={showCvv ? 'text' : 'password'} className={`${inpCls('cvv')} pr-8`} placeholder="•••" maxLength={4} value={data.cvv} onChange={handleCardInput} />
-              <button type="button" onClick={() => setShowCvv(!showCvv)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <button type="button" onClick={() => setShowCvv(!showCvv)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
                 {showCvv ? <EyeOff size={13} /> : <Eye size={13} />}
               </button>
             </div>
@@ -628,7 +859,7 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
 
         <div className="pt-2 border-t border-slate-100 mt-4">
           <p className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">Billing Address</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
             <div>
               <label className={labelStyle}>Address Line 1 <span className="text-red-500">*</span></label>
               <div className="relative"><MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -658,7 +889,7 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
             </div>
             <div>
               <label className={labelStyle}>Choose Country <span className="text-red-500">*</span></label>
-              <select className={`${inpFull} ${fieldErrors.countryId ? 'border-red-400' : ''}`} value={data.countryId || ''} onChange={e => { setData((p: any) => ({ ...p, countryId: e.target.value })); if (fieldErrors.countryId) setFieldErrors(p => { const n={...p}; delete n.countryId; return n; }); }}>
+              <select className={`${inpFull} ${fieldErrors.countryId ? 'border-red-400' : ''}`} value={data.countryId || ''} onChange={e => { setData((p: any) => ({ ...p, countryId: e.target.value })); if (fieldErrors.countryId) setFieldErrors(p => { const n = { ...p }; delete n.countryId; return n; }); }}>
                 <option value="">Select Country</option>
                 {countries?.map((c: Country) => (<option key={c.countryId} value={c.countryId}>{c.countryName}</option>))}
               </select>
@@ -674,9 +905,9 @@ function Step3Billing({ data, setData, countries, onNext, onBack }: any) {
           </div>
         </div>
       </div>
-      <div className="mt-8 flex items-center justify-between">
-        <button onClick={onBack} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all">Back</button>
-        <button onClick={handleNext} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-lg transition-all shadow-md shadow-cyan-200 active:scale-[0.98]">Review & Confirm</button>
+      <div className="mt-8 flex items-center justify-between gap-3">
+        <button onClick={onBack} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all cursor-pointer">Back</button>
+        <button onClick={handleNext} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-lg transition-all shadow-md shadow-cyan-200 active:scale-[0.98] cursor-pointer">Review & Confirm</button>
       </div>
     </div>
   );
@@ -687,9 +918,9 @@ function Step4Confirm({ account, billing, onBack, onSubmit }: any) {
   const [loading, setLoading] = useState(false);
 
   const Row = ({ label, value }: any) => (
-    <div className="flex justify-between py-1.5 border-b border-slate-50 last:border-0">
-      <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-xs font-semibold text-slate-800">{value || '—'}</span>
+    <div className="flex justify-between gap-4 py-1.5 border-b border-slate-50 last:border-0">
+      <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">{label}</span>
+      <span className="text-xs font-semibold text-slate-800 text-right break-words min-w-0">{value || '—'}</span>
     </div>
   );
 
@@ -713,7 +944,7 @@ function Step4Confirm({ account, billing, onBack, onSubmit }: any) {
         zipcode: account.zipcode,
         telephone: account.telephone,
         currency: account.currency,
-        
+
         // Billing/Card Details
         cardType: billing.cardType,
         cardNo: (billing.cardNumber || '').replace(/\s/g, ''),
@@ -747,7 +978,7 @@ function Step4Confirm({ account, billing, onBack, onSubmit }: any) {
       <p className="text-slate-400 text-xs mb-1">Step 4 of 4</p>
       <ProgressBar step={4} />
 
-      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-3">
         <div className="bg-slate-50 rounded-xl p-4">
           <p className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Account Information</p>
           <Row label="Name" value={`${account.firstName} ${account.lastName}`} />
@@ -773,9 +1004,9 @@ function Step4Confirm({ account, billing, onBack, onSubmit }: any) {
         </div>
       </div>
 
-      <div className="mt-8 flex items-center justify-between">
-        <button onClick={onBack} disabled={loading} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all">Back</button>
-        <button onClick={handleSubmit} disabled={loading} className="px-8 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-cyan-200 active:scale-[0.98] uppercase tracking-widest disabled:opacity-50">
+      <div className="mt-8 flex items-center justify-between gap-3">
+        <button onClick={onBack} disabled={loading} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all cursor-pointer disabled:cursor-not-allowed">Back</button>
+        <button onClick={handleSubmit} disabled={loading} className="px-8 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-cyan-200 active:scale-[0.98] uppercase tracking-widest disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
           {loading ? 'Processing...' : 'Complete Registration'}
         </button>
       </div>
@@ -784,7 +1015,7 @@ function Step4Confirm({ account, billing, onBack, onSubmit }: any) {
 }
 
 // ── Success Screen ────────────────────────────────────────────────────────────
-function SuccessScreen({ onDashboard, onLogin }: any) {
+function SuccessScreen({ onLogin }: any) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #f0fdf4 50%, #fafafa 75%, #f5f3ff 100%)' }}>
       <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col items-center text-center max-w-sm w-full">
@@ -792,12 +1023,9 @@ function SuccessScreen({ onDashboard, onLogin }: any) {
           <CheckCircle size={42} className="text-emerald-500" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 mb-2">Registration Successful!!</h2>
-        <p className="text-slate-400 text-sm mb-8">Your account has been created successfully.<br />You can now access your dashboard.</p>
-        <button onClick={onDashboard} className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-lg transition-all shadow-md shadow-cyan-200 mb-3 active:scale-[0.98]">
-          Go to Dashboard
-        </button>
-        <button onClick={onLogin} className="text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors">
-          Back to Login
+        <p className="text-slate-400 text-sm mb-8">Your account has been created successfully.<br />You can now sign in to your account.</p>
+        <button onClick={onLogin} className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-lg transition-all shadow-md shadow-cyan-200 active:scale-[0.98] cursor-pointer">
+          Go to Login
         </button>
       </div>
     </div>
@@ -810,6 +1038,9 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [success, setSuccess] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
+
+  // Persist email cooldown across step changes
+  const [emailCooldown, setEmailCooldown] = useState<{ email: string, sentAt: number } | null>(null);
 
   const [verifiedEmail, setVerifiedEmail] = useState('');
   const [account, setAccount] = useState({
@@ -837,10 +1068,10 @@ export default function RegisterPage() {
   if (success) return <SuccessScreen onDashboard={() => navigate('/')} onLogin={() => navigate('/login')} />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #f0fdf4 50%, #fafafa 75%, #f5f3ff 100%)' }}>
-      <div className="flex w-full max-w-5xl min-h-[550px] rounded-2xl shadow-2xl overflow-hidden bg-white">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6" style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #f0fdf4 50%, #fafafa 75%, #f5f3ff 100%)' }}>
+      <div className="flex w-full max-w-5xl sm:min-h-[550px] rounded-2xl shadow-2xl overflow-hidden bg-white">
         <Sidebar step={step} />
-        <div className="flex-1 bg-white px-8 py-6 overflow-y-auto max-h-[90vh] flex flex-col justify-center">
+        <div className="flex-1 bg-white px-5 sm:px-8 py-6 sm:overflow-y-auto sm:max-h-[90vh] flex flex-col">
           {step === 1 && <Step1 data={account} setData={setAccount} countries={countries} onNext={() => {
             if (account.useSameAddressForBilling) {
               setBilling(prev => ({
@@ -859,10 +1090,18 @@ export default function RegisterPage() {
               setStep(2);
             }
           }} />}
-          {step === 2 && <Step2VerifyEmail data={account} onNext={() => {
-            setVerifiedEmail(account.email);
-            setStep(3);
-          }} onBack={() => setStep(1)} />}
+          {step === 2 && (
+            <Step2VerifyEmail
+              data={account}
+              onNext={() => {
+                setVerifiedEmail(account.email);
+                setStep(3);
+              }}
+              onBack={() => setStep(1)}
+              cooldown={emailCooldown}
+              setCooldown={setEmailCooldown}
+            />
+          )}
           {step === 3 && <Step3Billing data={billing} setData={setBilling} countries={countries} onNext={() => setStep(4)} onBack={() => {
             if (account.email === verifiedEmail) {
               setStep(1);

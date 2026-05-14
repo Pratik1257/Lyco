@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Lyco.Api.Services;
 using Lyco.Api.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lyco.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IPriceService _priceService;

@@ -14,6 +14,7 @@ public class InvoiceDetailDto
     public string Email { get; set; } = "";
     public string CustomerId { get; set; } = "";
     public string TotalAmount { get; set; } = "";
+    public string Currency { get; set; } = "USD";
     public List<InvoiceLineItemDto> LineItems { get; set; } = new();
 }
 

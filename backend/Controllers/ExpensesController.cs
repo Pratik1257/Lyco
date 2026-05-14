@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Lyco.Api.DTOs;
 using Lyco.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lyco.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ExpensesController : ControllerBase
 {
     private readonly IExpenseService _service;

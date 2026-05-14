@@ -117,4 +117,14 @@ export const paymentsApi = {
     const response = await apiClient.put(`../admin/api/Payments/paypal-config/${id}`, { email });
     return response.data;
   },
+
+  async getCheckoutDetails(guid: string): Promise<any> {
+    const response = await apiClient.get(`Payments/checkout-details/${guid}`);
+    return response.data;
+  },
+
+  async confirmFromRedirect(guid: string): Promise<any> {
+    const response = await apiClient.get(`Payments/confirm-redirect?txguid=${guid}`);
+    return response.data;
+  },
 };

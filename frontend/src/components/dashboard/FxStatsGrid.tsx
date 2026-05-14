@@ -1,5 +1,6 @@
 import { CreditCard, Users, ShoppingCart, Clock, BarChart2, FileText, DollarSign, CheckCircle, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import type { DashboardData } from '../../types/dashboard';
 import CountUp from '../ui/CountUp';
 
@@ -12,8 +13,13 @@ function GlowCard({ children, gradient }: { children: React.ReactNode; gradient:
   );
 }
 
-export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true }: { data: DashboardData, timeframe: string, currency: string, isAdmin?: boolean }) {
-  const navigate = useNavigate();
+export default function FxStatsGrid({ data, timeframe, currency, isAdmin: isAdminProp }: { data: DashboardData, timeframe: string, currency: string, isAdmin?: boolean }) {
+
+  const location = useLocation();
+  const { user } = useAuth();
+
+  // Use prop if provided, else check if current URL is admin, else fallback to user type
+  const isAdmin = isAdminProp !== undefined ? isAdminProp : (location.pathname.startsWith('/admin') || user?.userType === 'Admin');
   const { pendingPayments, totalUsers, totalOrders, inProcessOrders, monthOrders, monthInvoices, monthOrderValue, pendingMonth } = data;
   const labelPrefix = timeframe === 'Month' ? 'Month' : timeframe === 'Week' ? 'Week' : 'Year';
 
@@ -62,8 +68,9 @@ export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true 
       {/* Row 1 */}
       <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
         {/* Pending Payments */}
-        <div className="relative overflow-hidden rounded-2xl p-5 col-span-1 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group"
-          onClick={() => navigate(isAdmin ? '/admin/orders/history?paymentStatus=Pending' : '/orders/history?paymentStatus=Pending')}
+        <Link
+          to={isAdmin ? '/admin/orders/history?paymentStatus=Pending' : '/orders/history?paymentStatus=Pending'}
+          className="relative overflow-hidden rounded-2xl p-5 col-span-1 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group block"
           style={{ background: 'linear-gradient(135deg,#ff6b35 0%,#e05555 50%,#c0392b 100%)' }}>
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-xl" />
           <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-lg" />
@@ -76,49 +83,49 @@ export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true 
                 Needs attention
               </span>
             </div>
-            <p className="text-3xl font-black text-white tracking-tight"><CountUp id="pending-payments" prefix={data.currencySymbol} end={pendingPayments.amount} decimals={0} /></p>
+            <p className="text-3xl font-black text-white tracking-tight"><CountUp id="pending-payments" prefix={data.currencySymbol} end={pendingPayments.amount} decimals={Number(pendingPayments.amount) % 1 === 0 ? 0 : 2} /></p>
             <p className="text-white/80 text-sm font-semibold mt-1">Pending Payments</p>
             <p className="text-white/50 text-xs mt-0.5">Across {pendingPayments.openOrders} open orders</p>
           </div>
-        </div>
+        </Link>
 
         {/* Total Users - Admin Only */}
         {isAdmin && (
-          <div onClick={() => navigate('/admin/customers/summary')} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+          <Link to="/admin/customers/summary" className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 block">
             <GlowCard gradient="bg-gradient-to-br from-sky-50 to-transparent">
               <div className="flex items-start justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-200">
                   <Users size={18} className="text-white" />
                 </div>
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
-                  <TrendingUp size={9}/> {formatChange(totalUsers.changePercent)}
+                  <TrendingUp size={9} /> {formatChange(totalUsers.changePercent)}
                 </span>
               </div>
               <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp id="total-users" end={totalUsers.count} /></p>
               <p className="text-sm text-gray-400 mt-1">Total Users</p>
             </GlowCard>
-          </div>
+          </Link>
         )}
 
         {/* Total Orders */}
-        <div onClick={() => navigate(isAdmin ? `/admin/orders/history?currency=${currency}` : `/orders/history?currency=${currency}`)} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+        <Link to={isAdmin ? `/admin/orders/history?currency=${currency}` : `/orders/history?currency=${currency}`} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 block">
           <GlowCard gradient="bg-gradient-to-br from-violet-50 to-transparent">
             <div className="flex items-start justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
                 <ShoppingCart size={18} className="text-white" />
               </div>
               <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
-                <TrendingUp size={9}/> {formatChange(totalOrders.changePercent)}
+                <TrendingUp size={9} /> {formatChange(totalOrders.changePercent)}
               </span>
             </div>
             <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp id="total-orders" end={totalOrders.count} /></p>
             <p className="text-sm text-gray-400 mt-1">Total Orders</p>
           </GlowCard>
-        </div>
+        </Link>
 
         {/* In-Process - Promoted for Client */}
         {!isAdmin && (
-          <div onClick={() => navigate(`/orders/history?status=In Process&currency=${currency}`)} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+          <Link to={`/orders/history?status=In Process&currency=${currency}`} className="cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 block">
             <GlowCard gradient="bg-gradient-to-br from-cyan-50 to-transparent">
               <div className="flex items-start justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-200">
@@ -131,7 +138,7 @@ export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true 
               <p className="text-3xl font-black text-gray-800 tracking-tight"><CountUp id="in-process" end={inProcessOrders} /></p>
               <p className="text-sm text-gray-400 mt-1">In-Process Orders</p>
             </GlowCard>
-          </div>
+          </Link>
         )}
       </div>
 
@@ -142,12 +149,12 @@ export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true 
             { label: 'In-Process', value: <CountUp id="metric-in-process" end={inProcessOrders} />, badge: 'Active', icon: Clock, from: 'from-cyan-400', to: 'to-teal-500', shadow: 'shadow-cyan-200', change: null, path: `/admin/orders/history?status=In Process&currency=${currency}` },
             { label: `${labelPrefix} Orders`, value: <CountUp id="metric-month-orders" end={monthOrders.count} />, badge: null, icon: BarChart2, from: 'from-blue-400', to: 'to-indigo-500', shadow: 'shadow-blue-200', change: formatChange(monthOrders.changePercent), path: `/admin/orders/history?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
             { label: `${labelPrefix} Invoices`, value: <CountUp id="metric-month-invoices" end={monthInvoices.count} />, badge: null, icon: FileText, from: 'from-purple-400', to: 'to-pink-500', shadow: 'shadow-purple-200', change: formatChange(monthInvoices.changePercent), path: `/admin/invoices/summary?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
-            { label: `${labelPrefix} Value`, value: <CountUp id="metric-month-value" prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={0} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: formatChange(monthOrderValue.changePercent), path: `/admin/orders/history?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
-            { label: `Pending ${labelPrefix}`, value: <CountUp id="metric-pending-month" prefix={data.currencySymbol} end={pendingMonth} decimals={2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null, path: `/admin/orders/history?paymentStatus=Pending&startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
+            { label: `${labelPrefix} Value`, value: <CountUp id="metric-month-value" prefix={data.currencySymbol} end={monthOrderValue.amount} decimals={Number(monthOrderValue.amount) % 1 === 0 ? 0 : 2} />, badge: null, icon: DollarSign, from: 'from-emerald-400', to: 'to-teal-500', shadow: 'shadow-emerald-200', change: formatChange(monthOrderValue.changePercent), path: `/admin/orders/history?startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
+            { label: `Pending ${labelPrefix}`, value: <CountUp id="metric-pending-month" prefix={data.currencySymbol} end={pendingMonth} decimals={Number(pendingMonth) % 1 === 0 ? 0 : 2} />, badge: 'Cleared', icon: CheckCircle, from: 'from-green-400', to: 'to-emerald-500', shadow: 'shadow-green-200', change: null, path: `/admin/orders/history?paymentStatus=Pending&startDate=${firstDay}&endDate=${lastDay}&timeframe=This ${labelPrefix}&currency=${currency}` },
           ].map((m) => (
-            <div key={m.label} 
-              onClick={() => navigate(m.path)}
-              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group">
+            <Link key={m.label}
+              to={m.path}
+              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group block">
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.from} ${m.to} flex items-center justify-center shadow-lg ${m.shadow}`}>
                   <m.icon size={15} className="text-white" />
@@ -165,7 +172,7 @@ export default function FxStatsGrid({ data, timeframe, currency, isAdmin = true 
               </div>
               <p className="text-xl font-black text-gray-800">{m.value}</p>
               <p className="text-xs text-gray-400 mt-0.5">{m.label}</p>
-            </div>
+            </Link>
           ))}
         </div>
       )}

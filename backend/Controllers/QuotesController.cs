@@ -3,20 +3,25 @@ using Microsoft.EntityFrameworkCore;
 using Lyco.Api.Data;
 using Lyco.Api.Models;
 using Lyco.Api.DTOs;
+using Lyco.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lyco.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class QuotesController : ControllerBase
 {
     private readonly LycoDbContext _context;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailService _email;
 
-    public QuotesController(LycoDbContext context, IWebHostEnvironment env)
+    public QuotesController(LycoDbContext context, IWebHostEnvironment env, IEmailService email)
     {
         _context = context;
         _env = env;
+        _email = email;
     }
 
     [HttpGet]
@@ -134,6 +139,7 @@ public class QuotesController : ControllerBase
             quote.Currency,
             quote.Email,
             quote.UniqueNo,
+            UserId = user?.UserId,
             quote.ServiceId,
             quote.QuoteType,
             quote.ImageUrl,
@@ -173,6 +179,22 @@ public class QuotesController : ControllerBase
         if (files != null && files.Count > 0)
         {
             await SaveFilesAsync(quote.QuoteNo ?? "", files);
+        }
+
+        // 11.4 — Fire quote-received email to customer (mirrors RequestQuote.aspx.cs)
+        if (!string.IsNullOrWhiteSpace(quote.Email))
+        {
+            var svc = await _context.ServiceMsts.FirstOrDefaultAsync(s => s.ServiceId == quote.ServiceId);
+            _ = _email.SendQuoteReceivedAsync(
+                quote.Email,
+                quote.QuoteNo ?? "",
+                quote.WorkTitle ?? "",
+                svc?.ServiceName ?? "",
+                quote.Size ?? "",
+                quote.Sizetype ?? "",
+                quote.FileFormat ?? "",
+                quote.Instructions ?? ""
+            );
         }
 
         return Ok(quote);
@@ -274,17 +296,26 @@ public class QuotesController : ControllerBase
     }
 
     [HttpPost("{id}/convert")]
-    public async Task<IActionResult> ConvertToOrder(long id)
+    public async Task<IActionResult> ConvertToOrder(long id, [FromBody] ConvertQuoteDto? dto)
     {
         var quote = await _context.Quotes.FindAsync(id);
         if (quote == null) return NotFound();
+
+        // Use rate from admin input if provided, otherwise fall back to stored quote amount
+        var finalAmount = dto?.Amount ?? quote.Amount;
+        var finalCurrency = dto?.Currency ?? quote.Currency;
+
+        // Guard: Cannot convert without a rate
+        if (string.IsNullOrWhiteSpace(finalAmount) || finalAmount == "0" || finalAmount == "0.00")
+        {
+            return BadRequest(new { message = "A rate must be set before converting this quote to an order." });
+        }
 
         // Check if an order with this number already exists (without QT-)
         var orderNo = quote.QuoteNo?.Replace("QT-", "") ?? "";
         var orderExists = await _context.OrderDetails.AnyAsync(o => o.OrderNo == orderNo);
         if (orderExists)
         {
-            // If it exists, it might be a collision or already converted
             return BadRequest(new { message = "An order with this number already exists. It may have been converted already." });
         }
 
@@ -303,14 +334,14 @@ public class QuotesController : ControllerBase
             FileFormat = quote.FileFormat,
             Size = quote.Size,
             Sizetype = quote.Sizetype,
-            Amount = quote.Amount,
-            Currency = quote.Currency,
+            Amount = finalAmount,
+            Currency = finalCurrency,
             Email = quote.Email,
             OrderStatus = "In Process",
-            OrderState = "New",           // BUG-Q2 fix
-            PaymentStatus = "Pending",    // BUG-Q1 fix
-            Ordertype = "Order",          // Ensure legacy compatibility
-            Orderuq = orderuq             // BUG-Q3 fix
+            OrderState = "New",
+            PaymentStatus = "Pending",
+            Ordertype = "Order",
+            Orderuq = orderuq
         };
 
         _context.OrderDetails.Add(order);
@@ -327,7 +358,7 @@ public class QuotesController : ControllerBase
             file.LastModifieddate = DateTime.Now;
         }
 
-        // Preserve quote record but mark as Order
+        // Preserve quote record but mark as converted
         quote.QuoteType = "Order";
 
         await _context.SaveChangesAsync();

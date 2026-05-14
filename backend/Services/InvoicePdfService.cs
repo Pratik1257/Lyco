@@ -117,6 +117,8 @@ public class InvoicePdfService : IInvoicePdfService
 
                         // Data rows
                         var total = 0m;
+                        var symbol = GetCurrencySymbol(invoice.Currency);
+
                         foreach (var item in invoice.LineItems)
                         {
                             decimal.TryParse(item.Amount, out var amt);
@@ -129,14 +131,14 @@ public class InvoicePdfService : IInvoicePdfService
                             table.Cell().Element(BodyCell).Text(item.OrderDate.HasValue
                                 ? item.OrderDate.Value.ToString("MM/dd/yyyy") : "").FontSize(9);
                             table.Cell().Element(BodyCell).Text(item.Description).FontSize(9);
-                            table.Cell().Element(BodyCell).Text($"£{amt:F2}").FontSize(9);
+                            table.Cell().Element(BodyCell).Text($"{symbol}{amt:F2}").FontSize(9);
                         }
 
                         // Grand Total row
                         table.Cell().ColumnSpan(3).Padding(5).AlignRight()
                             .Text("GRAND TOTAL").Bold().FontSize(9);
                         table.Cell().Background("#EEEEEE").Padding(5).AlignCenter()
-                            .Text($"£{total:F2}").Bold().FontSize(9);
+                            .Text($"{symbol}{total:F2}").Bold().FontSize(9);
                     });
 
                     col.Item().PaddingTop(14);
@@ -179,5 +181,18 @@ public class InvoicePdfService : IInvoicePdfService
         });
 
         return document.GeneratePdf();
+    }
+
+    private static string GetCurrencySymbol(string currencyCode)
+    {
+        return (currencyCode?.ToUpper()) switch
+        {
+            "GBP" => "£",
+            "EUR" => "€",
+            "INR" => "₹",
+            "AUD" => "A$",
+            "CAD" => "C$",
+            _ => "$"
+        };
     }
 }

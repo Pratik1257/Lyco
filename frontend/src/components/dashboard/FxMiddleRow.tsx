@@ -79,8 +79,8 @@ export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardD
         <div className="space-y-4">
           {[
             { label: 'Completed', ...data.orderStatus.completed, colors: 'from-emerald-400 to-teal-500', path: isAdmin ? '/admin/orders/history?status=Completed' : '/orders/history?status=Completed' },
-            { label: 'New Orders', ...data.orderStatus.newOrders, colors: 'from-blue-400 to-cyan-500', path: isAdmin ? '/admin/orders/history' : '/orders/history' },
-            { label: 'Pending', ...data.orderStatus.pending, colors: 'from-amber-400 to-orange-500', path: isAdmin ? '/admin/orders/history' : '/orders/history' },
+            { label: 'Invoiced', ...data.orderStatus.newOrders, colors: 'from-purple-400 to-indigo-500', path: isAdmin ? '/admin/orders/history?status=Invoiced' : '/orders/history?status=Invoiced' },
+            { label: 'Cancelled', ...data.orderStatus.pending, colors: 'from-rose-400 to-red-500', path: isAdmin ? '/admin/orders/history?status=Cancelled' : '/orders/history?status=Cancelled' },
             { label: 'In-Process', ...data.orderStatus.inProcess, colors: 'from-cyan-400 to-teal-500', path: isAdmin ? '/admin/orders/history?status=In Process' : '/orders/history?status=In Process' },
           ].map((s) => (
             <div key={s.label} onClick={(e) => { e.stopPropagation(); navigate(s.path); }}>
@@ -104,8 +104,8 @@ export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardD
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden flex gap-0.5">
             {[
               { label: 'Completed', ...data.orderStatus.completed, colors: 'from-emerald-400 to-teal-500' },
-              { label: 'New Orders', ...data.orderStatus.newOrders, colors: 'from-blue-400 to-cyan-500' },
-              { label: 'Pending', ...data.orderStatus.pending, colors: 'from-amber-400 to-orange-500' },
+              { label: 'Invoiced', ...data.orderStatus.newOrders, colors: 'from-purple-400 to-indigo-500' },
+              { label: 'Cancelled', ...data.orderStatus.pending, colors: 'from-rose-400 to-red-500' },
               { label: 'In-Process', ...data.orderStatus.inProcess, colors: 'from-cyan-400 to-teal-500' },
             ].map((s, i) => (
               <div key={i} className={`h-full rounded-full bg-gradient-to-r ${s.colors}`} style={{ width: `${s.percent}%` }} />
@@ -125,9 +125,9 @@ export default function FxMiddleRow({ data, isAdmin = true }: { data: DashboardD
             View All <ArrowUpRight size={12} />
           </Link>
         </div>
-        <div className="space-y-3">
-          {data.newQuoteRequests.map((q) => (
-            <div key={q.id} className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-50 last:border-0">
+        <div className="space-y-1">
+          {data.newQuoteRequests.slice(0, 4).map((q) => (
+            <div key={q.id} className="flex items-center justify-between gap-3 py-1 border-b border-gray-50 last:border-0">
               <div className="flex-1 min-w-0">
                 <span className="text-[10px] font-mono font-bold text-[#0891b2] bg-gradient-to-r from-cyan-50 to-sky-50 border border-cyan-100 px-1.5 py-0.5 rounded-md inline-block mb-0.5">
                   {q.id}

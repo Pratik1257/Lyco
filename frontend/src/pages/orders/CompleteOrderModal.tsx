@@ -59,7 +59,8 @@ export default function CompleteOrderModal({ isOpen, onClose, order }: CompleteO
     }
     const rate = Number(order.amount);
     const count = Number(stitches);
-    return ((count / 1000) * rate).toFixed(2);
+    const amount = (count / 1000) * rate;
+    return amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
   }, [isDigitizing, stitches, order?.amount]);
 
   // Mutation

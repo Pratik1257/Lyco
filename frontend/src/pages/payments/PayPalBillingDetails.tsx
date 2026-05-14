@@ -143,7 +143,7 @@ export default function PayPalBillingDetails() {
                                 <Button
                                   onClick={handleSave}
                                   disabled={updateMutation.isPending}
-                                  className="h-10 px-5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-[11px] uppercase tracking-widest rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
+                                  className="h-10 px-5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-[11px] uppercase tracking-widest rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 cursor-pointer"
                                   variant="unstyled"
                                 >
                                   {updateMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
@@ -152,7 +152,7 @@ export default function PayPalBillingDetails() {
                                 <Button
                                   onClick={() => setEditingId(null)}
                                   disabled={updateMutation.isPending}
-                                  className="h-10 px-4 bg-white border border-slate-200 text-slate-400 hover:text-slate-600 font-black text-[11px] uppercase tracking-widest rounded-xl"
+                                  className="h-10 px-4 bg-white border border-slate-200 text-slate-400 hover:text-slate-600 font-black text-[11px] uppercase tracking-widest rounded-xl cursor-pointer"
                                   variant="unstyled"
                                 >
                                   <X size={16} />
@@ -162,7 +162,7 @@ export default function PayPalBillingDetails() {
                               <Button
                                 variant="ghost-cyan"
                                 size="icon"
-                                className="w-8 h-8 rounded-lg hover:bg-cyan-50 text-cyan-600"
+                                className="w-8 h-8 rounded-lg hover:bg-cyan-50 text-cyan-600 cursor-pointer"
                                 onClick={() => handleEdit(config)}
                                 title="Edit Configuration"
                               >

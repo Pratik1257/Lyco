@@ -339,16 +339,16 @@ export default function PaymentSummary() {
                       )}
                     </TableCell>
                     <TableCell className="text-center whitespace-nowrap">
-                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold transition-all ${getOrderStatusStyle(order.orderStatus || order.OrderStatus)}`}>
+                      <div className={`flex items-center justify-center gap-1 w-[100px] py-1 mx-auto rounded-lg border text-[11px] font-bold transition-all ${getOrderStatusStyle(order.orderStatus || order.OrderStatus)}`}>
                         {getOrderStatusIcon(order.orderStatus || order.OrderStatus)}
                         {order.orderStatus || order.OrderStatus}
                       </div>
                     </TableCell>
                     <TableCell className="text-center pr-6 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getPaymentStatusStyle(order.paymentStatus || order.PaymentStatus)}`}>
+                      <div className={`flex items-center justify-center gap-1 w-[100px] py-1 mx-auto rounded-lg border text-[11px] font-bold transition-all ${getPaymentStatusStyle(order.paymentStatus || order.PaymentStatus)}`}>
                         {getPaymentStatusIcon(order.paymentStatus || order.PaymentStatus)}
                         {order.paymentStatus || order.PaymentStatus || 'Pending'}
-                      </span>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

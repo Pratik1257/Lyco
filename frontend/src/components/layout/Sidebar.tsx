@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   ShoppingCart, FileText, CreditCard, Receipt,
-  Users, User, Tag, LayoutGrid, ChevronDown, LogOut, type LucideIcon
+  Users, User, Tag, LayoutGrid, ChevronDown, LogOut, Lock, type LucideIcon
 } from 'lucide-react';
 import lycoLogo from '../../assets/LycoLogo.png';
 
@@ -30,7 +30,6 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
         label: 'Manage Orders',
         badge: 10,
         subItems: [
-          { to: '/admin/orders/new', label: 'Place New Order' },
           { to: '/admin/orders/history', label: 'Order History' },
           { to: '/admin/orders/complete', label: 'Complete an Order' },
           { to: '/admin/orders/remove', label: 'Remove an Order' },
@@ -77,7 +76,7 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
         label: 'Manage Customers',
         subItems: [
           { to: '/admin/customers/summary', label: 'Customer History' },
-          { to: '/admin/customers/card-summary', label: 'Card Summary' },
+          { to: '/admin/customers/card-summary', label: 'Card History' },
         ]
       },
     ],
@@ -87,6 +86,12 @@ const adminNavSections: { label: string; items: NavItem[] }[] = [
     items: [
       { to: '/admin/services', icon: Tag, label: 'Manage Service' },
       { to: '/admin/prices', icon: Tag, label: 'Manage Price' },
+    ],
+  },
+  {
+    label: 'ACCOUNT',
+    items: [
+      { to: '/admin/change-password', icon: Lock, label: 'Change Password' },
     ],
   },
 ];
@@ -120,6 +125,11 @@ const customerNavSections: { label: string; items: NavItem[] }[] = [
         icon: User,
         label: 'Edit Profile',
       },
+      {
+        to: '/change-password',
+        icon: Lock,
+        label: 'Change Password',
+      },
     ],
   },
 ];
@@ -138,7 +148,7 @@ function SidebarItem({ item, onClose }: { item: NavItem; onClose?: () => void })
       <div className="mb-0.5">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-[13px] font-medium group ${isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
+          className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-[13px] font-medium group cursor-pointer ${isActive ? 'text-white' : 'text-[#8892b0] hover:text-white'
             }`}
         >
           {isActive && (
@@ -298,7 +308,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
                 </div>
                 <button
                   onClick={logout}
-                  className="p-1.5 rounded-lg text-[#3a4a6a] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                  className="p-1.5 rounded-lg text-[#3a4a6a] hover:text-red-400 hover:bg-red-400/10 transition-colors cursor-pointer"
                   title="Logout"
                 >
                   <LogOut size={14} />

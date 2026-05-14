@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Download, Plus, Clock, CheckCircle2, AlertCircle, Info,
@@ -27,6 +27,7 @@ import type { Order } from '../../api/ordersApi';
 
 export default function OrderList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get('status') || 'all';
   const initialPaymentStatus = searchParams.get('paymentStatus') || 'all';
@@ -119,21 +120,51 @@ export default function OrderList() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [initiating, setInitiating] = useState(false);
 
-  useEffect(() => {
-    const status = searchParams.get('status');
-    const paymentStatus = searchParams.get('paymentStatus');
-    const start = searchParams.get('startDate');
-    const end = searchParams.get('endDate');
-    const timeframe = searchParams.get('timeframe');
-    const currency = searchParams.get('currency');
+  // Sync state to URL
+  const syncToUrl = (newFilters: any) => {
+    const params = new URLSearchParams();
+    const currentParams = new URLSearchParams(location.search);
+    
+    // Preserve existing params but overwrite with new ones
+    const merged = {
+      status: statusFilter,
+      paymentStatus: paymentStatusFilter,
+      startDate,
+      endDate,
+      timeframe: timeframeFilter,
+      currency: currencyFilter,
+      ...newFilters
+    };
 
-    if (status) setStatusFilter(status);
-    if (paymentStatus) setPaymentStatusFilter(paymentStatus);
-    if (start) setStartDate(start);
-    if (end) setEndDate(end);
-    if (timeframe) setTimeframeFilter(timeframe);
-    if (currency) setCurrencyFilter(currency);
-  }, [searchParams]);
+    Object.entries(merged).forEach(([key, val]) => {
+      if (val && val !== 'all') {
+        params.set(key, val.toString());
+      }
+    });
+
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  };
+
+  useLayoutEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status') || 'all';
+    const paymentStatus = params.get('paymentStatus') || 'all';
+    const start = params.get('startDate') || '';
+    const end = params.get('endDate') || '';
+    const timeframe = params.get('timeframe') || (params.get('startDate') && params.get('endDate') ? 'Custom' : '');
+    const currency = params.get('currency') || '';
+
+    console.log('OrderList Sync From URL:', { status, paymentStatus, search: location.search });
+
+    setStatusFilter(status);
+    setPaymentStatusFilter(paymentStatus);
+    setStartDate(start);
+    setEndDate(end);
+    setTimeframeFilter(timeframe);
+    setCurrencyFilter(currency);
+    
+    setCurrentPage(1);
+  }, [location.search]);
 
   // Queries
   const { data: servicesData } = useQuery({
@@ -280,7 +311,7 @@ export default function OrderList() {
     const s = (status || '').toLowerCase();
     if (s === 'completed' || s === 'paid') return <CheckCircle2 size={12} />;
     if (s.includes('bad')) return <XCircle size={12} />;
-    return null;
+    return <Clock size={12} />;
   };
 
   const handleExport = async () => {
@@ -398,6 +429,8 @@ export default function OrderList() {
   };
 
 
+  console.log('OrderList Render - paymentStatusFilter:', paymentStatusFilter);
+
   return (
     <div className="relative animate-in fade-in duration-500 space-y-4">
       {/* Checkout Summary Bar */}
@@ -477,7 +510,7 @@ export default function OrderList() {
                   <ul className="text-[11px] text-slate-600 space-y-2 list-disc pl-4">
                     <li>Only <b>Completed</b> and <b>Invoiced</b> orders can be paid</li>
                     <li><b>Paid</b>, <b>Cancelled</b>, and <b>In-Process</b> orders cannot be selected</li>
-                    <li>Batch payments are limited to <b>one customer</b> at a time</li>
+                    {isAdmin && <li>Batch payments are limited to <b>one customer</b> at a time</li>}
                   </ul>
                 </div>
               </div>
@@ -513,7 +546,12 @@ export default function OrderList() {
             />
             <CustomSelect
               value={statusFilter}
-              onChange={(val) => { setStatusFilter(val as string); setCurrentPage(1); }}
+              onChange={(val) => { 
+                const s = val as string;
+                setStatusFilter(s); 
+                syncToUrl({ status: s });
+                setCurrentPage(1); 
+              }}
               options={[
                 { value: 'all', label: 'All Status' },
                 { value: 'In Process', label: 'In Process' },
@@ -525,7 +563,12 @@ export default function OrderList() {
             />
             <CustomSelect
               value={paymentStatusFilter}
-              onChange={(val) => { setPaymentStatusFilter(val as string); setCurrentPage(1); }}
+              onChange={(val) => { 
+                const p = val as string;
+                setPaymentStatusFilter(p); 
+                syncToUrl({ paymentStatus: p });
+                setCurrentPage(1); 
+              }}
               options={[
                 { value: 'all', label: 'All Payment' },
                 { value: 'Pending', label: 'Pending' },
@@ -586,9 +629,9 @@ export default function OrderList() {
                   <TableHead className="py-2 px-4 whitespace-nowrap">PO No.</TableHead>
                   <TableHead className="py-2 px-4 whitespace-nowrap">Service</TableHead>
                   <TableHead className="py-2 px-4 whitespace-nowrap">Price</TableHead>
-                  <TableHead className="py-2 px-4 whitespace-nowrap">Order Status</TableHead>
+                  <TableHead className="py-2 px-4 text-center whitespace-nowrap">Order Status</TableHead>
                   <TableHead className="py-2 px-4 whitespace-nowrap">Completed Date</TableHead>
-                  <TableHead className="py-2 px-4 whitespace-nowrap">Payment Status</TableHead>
+                  <TableHead className="py-2 px-4 text-center whitespace-nowrap">Payment Status</TableHead>
                   <TableHead className="py-2 px-6 text-right whitespace-nowrap">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -674,14 +717,14 @@ export default function OrderList() {
                           {formatPrice(order.amount, order.currency)}
                         </TableCell>
                         <TableCell className="px-4 whitespace-nowrap">
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold transition-all ${getStatusStyle(order.orderStatus)}`}>
+                          <div className={`flex items-center justify-center gap-1 w-[100px] py-1 rounded-lg border text-[11px] font-bold transition-all ${getStatusStyle(order.orderStatus)}`}>
                             {getStatusIcon(order.orderStatus)}
                             {order.orderStatus || 'Unknown'}
                           </div>
                         </TableCell>
                         <TableCell className="px-4 text-slate-500 text-xs font-medium whitespace-nowrap">{formatDate(order.completedDate)}</TableCell>
                         <TableCell className="px-4 whitespace-nowrap">
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold transition-all ${getPaymentStatusStyle(order.paymentStatus)}`}>
+                          <div className={`flex items-center justify-center gap-1 w-[100px] py-1 rounded-lg border text-[11px] font-bold transition-all ${getPaymentStatusStyle(order.paymentStatus)}`}>
                             {getPaymentStatusIcon(order.paymentStatus)}
                             {order.paymentStatus || 'Pending'}
                           </div>

@@ -19,7 +19,7 @@ export default function FxGlobalFilters({
   const currencies = ['USD', 'GBP', 'EUR', 'AUD'];
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-2">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
       <div className="flex items-center gap-4">
         {/* Timeframe Filter (Segmented Control) */}
         <div className="bg-white/80 backdrop-blur-md border border-gray-100 p-1 rounded-2xl shadow-sm flex items-center">
@@ -56,7 +56,7 @@ export default function FxGlobalFilters({
                 </div>
               </div>
               
-              <div className="absolute right-0 top-full mt-2 w-32 bg-white border border-gray-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden py-1">
+              <div className="absolute right-0 top-full mt-5 w-32 bg-white border border-gray-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform -translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden py-1">
                 {currencies.map((c) => (
                   <button
                     key={c}

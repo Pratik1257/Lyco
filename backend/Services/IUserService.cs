@@ -12,6 +12,10 @@ public interface IUserService
     Task<(bool Success, string? Error)> DeleteAsync(long id);
     Task<(LoginResponse? Response, string? Error)> LoginAsync(LoginRequest req);
     Task<(UserRegistrationDto? Dto, string? Error)> AuthRegisterAsync(AuthRegisterRequest req);
+    Task<(bool Success, string? Code, string? Error)> SendVerificationCodeAsync(string email);
     Task<(string? Email, string? Error)> ForgotPasswordAsync(string username);
     Task<(bool Success, string? Error)> ResetPasswordAsync(ResetPasswordRequest req);
+    Task<bool> UsernameExistsAsync(string username);
+    Task<bool> EmailExistsAsync(string email);
+    Task<bool> CardExistsAsync(string cardNo);
 }

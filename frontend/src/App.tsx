@@ -1,7 +1,8 @@
 import { Component, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
+import { X } from 'lucide-react';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/dashboard/Dashboard';
 import ServiceList from './pages/services/ServiceList';
@@ -39,6 +40,7 @@ import ManagePayment from './pages/payments/ManagePayment';
 import PayPalBillingDetails from './pages/payments/PayPalBillingDetails';
 import PaymentSuccess from './pages/payments/PaymentSuccess';
 import PaymentCancel from './pages/payments/PaymentCancel';
+import PaymentCheckout from './pages/payments/PaymentCheckout';
 
 // Wrapper: render CustomerFormModal as a standalone page at /customers/add-three
 function CustomerFormModalPage() {
@@ -81,14 +83,45 @@ export default function App() {
           position="top-right"
           toastOptions={{
             duration: 4000,
-            style: { borderRadius: '12px', fontWeight: 600, fontSize: '14px' },
+            style: { 
+              borderRadius: '16px', 
+              fontWeight: 600, 
+              fontSize: '13px',
+              padding: '12px 16px',
+              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)'
+            },
             success: { style: { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' } },
             error: { style: { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' } },
           }}
-        />
+        >
+          {(t) => (
+            <ToastBar toast={t}>
+              {({ icon, message }) => (
+                <div className="flex items-center gap-2">
+                  {icon}
+                  <div className="flex-1">{message}</div>
+                  {t.type !== 'loading' && (
+                    <button
+                      onClick={() => toast.dismiss(t.id)}
+                      className="ml-2 p-1 hover:bg-black/5 rounded-full transition-colors"
+                      aria-label="Close"
+                    >
+                      <X size={14} className="opacity-50 hover:opacity-100" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </ToastBar>
+          )}
+        </Toaster>
         <BrowserRouter basename="/">
           <AuthProvider>
             <Routes>
+              {/* Public PayPal redirect pages — no auth required, placed first to avoid route collisions */}
+              <Route path="payment/success" element={<PaymentSuccess />} />
+              <Route path="payment/cancel" element={<PaymentCancel />} />
+              <Route path="payment/checkout/:guid" element={<PaymentCheckout />} />
+
               <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 {/* Unified Redirect / Home */}
                 <Route index element={<Dashboard />} />
@@ -152,16 +185,10 @@ export default function App() {
                 <Route path="admin/invoices" element={<Navigate to="/admin/invoices/summary" replace />} />
                 <Route path="admin/customers" element={<Navigate to="/admin/customers/summary" replace />} />
               </Route>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              {/* Public PayPal redirect pages — no auth required */}
-              <Route path="/payment/success" element={<Layout />}>
-                <Route index element={<PaymentSuccess />} />
-              </Route>
-              <Route path="/payment/cancel" element={<Layout />}>
-                <Route index element={<PaymentCancel />} />
-              </Route>
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route path="reset-password" element={<ResetPassword />} />
+              <Route path="*" element={<div className="p-10 font-bold text-red-500">Route not matched: {window.location.pathname}</div>} />
             </Routes>
           </AuthProvider>
         </BrowserRouter>

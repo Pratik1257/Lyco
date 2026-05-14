@@ -247,3 +247,7 @@ public record ResetPasswordRequest(
     [Required] string Username,
     [Required] string NewPassword
 );
+
+public record SendVerificationRequest(
+    [Required] string Email
+);

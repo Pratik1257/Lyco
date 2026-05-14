@@ -3,24 +3,39 @@ using Microsoft.EntityFrameworkCore;
 using Lyco.Api.Data;
 using Lyco.Api.Models;
 using Lyco.Api.DTOs;
+using Lyco.Api.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using System.IO;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lyco.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class OrdersController : ControllerBase
 {
     private readonly LycoDbContext _context;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailService _email;
 
-    public OrdersController(LycoDbContext context, IWebHostEnvironment env)
+    public OrdersController(LycoDbContext context, IWebHostEnvironment env, IEmailService email)
     {
         _context = context;
         _env = env;
+        _email = email;
     }
+
+    // Mirrors legacy currency symbol mapping (USD→$, GBP→£, EURO→€, AUD→A$)
+    private static string GetCurrencySymbol(string? currency) => currency?.ToUpper() switch
+    {
+        "GBP"            => "£",
+        "EURO" or "EUR" => "€",
+        "AUD"            => "A$",
+        "INR"            => "₹",
+        _                => "$"
+    };
 
     [HttpGet]
     public async Task<IActionResult> GetOrders(
@@ -301,6 +316,22 @@ public class OrdersController : ControllerBase
             await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink, modifiedBy);
         }
 
+        // 11.3 — Fire order-received email to customer (mirrors OrderForm.aspx.cs)
+        if (!string.IsNullOrWhiteSpace(order.Email))
+        {
+            var svc = await _context.ServiceMsts.FirstOrDefaultAsync(s => s.ServiceId == order.ServiceId);
+            _ = _email.SendOrderReceivedAsync(
+                order.Email,
+                order.OrderNo ?? "",
+                order.WorkTitle ?? "",
+                svc?.ServiceName ?? "",
+                order.Size ?? "",
+                order.Sizetype ?? "",
+                order.FileFormat ?? "",
+                order.Instructions ?? ""
+            );
+        }
+
         return Ok(order);
     }
 
@@ -332,9 +363,12 @@ public class OrdersController : ControllerBase
 
         if (!decimal.TryParse(dto.Amount, out _)) return BadRequest(new { message = "Rate must be a valid number" });
         
+        bool shouldSendCompletionEmail = false;
+
         // Update Status
         if (!string.IsNullOrEmpty(dto.OrderStatus))
         {
+            var previousStatus = order.OrderStatus;
             order.OrderStatus = dto.OrderStatus;
             if (dto.OrderStatus == "Completed")
             {
@@ -350,6 +384,12 @@ public class OrdersController : ControllerBase
                         var finalAmount = (stitchCount / 1000m) * rate;
                         order.Amount = finalAmount.ToString("F2");
                     }
+                }
+
+                // 11.2 — Flag for completion email (mirrors CompleteOrder.aspx.cs)
+                if (!string.IsNullOrWhiteSpace(order.Email) && previousStatus != "Completed")
+                {
+                    shouldSendCompletionEmail = true;
                 }
             }
             else
@@ -399,7 +439,57 @@ public class OrdersController : ControllerBase
             await SaveExternalLinkAsync(order.OrderNo ?? "", dto.ExternalLink, modifiedByUpdate);
         }
 
+        // 11.2 — Fire completion email with attachments (mirrors CompleteOrder.aspx.cs)
+        if (shouldSendCompletionEmail)
+        {
+            var attachments = await GetOrderAttachmentsAsync(order.OrderNo ?? "");
+            var symbol = GetCurrencySymbol(order.Currency);
+            var priceDisplay = $"{symbol}{order.Amount}";
+            var completedDateDisplay = order.CompletedDate?.ToShortDateString() ?? DateTime.Now.ToShortDateString();
+            
+            _ = _email.SendOrderCompletedAsync(
+                order.Email!,
+                order.OrderNo ?? "",
+                order.WorkTitle ?? "",
+                priceDisplay,
+                completedDateDisplay,
+                order.Note ?? "",
+                attachments
+            );
+        }
+
         return Ok(order);
+    }
+
+    private async Task<List<EmailAttachment>> GetOrderAttachmentsAsync(string orderNo)
+    {
+        var attachments = new List<EmailAttachment>();
+        var completedFiles = await _context.OrderFileMsts
+            .Where(f => f.OrderNo == orderNo && f.FileStatus == "Completed")
+            .ToListAsync();
+
+        foreach (var file in completedFiles)
+        {
+            if (!string.IsNullOrEmpty(file.FileUrl))
+            {
+                var fullPath = Path.Combine(_env.ContentRootPath, "wwwroot", file.FileUrl.TrimStart('/'));
+                if (System.IO.File.Exists(fullPath))
+                {
+                    try
+                    {
+                        var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+                        attachments.Add(new EmailAttachment
+                        {
+                            FileName = file.FileName ?? Path.GetFileName(fullPath),
+                            Content = bytes,
+                            ContentType = "application/octet-stream" // Mailgun handles this well
+                        });
+                    }
+                    catch { /* skip broken files */ }
+                }
+            }
+        }
+        return attachments;
     }
 
     private async Task SaveFilesAsync(string orderNo, List<IFormFile> files, string modifiedBy, string fileStatus = "Active")

@@ -6,14 +6,48 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lyco.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class DashboardController : ControllerBase
 {
     private readonly LycoDbContext _context;
+    private static readonly string[] AvatarColors = new[] 
+    { 
+        "#3b82f6", // Blue
+        "#8b5cf6", // Violet
+        "#f97316", // Orange
+        "#eab308", // Yellow
+        "#10b981", // Emerald
+        "#06b6d4", // Cyan
+        "#ef4444", // Red
+        "#ec4899", // Pink
+        "#6366f1", // Indigo
+        "#f43f5e", // Rose
+        "#14b8a6", // Teal
+        "#f59e0b", // Amber
+        "#84cc16", // Lime
+        "#a855f7", // Purple
+        "#0ea5e9", // Sky
+        "#fb923c", // Light Orange
+        "#c026d3", // Fuchsia
+        "#4d7c0f", // Dark Lime
+        "#be123c", // Dark Rose
+        "#1d4ed8", // Dark Blue
+        "#7e22ce"  // Dark Purple
+    };
+
+    private int GetStableHash(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return 0;
+        int h = 0;
+        foreach (char c in s) h = 31 * h + c;
+        return Math.Abs(h);
+    }
 
     public DashboardController(LycoDbContext context)
     {
@@ -74,21 +108,29 @@ public class DashboardController : ControllerBase
 
         // Period filtering for stats
         DateTime periodStart = timeframeStart;
+        DateTime periodEnd = now; 
+        
         DateTime lastPeriodStart;
-        DateTime periodEnd = now; // For current period
-        DateTime lastPeriodEnd = periodStart;
+        DateTime lastPeriodEnd;
 
         if (timeframe.ToLower() == "week")
         {
             lastPeriodStart = periodStart.AddDays(-7);
+            lastPeriodEnd = periodStart;
         }
         else if (timeframe.ToLower() == "year")
         {
             lastPeriodStart = periodStart.AddYears(-1);
+            // Compare same months of previous year for accurate growth
+            lastPeriodEnd = lastPeriodStart.AddMonths(now.Month - 1).AddDays(now.Day);
+            if (lastPeriodEnd > periodStart) lastPeriodEnd = periodStart;
         }
         else // Month
         {
             lastPeriodStart = periodStart.AddMonths(-1);
+            // Compare same days of previous month for accurate growth
+            lastPeriodEnd = lastPeriodStart.AddDays(now.Day);
+            if (lastPeriodEnd > periodStart) lastPeriodEnd = periodStart;
         }
 
         var periodOrders = allOrders.Where(o => o.OrderDate >= periodStart && o.OrderDate < periodEnd).ToList();
@@ -148,16 +190,22 @@ public class DashboardController : ControllerBase
         }
 
         var trendMonth = new List<TrendPoint>();
-        var startOfTrendMonth = startOfToday.AddDays(-27);
         for (int i = 0; i < 4; i++)
         {
-            var weekStart = startOfTrendMonth.AddDays(i * 7);
-            var weekEnd = weekStart.AddDays(7);
+            var weekStart = startOfMonth.AddDays(i * 7);
+            var weekEnd = (i == 3) ? startOfMonth.AddMonths(1) : weekStart.AddDays(7);
+            
             var weekOrders = allOrders.Where(o => o.OrderDate >= weekStart && o.OrderDate < weekEnd).ToList();
             var weekExpenses = allExpenses.Where(e => e.ExpenseDate >= weekStart && e.ExpenseDate < weekEnd).ToList();
+            
+            var rangeEnd = weekEnd.AddDays(-1);
+            var label = (weekStart.Month == rangeEnd.Month)
+                ? $"{weekStart:MMM d}–{rangeEnd:%d}"
+                : $"{weekStart:MMM d}–{rangeEnd:MMM d}";
+
             trendMonth.Add(new TrendPoint
             {
-                Label = $"{weekStart:MMM d}-{weekEnd.AddDays(-1):d}",
+                Label = label,
                 Orders = weekOrders.Count,
                 Revenue = weekOrders.Sum(o => ParseAmount(o.Amount)),
                 Expenses = weekExpenses.Sum(e => e.Amount ?? 0)
@@ -165,16 +213,17 @@ public class DashboardController : ControllerBase
         }
 
         var trendYear = new List<TrendPoint>();
-        var startOfTrendYear = startOfMonth.AddMonths(-11);
+        var currentYear = now.Year;
         for (int i = 0; i < 12; i++)
         {
-            var monthStart = startOfTrendYear.AddMonths(i);
+            var monthStart = new DateTime(currentYear, i + 1, 1);
             var monthEnd = monthStart.AddMonths(1);
+            
             var mOrders = allOrders.Where(o => o.OrderDate >= monthStart && o.OrderDate < monthEnd).ToList();
             var mExpenses = allExpenses.Where(e => e.ExpenseDate >= monthStart && e.ExpenseDate < monthEnd).ToList();
             trendYear.Add(new TrendPoint
             {
-                Label = monthStart.ToString("MMM yyyy"),
+                Label = monthStart.ToString("MMM"),
                 Orders = mOrders.Count,
                 Revenue = mOrders.Sum(o => ParseAmount(o.Amount)),
                 Expenses = mExpenses.Sum(e => e.Amount ?? 0)
@@ -191,7 +240,6 @@ public class DashboardController : ControllerBase
         decimal CalcPercent(int count) => totalOrdersCount == 0 ? 0 : Math.Round(((decimal)count / totalOrdersCount) * 100, 1);
 
         // 5. Service Breakdown
-        var colors = new[] { "#3b82f6", "#8b5cf6", "#f97316", "#eab308", "#10b981", "#06b6d4", "#ef4444" };
         var serviceGroups = filteredOrders
             .Where(o => o.ServiceId.HasValue)
             .GroupBy(o => o.ServiceId)
@@ -208,7 +256,7 @@ public class DashboardController : ControllerBase
         foreach (var sg in serviceGroups)
         {
             var serviceName = allServices.FirstOrDefault(s => s.ServiceId == sg.ServiceId)?.ServiceName ?? "Unknown";
-            var color = colors[colorIdx % colors.Length];
+            var color = AvatarColors[colorIdx % AvatarColors.Length];
             var icon = icons[colorIdx % icons.Length];
             
             serviceBreakdown.Add(new ServiceBreakdownDto { Name = serviceName, Count = sg.Count, Color = color });
@@ -238,9 +286,9 @@ public class DashboardController : ControllerBase
             else
                 initials = customerName.Length >= 2 ? customerName.Substring(0, 2).ToUpper() : "UN";
             
-            // Deterministic color based on name
-            var colorHash = Math.Abs(customerName.GetHashCode());
-            var avatarColor = colors[colorHash % colors.Length];
+            // Deterministic stable color based on name AND UniqueNo for maximum uniqueness
+            var colorSeed = GetStableHash(customerName) + (int)(user?.UniqueNo ?? 0);
+            var avatarColor = AvatarColors[Math.Abs(colorSeed) % AvatarColors.Length];
 
             recentOrders.Add(new RecentOrderDto
             {
@@ -299,7 +347,7 @@ public class DashboardController : ControllerBase
                 Name = serviceName,
                 Current = rsg.Revenue,
                 Goal = rsg.Revenue > 0 ? rsg.Revenue * 1.2m : 100m, // Set a dynamic goal +20%
-                Color = colors[colorIdx % colors.Length]
+                Color = AvatarColors[colorIdx % AvatarColors.Length]
             });
             colorIdx++;
         }
@@ -327,7 +375,7 @@ public class DashboardController : ControllerBase
             {
                 Name = customerName,
                 Orders = tcg.Count,
-                Color = colors[colorIdx % colors.Length]
+                Color = AvatarColors[colorIdx % AvatarColors.Length]
             });
             colorIdx++;
         }
@@ -364,10 +412,22 @@ public class DashboardController : ControllerBase
             OrderStatus = new OrderStatusMetrics
             {
                 Total = filteredOrders.Count,
-                Completed = new StatusCountPercent { Count = filteredOrders.Count(o => o.OrderStatus == "Completed" || o.OrderStatus == "Invoiced"), Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "Completed" || o.OrderStatus == "Invoiced")) },
-                NewOrders = new StatusCountPercent { Count = filteredOrders.Count(o => o.OrderStatus == "New"), Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "New")) },
-                Pending = new StatusCountPercent { Count = filteredOrders.Count(o => o.OrderStatus == "Pending"), Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "Pending")) },
-                InProcess = new StatusCountPercent { Count = filteredOrders.Count(o => o.OrderStatus == "In Process"), Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "In Process")) }
+                Completed = new StatusCountPercent { 
+                    Count = filteredOrders.Count(o => o.OrderStatus == "Completed"), 
+                    Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "Completed")) 
+                },
+                NewOrders = new StatusCountPercent { 
+                    Count = filteredOrders.Count(o => o.OrderStatus == "Invoiced"), 
+                    Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "Invoiced")) 
+                },
+                Pending = new StatusCountPercent { 
+                    Count = filteredOrders.Count(o => o.OrderStatus == "Cancelled"), 
+                    Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "Cancelled")) 
+                },
+                InProcess = new StatusCountPercent { 
+                    Count = filteredOrders.Count(o => o.OrderStatus == "In Process" || o.OrderStatus == "New"), 
+                    Percent = CalcPercent(filteredOrders.Count(o => o.OrderStatus == "In Process" || o.OrderStatus == "New")) 
+                }
             },
             ServiceBreakdown = serviceBreakdown,
             RecentOrders = recentOrders,

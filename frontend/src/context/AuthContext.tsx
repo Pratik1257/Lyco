@@ -20,7 +20,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem('lyco_user');
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        
+        // Simple JWT expiration check
+        if (parsedUser.token) {
+          try {
+            const base64Url = parsedUser.token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(atob(base64));
+            const isExpired = payload.exp * 1000 < Date.now();
+            
+            if (isExpired) {
+              console.warn('Session expired on load');
+              localStorage.removeItem('lyco_user');
+              setUser(null);
+            } else {
+              setUser(parsedUser);
+            }
+          } catch (e) {
+            console.error('Error parsing token payload', e);
+            setUser(parsedUser); // Fallback to current behavior if parse fails
+          }
+        } else {
+          setUser(parsedUser);
+        }
       } catch (e) {
         localStorage.removeItem('lyco_user');
       }

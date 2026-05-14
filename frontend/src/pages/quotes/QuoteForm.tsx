@@ -76,6 +76,7 @@ export default function QuoteForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<number[]>([]);
+  const [refreshQuotesCount, setRefreshQuotesCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch users for dropdown
@@ -130,10 +131,10 @@ export default function QuoteForm() {
     }
   }, [formData.userId, isEditMode, isAdmin, user]);
 
-  // When user and service are selected, fetch Rate
+  // When user and service are selected, fetch Rate (Admin only)
   useEffect(() => {
-    // Skip auto-rate fetch in edit mode to preserve historical pricing
-    if (isEditMode) return;
+    // Only auto-fetch rate for admin; customers don't see the rate field
+    if (!isAdmin || isEditMode) return;
 
     const { userId, serviceId, currency } = formData;
     if (userId !== null && serviceId !== null) {
@@ -149,7 +150,7 @@ export default function QuoteForm() {
         }
       });
     }
-  }, [formData.userId, formData.serviceId, formData.currency, isEditMode]);
+  }, [formData.userId, formData.serviceId, formData.currency, isEditMode, isAdmin]);
 
   // Auto-generate Quote # when uniqueNo/userId changes
   useEffect(() => {
@@ -167,7 +168,7 @@ export default function QuoteForm() {
     } else {
       setFormData(prev => ({ ...prev, quoteNo: '' }));
     }
-  }, [formData.uniqueNo, formData.userId, isEditMode]);
+  }, [formData.uniqueNo, formData.userId, isEditMode, refreshQuotesCount]);
 
   // Load data for edit mode
   useEffect(() => {
@@ -215,13 +216,15 @@ export default function QuoteForm() {
   }, [formData, initialData, isEditMode, selectedFiles.length, filesToDelete.length]);
 
   const isFormValid = useMemo(() => {
-    return !!(
+    const baseValid = !!(
       formData.userId &&
       formData.serviceId &&
-      formData.workTitle && formData.workTitle.trim().length > 0 &&
-      formData.amount && formData.amount.toString().trim().length > 0
+      formData.workTitle && formData.workTitle.trim().length > 0
     );
-  }, [formData]);
+    // Admin must also have a rate set
+    if (isAdmin) return baseValid && !!(formData.amount && formData.amount.toString().trim().length > 0);
+    return baseValid;
+  }, [formData, isAdmin]);
 
   const mutation = useMutation({
     mutationFn: (data: any) => {
@@ -238,7 +241,37 @@ export default function QuoteForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast.success(isEditMode ? 'Quote updated successfully' : 'Quote placed successfully');
-      navigate(isAdmin ? '/admin/quotes' : '/quotes');
+      
+      // Stay on page and perform a FULL reset of ALL data
+      if (!isEditMode) {
+        setFormData({
+          uniqueNo: null,
+          userId: isAdmin ? null : (user as any)?.userId || null,
+          serviceId: null,
+          workTitle: '',
+          instructions: '',
+          fileFormat: '',
+          size: '',
+          sizetype: 'Inches',
+          amount: '',
+          currency: (user as any)?.currency || 'USD',
+          email: isAdmin ? '' : (user as any)?.email || '',
+          companyName: isAdmin ? '' : (user as any)?.companyName || '',
+          quoteNo: '',
+          quoteType: 'Quote',
+          imageUrl: ''
+        });
+        setSelectedFiles([]);
+        setExistingFiles([]);
+        setFilesToDelete([]);
+        setFieldErrors({});
+        setRefreshQuotesCount(prev => prev + 1);
+        mutation.reset();
+      } else {
+        setTimeout(() => {
+          navigate(isAdmin ? '/admin/quotes' : '/quotes');
+        }, 1500);
+      }
     },
     onError: (err: any) => {
       setFormError(err.response?.data?.message || err.message);
@@ -291,10 +324,13 @@ export default function QuoteForm() {
       validateEmail(formData.email, 'email', 'Email');
     }
 
-    if (!formData.amount) {
-      errors.amount = 'Rate is required';
-    } else if (isNaN(Number(formData.amount)) || Number(formData.amount) < 0) {
-      errors.amount = 'Please enter a valid positive number';
+    // Rate is only required/validated for admins
+    if (isAdmin) {
+      if (!formData.amount) {
+        errors.amount = 'Rate is required';
+      } else if (isNaN(Number(formData.amount)) || Number(formData.amount) < 0) {
+        errors.amount = 'Please enter a valid positive number';
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -414,31 +450,33 @@ export default function QuoteForm() {
                   />
                 </div>
 
-                <div className="space-y-1 lg:col-span-2">
-                  <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <div className="absolute left-3.5 inset-y-0 flex items-center justify-center w-4">
-                      <span className="text-[13.5px] font-bold text-slate-400 group-focus-within:text-cyan-600 transition-colors mt-[0.5px]">
-                        {getCurrencySymbol(formData.currency)}
-                      </span>
+                {/* Rate field — Admin only. Customers don't see this; rate is set by admin at convert time */}
+                {isAdmin && (
+                  <div className="space-y-1 lg:col-span-2">
+                    <label className="block text-[13px] font-semibold text-slate-900 ml-1">Rate <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                      <div className="absolute left-3.5 inset-y-0 flex items-center justify-center w-4">
+                        <span className="text-[13.5px] font-bold text-slate-400 group-focus-within:text-cyan-600 transition-colors mt-[0.5px]">
+                          {getCurrencySymbol(formData.currency)}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="0.00"
+                        value={formData.amount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setFormData(p => ({ ...p, amount: val }));
+                            if (fieldErrors.amount) setFieldErrors(p => { const n = { ...p }; delete n.amount; return n; });
+                          }
+                        }}
+                        className={`${premiumInput} pl-10 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''}`}
+                      />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="0.00"
-                      value={formData.amount}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                          setFormData(p => ({ ...p, amount: val }));
-                          if (fieldErrors.amount) setFieldErrors(p => { const n = { ...p }; delete n.amount; return n; });
-                        }
-                      }}
-                      readOnly={!isAdmin}
-                      className={`${premiumInput} pl-10 ${fieldErrors.amount ? 'border-red-500 ring-red-500/10' : ''} ${!isAdmin ? 'bg-slate-50 border-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
-                    />
+                    {renderError('amount')}
                   </div>
-                  {renderError('amount')}
-                </div>
+                )}
 
                 <div className="space-y-1 lg:col-span-4">
                   <label className="block text-[13px] font-semibold text-slate-900 ml-1">PO / Artwork Name <span className="text-red-500">*</span></label>
@@ -498,6 +536,7 @@ export default function QuoteForm() {
                           { value: 'CM', label: 'CM' },
                           { value: 'MM', label: 'MM' }
                         ]}
+                        menuAlign="right"
                       />
                     </div>
                   </div>
@@ -676,7 +715,7 @@ export default function QuoteForm() {
                   type="submit"
                   variant="primary"
                   isLoading={mutation.isPending}
-                  disabled={!hasChanges || !isFormValid}
+                  disabled={!hasChanges || !isFormValid || mutation.isSuccess}
                   className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isEditMode ? 'Update Quote' : 'Create Quote'}

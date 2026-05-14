@@ -28,5 +28,21 @@ export const authApi = {
   resetPassword: async (data: { Username: string; NewPassword: string }) => {
     const response = await apiClient.post<{ message: string }>('/auth/reset-password', data);
     return response.data;
+  },
+  sendVerification: async (email: string) => {
+    const response = await apiClient.post<{ message: string, code: string }>('/auth/send-verification', { Email: email });
+    return response.data;
+  },
+  checkUsername: async (username: string) => {
+    const response = await apiClient.get<{ available: boolean }>(`/auth/check-username?username=${encodeURIComponent(username)}`);
+    return response.data;
+  },
+  checkEmail: async (email: string) => {
+    const response = await apiClient.get<{ available: boolean }>(`/auth/check-email?email=${encodeURIComponent(email)}`);
+    return response.data;
+  },
+  checkCard: async (cardNo: string) => {
+    const response = await apiClient.get<{ available: boolean }>(`/auth/check-card?cardNo=${encodeURIComponent(cardNo)}`);
+    return response.data;
   }
 };

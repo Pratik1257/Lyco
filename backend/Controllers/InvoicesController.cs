@@ -9,21 +9,28 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lyco.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class InvoicesController : ControllerBase
 {
     private readonly LycoDbContext _context;
     private readonly IInvoicePdfService _pdfService;
+    private readonly IEmailService _email;
+    private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
 
-    public InvoicesController(LycoDbContext context, IInvoicePdfService pdfService, IWebHostEnvironment env)
+    public InvoicesController(LycoDbContext context, IInvoicePdfService pdfService, 
+        IEmailService email, IConfiguration config, IWebHostEnvironment env)
     {
         _context = context;
         _pdfService = pdfService;
+        _email = email;
+        _config = config;
         _env = env;
     }
 
@@ -204,8 +211,13 @@ public class InvoicesController : ControllerBase
                 var pdfPath = Path.Combine(invoicesDir, pdfFileName);
                 await System.IO.File.WriteAllBytesAsync(pdfPath, pdfBytes);
                 invoice.InvoiceUrl = $"/invoices/{pdfFileName}";
-
                 await _context.SaveChangesAsync();
+
+                // Send Email (Fire-and-forget)
+                if (!string.IsNullOrWhiteSpace(user.PrimaryEmail))
+                {
+                    _ = _email.SendInvoiceAsync(user.PrimaryEmail, $"Invoice {invoiceNo} from Lyco Designs", pdfBytes, pdfFileName);
+                }
 
                 createdInvoices.Add(new
                 {
@@ -258,8 +270,36 @@ public class InvoicesController : ControllerBase
             var pdfPath = Path.Combine(invoicesDir, pdfFileName);
             await System.IO.File.WriteAllBytesAsync(pdfPath, pdfBytes);
             invoice.InvoiceUrl = $"/invoices/{pdfFileName}";
-
             await _context.SaveChangesAsync();
+
+            // Handle Email Sending
+            if (!string.IsNullOrWhiteSpace(user.PrimaryEmail))
+            {
+                if (dto.InvoiceType == "Paypal")
+                {
+                    // FIX: Generate a unique GUID and send a link to our GATEWAY page instead of direct PayPal.
+                    // This prevents double payments because the gateway checks status before redirecting.
+                    var transactionNumber = Guid.NewGuid().ToString();
+                    foreach (var o in orders)
+                    {
+                        o.TransactionNo = transactionNumber;
+                        o.Systransactionno = transactionNumber;
+                    }
+                    await _context.SaveChangesAsync();
+
+                    // Derive the gateway URL from the frontend URL (based on PayPal ReturnUrl config)
+                    var returnUrl = _config["PayPal:ReturnUrl"] ?? "http://localhost:5173/payment/success";
+                    var websiteUrl = returnUrl.Replace("/payment/success", "").TrimEnd('/');
+                    var gatewayUrl = $"{websiteUrl}/payment/checkout/{transactionNumber}";
+                    
+                    var orderList = string.Join(", ", orders.Select(o => o.OrderNo));
+                    _ = _email.SendPaymentLinkAsync(user.PrimaryEmail, gatewayUrl, orderList);
+                }
+                else
+                {
+                    _ = _email.SendInvoiceAsync(user.PrimaryEmail, $"Invoice {invoiceNo} from Lyco Designs", pdfBytes, pdfFileName);
+                }
+            }
 
             createdInvoices.Add(new
             {
@@ -336,6 +376,7 @@ public class InvoicesController : ControllerBase
             Email = user.PrimaryEmail ?? "",
             CustomerId = user.UniqueNo?.ToString() ?? "",
             TotalAmount = invoice.Amount ?? "0.00",
+            Currency = orders.FirstOrDefault()?.Currency ?? user.Currency ?? "USD",
             LineItems = orders.Select(o => new InvoiceLineItemDto
             {
                 OrderNo = o.OrderNo ?? "",

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
   User, CheckCircle2, AlertCircle, Loader2,
-  Calendar, DollarSign, Clock, Building2, ChevronLeft, CheckSquare, Receipt
+  Calendar, DollarSign, Clock, Building2, CheckSquare
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+
 import { paymentsApi } from '../../api/paymentsApi';
 import type { PendingOrder } from '../../api/paymentsApi';
 import { usersApi } from '../../api/pricesApi';
@@ -14,7 +14,6 @@ import CustomSelect from '../../components/ui/CustomSelect';
 import { Skeleton } from '../../components/ui/Skeleton';
 
 export default function ManagePaymentStatus() {
-  const navigate = useNavigate();
   const [users, setUsers] = useState<UserDto[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -357,15 +356,7 @@ export default function ManagePaymentStatus() {
 
             </div>
 
-            <div className="bg-slate-50/50 p-6 sm:p-7 border-t border-slate-100 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <ChevronLeft size={16} /> Dashboard
-              </button>
-            </div>
+
           </form>
         </div>
       </div>

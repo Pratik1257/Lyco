@@ -67,7 +67,7 @@ export default function OrderForm() {
     amount: '',
     currency: (user as any)?.userType !== 'Admin' 
       ? ((user as any)?.currency || (user as any)?.Currency || 'USD') 
-      : (localStorage.getItem('dashboard_currency') || (user as any)?.currency || (user as any)?.Currency || 'USD'),
+      : 'USD', // Admin: currency is resolved per-customer on user select, not from dashboard filter
     email: '',
     companyName: '',
     orderNo: '',
@@ -81,6 +81,7 @@ export default function OrderForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<number[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch users for dropdown
@@ -114,7 +115,7 @@ export default function OrderForm() {
         }
 
         const uCurrency = latestCurrency || 'USD';
-
+        
         setFormData(prev => ({
           ...prev,
           userId: uId,
@@ -123,15 +124,9 @@ export default function OrderForm() {
           companyName: uCompany,
           currency: uCurrency
         }));
-
-        if (uNo) {
-          ordersApi.getNextOrderNumber(uNo).then(no => {
-            setFormData(prev => ({ ...prev, orderNo: no }));
-          });
-        }
       }).catch(console.error);
     }
-  }, [user?.userId, isAdmin, isEditMode]);
+  }, [user?.userId, isAdmin, isEditMode, updateUser]);
 
   // Handle Admin User details fetch
   useEffect(() => {
@@ -143,10 +138,29 @@ export default function OrderForm() {
         email: u.primaryEmail || (u as any).PrimaryEmail || '',
         companyName: u.companyname || (u as any).Companyname || '',
         uniqueNo: u.uniqueNo ?? (u as any).UniqueNo ?? null,
-        currency: localStorage.getItem('dashboard_currency') || u.currency || (u as any).Currency || 'USD'
+        currency: u.currency || (u as any).Currency || 'USD'
       }));
     });
   }, [formData.userId, isAdmin, isEditMode]);
+
+  // ── Fetch Next Order Number (Create Mode) ──────────────────────────────────
+  useEffect(() => {
+    if (isEditMode || !formData.uniqueNo) {
+      if (!isEditMode && !formData.uniqueNo) {
+         setFormData(prev => ({ ...prev, orderNo: '' }));
+      }
+      return;
+    }
+
+    ordersApi.getNextOrderNumber(formData.uniqueNo)
+      .then(no => {
+        setFormData(prev => ({ ...prev, orderNo: no }));
+      })
+      .catch(err => {
+        console.error("Order Number Fetch Error:", err);
+        setFormData(prev => ({ ...prev, orderNo: 'Error' }));
+      });
+  }, [formData.uniqueNo, isEditMode, refreshTrigger]);
 
   // Fetch Rate when user, service, or currency changes
   useEffect(() => {
@@ -203,7 +217,7 @@ export default function OrderForm() {
         amount: '',
         currency: (user as any)?.userType !== 'Admin' 
           ? ((user as any)?.currency || (user as any)?.Currency || 'USD') 
-          : (localStorage.getItem('dashboard_currency') || (user as any)?.currency || (user as any)?.Currency || 'USD'),
+          : 'USD',
         email: '',
         companyName: '',
         orderNo: '',
@@ -291,7 +305,38 @@ export default function OrderForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success(isEditMode ? 'Order updated successfully' : 'Order placed successfully');
-      navigate(isAdmin ? '/admin/orders/history' : '/orders/history');
+      
+      // Stay on page and perform a FULL reset of ALL data
+      if (!isEditMode) {
+        setFormData({
+          uniqueNo: null,
+          userId: isAdmin ? null : (user as any)?.userId || null,
+          serviceId: null,
+          workTitle: '',
+          instructions: '',
+          fileFormat: '',
+          size: '',
+          sizetype: 'Inches',
+          amount: '',
+          currency: (user as any)?.currency || 'USD',
+          email: isAdmin ? '' : (user as any)?.email || '',
+          companyName: isAdmin ? '' : (user as any)?.companyName || '',
+          orderNo: '',
+          orderStatus: 'In Process',
+          externalLink: ''
+        });
+        setSelectedFiles([]);
+        setExistingFiles([]);
+        setFilesToDelete([]);
+        setFieldErrors({});
+        setRefreshTrigger(prev => prev + 1); // Re-fetch next order number
+        mutation.reset(); // Enable button again for next order
+      } else {
+        // For edit mode, we can just navigate back or stay with disabled button
+        setTimeout(() => {
+          navigate(isAdmin ? '/admin/orders/history' : '/orders/history');
+        }, 1500);
+      }
     },
     onError: (err: any) => {
       setFormError(err.response?.data?.message || err.message);
@@ -694,6 +739,7 @@ export default function OrderForm() {
                               { value: 'CM', label: 'CM' },
                               { value: 'MM', label: 'MM' }
                             ]}
+                            menuAlign="right"
                           />
                         </div>
                       </div>
@@ -737,6 +783,7 @@ export default function OrderForm() {
                               { value: 'CM', label: 'CM' },
                               { value: 'MM', label: 'MM' }
                             ]}
+                            menuAlign="right"
                           />
                         </div>
                       </div>
@@ -1019,7 +1066,7 @@ export default function OrderForm() {
                   type="submit"
                   variant="primary"
                   isLoading={mutation.isPending}
-                  disabled={!hasChanges || !isFormValid}
+                  disabled={!hasChanges || !isFormValid || mutation.isSuccess}
                   className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 px-10 py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isEditMode ? 'Update Order' : 'Place Order'}

@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   MapPin, User, CreditCard as CardIcon,
-  Info, Sparkles, CheckCircle2, ChevronLeft
+  Info, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -585,7 +585,7 @@ export default function CardForm() {
               <section>
                 <h4 className={sectionLabel('text-slate-800/50')}><Info size={12} /> Supplementary Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
-                  <div className="md:col-span-8 space-y-1">
+                  <div className="md:col-span-12 space-y-1">
                     <label className="block text-[13px] font-semibold text-slate-900 ml-1">Comments</label>
                     <textarea
                       name="comments"
@@ -594,14 +594,6 @@ export default function CardForm() {
                       onChange={handleInputChange}
                       className={`${premiumInput} h-24 py-3 resize-none`}
                     />
-                  </div>
-                  <div className="md:col-span-4 self-center p-5 bg-cyan-50/40 rounded-2xl border border-cyan-100/50">
-                    <div className="flex items-center gap-2 text-cyan-700 font-bold text-[11px] uppercase tracking-wider mb-2">
-                      <Sparkles size={14} /> Audit Trail
-                    </div>
-                    <p className="text-[11px] text-cyan-800/60 font-medium leading-relaxed">
-                      Notes entered here are restricted to internal financial auditing and will never be exposed to the end customer.
-                    </p>
                   </div>
                 </div>
               </section>
@@ -612,7 +604,7 @@ export default function CardForm() {
               <button
                 type="button"
                 onClick={() => navigate(isAdmin ? '/admin/customers/card-summary' : '/dashboard')}
-                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 <ChevronLeft size={16} /> Cancel
               </button>
@@ -622,7 +614,7 @@ export default function CardForm() {
                   <button
                     type="button"
                     onClick={() => setFormData({ userId: null, cardType: 'Visa', cardNo: '', expDate: '', cvv: '', asRegistered: 'Y', firstName: '', middlename: '', lastName: '', address1: '', address2: '', city: '', state: '', postcode: '', countryId: null, currency: 'USD', comments: '' })}
-                    className="text-[11px] font-black uppercase text-slate-400 hover:text-cyan-700 tracking-widest transition-colors px-6"
+                    className="text-[11px] font-black uppercase text-slate-400 hover:text-cyan-700 tracking-widest transition-colors px-6 cursor-pointer"
                   >
                     Reset
                   </button>

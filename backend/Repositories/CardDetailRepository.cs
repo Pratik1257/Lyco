@@ -146,4 +146,9 @@ public class CardDetailRepository : ICardDetailRepository
 
         return card;
     }
+
+    public Task<bool> IsCardNoUniqueAsync(string cardNo)
+    {
+        return _context.CardDetails.AllAsync(c => c.CardNo != cardNo);
+    }
 }

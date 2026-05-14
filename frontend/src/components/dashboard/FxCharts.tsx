@@ -68,7 +68,7 @@ export default function FxCharts({ data, timeframe, isAdmin = true }: { data: Da
             <h3 className="text-sm font-bold text-gray-800">Pending Payment Orders</h3>
             <p className="text-xs text-gray-400 mt-0.5">{isAdmin ? 'Orders awaiting payment from customers' : 'Your orders with pending payments'}</p>
           </div>
-          <Link to={isAdmin ? "/admin/orders/history" : "/orders/history"} className="text-xs text-[#0891b2] font-bold flex items-center gap-0.5 hover:gap-1.5 transition-all">
+          <Link to={isAdmin ? "/admin/orders/history?paymentStatus=Pending" : "/orders/history?paymentStatus=Pending"} className="text-xs text-[#0891b2] font-bold flex items-center gap-0.5 hover:gap-1.5 transition-all">
             View All <ArrowUpRight size={12} />
           </Link>
         </div>

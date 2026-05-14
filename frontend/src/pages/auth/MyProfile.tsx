@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   User, Mail, Building2, Globe, Phone, MapPin,
   ShieldCheck, Save, CreditCard,
-  Building, MapPinned, Hash, DollarSign
+  Building, MapPinned, Hash
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { customersApi, type Customer, type Country } from '../../api/customersApi';
+import { pricesApi, type CurrencyDto } from '../../api/pricesApi';
+import CustomSelect from '../../components/ui/CustomSelect';
 
 export default function MyProfile() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function MyProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
+  const [currencies, setCurrencies] = useState<CurrencyDto[]>([]);
   const [profile, setProfile] = useState<Partial<Customer>>({
     firstname: '',
     lastname: '',
@@ -43,13 +46,15 @@ export default function MyProfile() {
         }
         const { userId } = JSON.parse(savedUser);
 
-        const [userData, countryList] = await Promise.all([
+        const [userData, countryList, currencyList] = await Promise.all([
           customersApi.getCustomerById(userId),
-          customersApi.getCountries()
+          customersApi.getCountries(),
+          pricesApi.getCurrencies()
         ]);
 
         setProfile(userData);
         setCountries(countryList);
+        setCurrencies(currencyList);
       } catch (error) {
         toast.error('Failed to load profile data');
       } finally {
@@ -91,7 +96,14 @@ export default function MyProfile() {
     const { name, value } = e.target;
     setProfile(prev => ({
       ...prev,
-      [name]: name === 'countryId' ? Number(value) : value
+      [name]: name === 'countryId' ? (value ? Number(value) : null) : value
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string | number) => {
+    setProfile(prev => ({
+      ...prev,
+      [name]: name === 'countryId' ? (value ? Number(value) : null) : value
     }));
   };
 
@@ -107,8 +119,8 @@ export default function MyProfile() {
   const labelCls = "block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1.5 ml-1";
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-8 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="min-h-screen bg-slate-50/50 py-5">
+      <div className="w-full px-4 sm:px-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Basic Info */}
           <div className="lg:col-span-8 space-y-6">
@@ -221,34 +233,29 @@ export default function MyProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1">
                     <label className={labelCls}>Country</label>
-                    <select
-                      name="countryId"
+                    <CustomSelect
                       value={profile.countryId || ''}
-                      onChange={handleInput}
-                      className={inp.replace('pl-10', 'pl-4')}
-                    >
-                      <option value="">Select Country</option>
-                      {countries.map(c => (
-                        <option key={c.countryId} value={c.countryId}>{c.countryName}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => handleSelectChange('countryId', val)}
+                      options={countries.map(c => ({ value: c.countryId, label: c.countryName }))}
+                      placeholder="Select Country"
+                      prefixIcon={<Globe size={14} />}
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className={labelCls}>Preferred Currency</label>
-                    <div className="relative">
-                      <DollarSign size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <select 
-                        name="currency" 
-                        value={profile.currency} 
-                        onChange={handleInput} 
-                        className={inp}
-                      >
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="AUD">AUD - Australian Dollar</option>
-                        <option value="GBP">GBP - British Pound</option>
-                        <option value="EUR">EUR - Euro</option>
-                      </select>
-                    </div>
+                    <CustomSelect
+                      value={profile.currency || 'USD'}
+                      onChange={(val) => handleSelectChange('currency', val)}
+                      options={currencies.map(c => ({
+                        value: c.code,
+                        label: `${c.symbol}\u00A0\u00A0${c.code}`,
+                        code: c.code,
+                        symbol: c.symbol,
+
+                      }))}
+                      placeholder="Select Currency"
+                      prefixIcon={<span className="text-sm font-black text-slate-700">{currencies.find(c => c.code === profile.currency)?.symbol || '$'}</span>}
+                    />
                   </div>
                 </div>
               </div>
@@ -278,7 +285,7 @@ export default function MyProfile() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full mt-10 py-4 bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
+                className="w-full mt-10 py-4 bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <Save size={16} />
                 {saving ? 'Saving...' : 'Update Profile'}
@@ -296,7 +303,7 @@ export default function MyProfile() {
               <button
                 type="button"
                 onClick={() => navigate(isAdmin ? '/admin/card-details' : '/card-details')}
-                className="w-full py-3 bg-white text-cyan-700 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all"
+                className="w-full py-3 bg-white text-cyan-700 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
               >
                 Manage Cards
               </button>

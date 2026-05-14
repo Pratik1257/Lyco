@@ -44,7 +44,7 @@ export default function CompleteOrderForm() {
 
   const { data: ordersData, isLoading: isLoadingOrders } = useQuery({
     queryKey: ['user-orders', formData.userId],
-    queryFn: () => ordersApi.getOrders(1, 100, '', 'In Process', undefined, formData.userId || undefined),
+    queryFn: () => ordersApi.getOrders(1, 100, '', 'In Process', 'all', undefined, formData.userId || undefined),
     enabled: !!formData.userId
   });
   // Filter orders manually if API doesn't support UniqueNo yet (or as extra safety)
